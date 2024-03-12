@@ -41,3 +41,24 @@ function Get-ShellLauncherBridgeWMI
 {
     (Get-AssignedAccessCspBridgeWmi).ShellLauncher
 }
+
+function Set-MultiAppKioskConfiguration
+{
+    param (
+        [Parameter(Mandatory=$True)]
+        [string] $FilePath
+    )
+
+    $Xml = Get-Content -Path $FilePath
+    $AssignedAccessCsp = Get-AssignedAccessCspBridgeWmi
+    $EncodedXml = [System.Net.WebUtility]::HtmlEncode($Xml)
+    $AssignedAccessCsp.Configuration = $EncodedXml
+    Set-CimInstance -CimInstance $AssignedAccessCsp
+    (Get-AssignedAccessCspBridgeWmi).Configuration
+}
+
+function Clear-MultiAppKioskConfiguration {
+    $AssignedAccessCsp = Get-AssignedAccessCspBridgeWmi
+    $AssignedAccessCsp.Configuration = $NULL
+    Set-CimInstance -CimInstance $AssignedAccessCsp
+}

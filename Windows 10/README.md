@@ -1,5 +1,5 @@
 # Introduction 
-This folder contains a script and supporting artifacts to configure a Windows 10 operating system to act as a custom AVD Client kiosk. The custom configuration is built with a combination of:
+This folder contains a script and supporting artifacts to configure a Windows operating system to act as a custom AVD Client kiosk. The custom configuration is built with a varied combination of:
 - A Shell Launcher configuration applied via the Assigned Access CSP WMI Bridge. The shell launcher configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters as follows:
 
 | AVDClientShell | AutoLogon | Resulting Configuration |

@@ -6,6 +6,9 @@ param (
     [Parameter(Mandatory = $true)]
     [string]
     $EventSource,
+    [Parameter(Mandatory = $false)]
+    [switch]
+    $ShowDisplaySettings,
     [Parameter(Mandatory = $true)]
     [string]
     $TaskName
@@ -145,8 +148,7 @@ $PredefinedKeys = @{
     "Win+P" = "Cycle through Presentation Mode"
     "Win+R" = "Open Run Dialog"
     "Win+Tab" = "Cycle through Microsoft Store Apps. Also blocks the Windows+Ctrl+Tab and Windows+Shift+Tab combinations"
-    "Win+B" = "Sets focus in the notification area"
-    "Win+I" = "Open Settings"
+    "Win+B" = "Sets focus in the notification area"    
     "Win+K" = "Open Connect"
     "Win+H" = "Open Dictation"
     "Win+Q" = "Open Search Charm"    
@@ -159,6 +161,10 @@ $PredefinedKeys = @{
     "LaunchMediaSelect" = "Select Media Key"
     "LaunchApp1" = "Start Application 1 key"
     "LaunchApp2" = "Start Application 2 key"
+}
+
+If (!$ShowDisplaySettings) {
+    $PredefinedKeys.Add('Win+I', 'Open Settings')
 }
 
 $PredefinedKeys.keys | ForEach-Object {

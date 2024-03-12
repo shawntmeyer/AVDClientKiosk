@@ -142,6 +142,8 @@ $DirConfigurationScripts = "$Script:Dir\Scripts\Configuration"
 $DirSchedTasksScripts = "$Script:Dir\Scripts\ScheduledTasks"
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
+# Detect Windows 11
+If ($OS.BuildNumber -ge 22000 -or $OS.Caption -match 'Windows 11') {$Windows11 = $true}
 If ($OS.Name -match 'LTSC') {$LTSC = $true}
 # Set AVD feed subscription Url.
 If ($EnvironmentAVD -eq 'AzureUSGovernment') {
@@ -537,7 +539,22 @@ If (-not ($AVDClientShell)) {
     Get-ChildItem -Path "$env:Public\Desktop" -Filter '*.lnk' | Remove-Item -Force
     Get-ChildItem -Path "$env:SystemDrive\Users\Default\Desktop" -Filter '*.lnk' | Remove-Item -Force
     Write-Log -EntryType Information -EventId 48 -Message "Copying Start Menu Layout file for Non Admins to '$DirKiosk' directory."
-    Copy-Item -Path "$DirStartMenu\startlayout.xml" -Destination "$DirKiosk\startlayout.xml" -Force
+    If ($Windows11) {
+        If ($ShowDisplaySettings) {
+            $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings.xml"
+        } Else {
+            $StartMenuFile = "$DirStartMenu\Win10-LayoutModification.xml"
+        }
+        Copy-Item -Path $StartMenuFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -Force
+    } Else {
+        If ($ShowDisplaySettings) {
+            $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings.xml"
+        } Else {
+            $StartMenuFile = "$DirStartMenu\Win10-LayoutModification.xml"
+        }
+        Copy-Item -Path $StartMenuFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.json" -Force
+    }
+    
     Write-Log -EntryType Information -EventId 49 -Message "Creating a custom AVD Shortcut in Start Menu."
     [string]$StringVersion = $Version
     $ObjShell = New-Object -ComObject WScript.Shell
@@ -771,15 +788,15 @@ If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
 
 If ($AutoLogon -or $AVDClientShell) {
     Write-Log -EntryType Information -EventId 113 -Message "Starting Shell Launcher Configuration Section."
-    . "$DirConfigurationScripts\ShellLauncherWmiBridgeHelpers.ps1"
+    . "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
     If ($AutoLogon -and $AVDClientShell) {
-        $configFile = "$DirShellLauncherSettings\embeddedShell_avdclient_autologon.xml"
+        $configFile = "$DirShellLauncherSettings\AVDClient_AutoLogon.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling AVD Client Shell Launcher Settings with Autologon via WMI MDM bridge."
     } Elseif ($AVDClientShell) {
-        $configFile = "$DirShellLauncherSettings\embeddedShell_avdclient.xml"
+        $configFile = "$DirShellLauncherSettings\AVDClient.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling AVD Client Shell Launcher Settings via WMI MDM bridge."
     } Else {
-        $configFile = "$DirShellLauncherSettings\embeddedShell_explorer_autoLogon.xml"
+        $configFile = "$DirShellLauncherSettings\Explorer_AutoLogon.xml"
         Write-Log -EntryType Information -EventID 114 -Message "Enabling Explorer Shell Launcher Settings with Autologon via the WMI MDM bridge."
     }
 
@@ -812,7 +829,11 @@ $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
 $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
 New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
 $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
-$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName -TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
+$TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
+If ($ShowDisplaySettings) {
+    $TaskScriptArgs = "$TaskScriptArgs -ShowDisplaySettings"
+}
+$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
 $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
 Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger

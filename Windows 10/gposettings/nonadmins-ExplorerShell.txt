@@ -165,11 +165,6 @@ DWORD:1
 
 User:Non-Administrators
 Software\Policies\Microsoft\Windows\Explorer
-StartLayoutFile
-EXSZ:c:\\kiosksettings\\startlayout.xml
-
-User:Non-Administrators
-Software\Policies\Microsoft\Windows\Explorer
 AddSearchInternetLinkInStartMenu
 DWORD:0
 

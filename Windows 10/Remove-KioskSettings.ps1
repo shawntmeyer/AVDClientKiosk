@@ -104,7 +104,7 @@ Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullNam
 
 # Removing Embedded Shells Configuration
 
-. "$DirConfigurationScripts\ShellLauncherWmiBridgeHelpers.ps1"
+. "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
 If (Get-ShellLauncherBridgeWMI) {
     Write-Log -EventId 6 -EntryType Information -Message "Removing Shell Launcher settings via WMI Bridge."
     Clear-ShellLauncherBridgeWMI
