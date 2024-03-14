@@ -43,28 +43,13 @@ Computer
 Software\Policies\Microsoft\EdgeUpdate
 RemoveDesktopShortcutDefault
 DWORD:1
-; Win11 - Disable Widgets
-Computer
-Software\Policies\Microsoft\Dsh
-AllowNewsAndInterests
-DWORD:0
-; Win11 - Hide Recommended Section of Start Menu
-Computer
-Software\Policies\Microsoft\Windows\Explorer
-HideRecommendedSection
-DWORD:1
 ; Disable Nearby Sharing
 Computer
 Software\Policies\Microsoft\Windows\System
 EnableCdp
 DWORD:0
-; Win11 - Disable Search on Start Menu
+; Disable Widgets
 Computer
-Software\Policies\Microsoft\Windows\Windows Search
-DisableSearch
-DWORD:1
-; Win11 - Disable Search on TaskBar
-Computer
-Software\Policies\Microsoft\Windows\Windows Search
-SearchOnTaskbarMode
+Software\Policies\Microsoft\Dsh
+AllowNewsAndInterests
 DWORD:0

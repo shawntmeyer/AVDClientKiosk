@@ -223,12 +223,3 @@ Software\Policies\Microsoft\Windows\System
 DisableCMD
 DWORD:2
 
-User:Non-Administrators
-Software\Policies\Microsoft\Windows\WindowsCopilot
-TurnOffWindowsCopilot
-DWORD:1
-
-Users:Non-Administrators
-Software\Policies\Microsoft\Windows\Explorer
-HideTaskViewButton
-DWORD:1
