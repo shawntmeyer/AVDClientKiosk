@@ -1,5 +1,0 @@
-{ "primaryOEMPins": [
-    {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Azure Virtual Desktop.lnk"},
-    {"packagedAppId":"windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"} 
-  ] 
-}
