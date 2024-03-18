@@ -9,8 +9,9 @@ param (
 $script:FullName = $MyInvocation.MyCommand.Path
 $script:Dir = Split-Path $script:FullName
 $Script:File = [string]$myInvocation.MyCommand.Name
-[String]$Script:LogDir = "$($env:SystemRoot)\Logs\Configuration"
-$Script:LogName = [io.path]::GetFileNameWithoutExtension($Script:File) + ".log"
+[String]$Script:LogDir = Join-Path -Path $env:SystemRoot -ChildPath "Logs"
+$date = Get-Date -UFormat "%Y-%m-%d %H-%M-%S"
+$Script:LogName = [io.path]::GetFileNameWithoutExtension($Script:File) + "-$date.log"
 $GPODir = "$Script:Dir\gposettings"
 $ToolsDir = "$Script:Dir\Tools"
 $DirConfigurationScripts = "$Script:Dir\Scripts\Configuration"

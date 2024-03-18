@@ -1,0 +1,4 @@
+User
+SOFTWARE\Policies\Microsoft\Workspaces
+DefaultConnectionURL
+SZ:<url>/api/arm/feeddiscovery

@@ -126,8 +126,9 @@ $Script:Dir = Split-Path $Script:FullName
 $Script:File = [string]$myInvocation.MyCommand.Name
 $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
 # Log file (.log)
-$Script:LogDir = Join-Path -Path $env:SystemRoot -ChildPath "Logs" -ChildPath "Configuration"
-$Script:LogName = "$($Script:Name).log"
+$Script:LogDir = Join-Path -Path $env:SystemRoot -ChildPath "Logs"
+$date = Get-Date -UFormat "%Y-%m-%d %H-%M-%S"
+$Script:LogName = "$($Script:Name)-$date.log"
 # Windows Event Log (.evtx)
 $EventLog = 'AVD Client Kiosk'
 $EventSource = 'Configuration Script'
@@ -389,10 +390,11 @@ New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContin
 If (-not (Test-Path $Script:LogDir)) {
     $null = New-Item -Path $Script:LogDir -ItemType Directory -Force
 }
+
 Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
 
 Write-Log -EntryType Information -EventId 1 -Message "Executing '$Script:FullName'."
-Write-Log -EntryType Information -EventId 2 -Message "Running on $($OS.Caption) $($OS.Version) Build $($OS.BuildNumber)."
+Write-Log -EntryType Information -EventId 2 -Message "Running on $($OS.Caption) version $($OS.Version)."
 
 If (Get-PendingReboot) {
     Write-Log -EntryType Error -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
@@ -415,7 +417,7 @@ $TaskschdLog.SaveChanges()
 
 # Run Removal Script first in the event that a previous version is installed or in the event of a failed installation.
 Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
-& Join-Path -Path $Script:Dir -ChildPath "Remove-KioskSettings.ps1" -Reinstall
+& "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
 
 #endregion Previous Version Removal
 
@@ -661,8 +663,13 @@ If ($AVDClientShell) {
 }
 
 # Configure Feed URL for all Users
-$outfile = "$env:Temp\Users-AVDFeedURL.txt"
-(Get-Content -Path "$DirGPO\users-AVDFeedUrl.txt").Replace('<url>', $SubscribeUrl) | Out-File $outfile
+$outfile = "$env:Temp\Users-AVDURL.txt"
+If ($AutoLogon) {
+    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
+} Else {
+    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-AutoSubscribe.txt'
+}
+(Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
 $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
 Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
@@ -792,7 +799,7 @@ If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
 
 #endregion Applocker Policy
 
-#region Assigned Access Configuration
+#region Shell Launcher Configuration
 
 If ($AutoLogon -or $AVDClientShell -or !$Windows10) {
     Write-Log -EntryType Information -EventId 113 -Message "Starting Shell Launcher Configuration Section."
@@ -807,17 +814,18 @@ If ($AutoLogon -or $AVDClientShell -or !$Windows10) {
         $configFile = "$DirShellLauncherSettings\Explorer_AutoLogon.xml"
         Write-Log -EntryType Information -EventID 114 -Message "Enabling Explorer Shell Launcher Settings with Autologon via the WMI MDM bridge."
     }
-    $ShellLauncherFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
-    Copy-Item -Path $configFile -Destination $ShellLauncherFile -Force
-    Set-ShellLauncherConfiguration -FilePath "$DirKiosk\ShellLauncher.xml"
-    If (Get-ShellLauncherConfiguration) {
-        Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
-    } Else {
-        Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
-        Stop-Transcript
-        Exit 1
-    }
-    if (!$Windows10 -and !$AVDClientShell) {
+    If ($configFile) {
+        $ShellLauncherFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
+        Copy-Item -Path $configFile -Destination $ShellLauncherFile -Force
+        Set-ShellLauncherConfiguration -FilePath "$DirKiosk\ShellLauncher.xml"
+        If (Get-ShellLauncherConfiguration) {
+            Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
+        } Else {
+            Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+            Stop-Transcript
+            Exit 1
+        }
+    } ElseIf (!$Windows10 -and !$AVDClientShell) {
         Write-Log -EntryType Information -EventId 113 -Message "Configuring Multi-App Kiosk Settings."
         If ($AutoLogon -and !$ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiApp_Autologon.xml" }
         If ($AutoLogon -and $ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiAppWithSettings_Autologon.xml" }

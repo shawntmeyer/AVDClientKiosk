@@ -103,35 +103,12 @@ New-Item -Path $RegKey -Force | Out-Null
 New-ItemProperty -Path $RegKey -Name $RegValue -PropertyType DWORD -Value 0 -Force | Out-Null
 
 Write-Output "Starting Remote Desktop Client."
-If ($Env:UserName -eq 'KioskUser0') {
+If ($AutoLogon) {
     # Always start client with subscribe Url in Autologon scenario
     $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -ArgumentList "ms-rd:subscribe?url=$SubscribeUrl" -PassThru
 } Else {
-    # for direct sign-in scenario, check if user already subscribed.
-    $JSONFile = "$env:UserProfile\AppData\Local\rdclientwpf\ISubscription.json"
-    If (Test-Path -Path $JSONFile) {
-        $UPN = Whoami.exe /UPN
-        Write-Output "Found '$JSONFile'. Determining if '$UPN' is already subscribed."
-        $AVDInfo = Get-Content $JSONFile | ConvertFrom-Json
-        $Users = $AVDInfo.Username
-        ForEach ($User in $Users) {
-            If ($User -eq $UPN) {
-                Write-Output "Found subscription for '$User' in file."
-                $Subscribed = $true
-                Break
-            }
-        }
-        If ($Subscribed) {
-            Write-Output "Starting MSRDCW without arguments."
-            $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -PassThru
-        } Else {
-            Write-Output "Starting MSRDCW with 'ms-rd:subscribe?url=$SubscribeUrl' argument."
-            $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -ArgumentList "ms-rd:subscribe?url=$SubscribeUrl" -PassThru
-        }
-    } Else {
-        Write-Output "$JSONFile not found. Starting MSRDCW with 'ms-rd:subscribe?url=$SubscribeUrl' argument."
-        $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -ArgumentList "ms-rd:subscribe?url=$SubscribeUrl" -PassThru
-    }   
+    # Start client without subscribe Url in non-Autologon scenario because GPO will handle the subscription.
+    $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -PassThru
 }
 
 <#---Wait for this to be available on Azure US Government
@@ -152,7 +129,7 @@ do {
 
 If ($User) {
     $Apps = $AVDInfo.TenantCollection.remoteresourcecollection
-    If ($SubscribeUrl -contains '.us') { $env = 'avdgov' } Else { $env = 'avdarm' }
+    If ($SubscribeUrl -match '.us') { $env = 'avdgov' } Else { $env = 'avdarm' }
     If ($apps.count -eq 1) {
         $URL = -join("ms-avd:connect?workspaceId=", $WorkSpaceOID, "&resourceid=", $apps.ID, "&username=", $User,"&env=", $env, "&version=0")
         Start-Process -FilePath "$URL"
