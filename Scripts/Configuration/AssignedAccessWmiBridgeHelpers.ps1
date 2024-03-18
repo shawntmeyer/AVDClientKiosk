@@ -1,20 +1,10 @@
-[CmdletBinding()]
-param (
-    #The path to the XML file for assigned access.
-    [Parameter()]
-    [string]
-    $FilePath
-)
-$NameSpace = "root\cimv2\mdm\dmmap"
-$Class = "MDM_AssignedAccess"
-
-function Get-AssignedAccessCspBridgeWmi
-{
+function Get-AssignedAccessCspBridgeWmi {
+    $NameSpace = "root\cimv2\mdm\dmmap"
+    $Class = "MDM_AssignedAccess"
     return Get-CimInstance -Namespace $NameSpace -ClassName $Class
 }
 
-function Set-ShellLauncherBridgeWMI
-{
+function Set-ShellLauncherConfiguration {
     param (
         [Parameter(Mandatory=$True)]
         [String] $FilePath
@@ -30,20 +20,21 @@ function Set-ShellLauncherBridgeWMI
     (Get-AssignedAccessCspBridgeWmi).ShellLauncher
 }
 
-function Clear-ShellLauncherBridgeWMI
-{
+function Clear-ShellLauncherConfiguration {
     $AssignedAccessCsp = Get-AssignedAccessCspBridgeWmi
     $AssignedAccessCsp.ShellLauncher = $NULL
     Set-CimInstance -CimInstance $AssignedAccessCsp
 }
 
-function Get-ShellLauncherBridgeWMI
-{
+function Get-ShellLauncherConfiguration {
     (Get-AssignedAccessCspBridgeWmi).ShellLauncher
 }
 
-function Set-MultiAppKioskConfiguration
-{
+function Get-MultiAppKioskConfiguration {
+    (Get-AssignedAccessCspBridgeWmi).Configuration
+}
+
+function Set-MultiAppKioskConfiguration {
     param (
         [Parameter(Mandatory=$True)]
         [string] $FilePath

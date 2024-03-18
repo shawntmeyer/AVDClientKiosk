@@ -14,7 +14,7 @@
       <v5:StartPins>
         <![CDATA[
           { "pinnedList":[
-            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Remote Desktop.lnk"}
+            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Azure Virtual Desktop.lnk"}
           ] }
         ]]>
       </v5:StartPins>

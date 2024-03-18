@@ -1,13 +1,17 @@
-# Introduction 
-This folder contains a script and supporting artifacts to configure a Windows operating system to act as a custom AVD Client kiosk. The custom configuration is built with a varied combination of:
-- A Shell Launcher configuration applied via the Assigned Access CSP WMI Bridge. The shell launcher configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters as follows:
+# Introduction
 
-| AVDClientShell | AutoLogon | Resulting Configuration |
-|----------------|------------------|-------------------------|
-| True           | True             | The default explorer shell will be replaced with the Remote Desktop client for Windows. The Windows 10 client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
-| True           | False            | The default explorer shell will be replaced with the Remote Desktop client for Windows. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
-| False          | True             | The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and toast notifications on the local device. The Windows 10 client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
-| False          | False            | *This is the default configuration if no parameters are specified when running the script.* The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and toast notifications on the local device. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
+This folder contains a script and supporting artifacts to configure a Windows operating system to act as a custom AVD Client kiosk. The custom configuration is built with a varied combination of:
+
+- A Shell Launcher or Multi-App configuration applied via the Assigned Access CSP WMI Bridge. The assigned access configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters and the operationg system version as follows:
+
+| AVDClientShell | AutoLogon | Operating System | Resulting Configuration |
+|----------------|------------------|------------------|-------------------------|
+| True           | True             | Windows 10 + | The default explorer shell will be replaced with the Remote Desktop client for Windows. The Windows 10 client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
+| True           | False            | Windows 10 | The default explorer shell will be replaced with the Remote Desktop client for Windows. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
+| False          | True             | Windows 10 | The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and toast notifications on the local device. The Windows 10 client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
+| False          | True             | Windows 11 | A Multi-App Kiosk configuration is applied which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions and the Remote Desktop client along with Display Settings if the option is chosen. The Windows 11+ client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
+| False          | False            | Windows 10 | *This is the default configuration if no parameters are specified when running the script.* The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and toast notifications on the local device. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
+| False          | False            | Windows 11 | *This is the default configuration if no parameters are specified when running the script.* A Multi-App Kiosk configuration is applied which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and the settings application if the option is chosen. The user will be required to sign in to the Windows 11 client and will be automatically signed in to the Remote Desktop client. If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
 
 - a multi-user local group policy object for non-administrative users.
 - a local group policy object that affects computer settings.
@@ -17,35 +21,49 @@ This folder contains a script and supporting artifacts to configure a Windows op
 # Version History
 
 ## 5.0 (Current Version)
+
 This is a [Feature] release.
+
 1. Introduced Support for Windows 11.
 
 ## 4.6 (Current Version)
+
 This is a [Feature] release.
+
 1. This version is minor change with the addition of the -SharedPC switch parameter. The SharedPC parameter can only be enabled in the non-autologon scenario. It enables Shared PC mode on the system with the Account Management function. Account Management will automatically be enabled and configured to remove the user profile after logoff. SharedPC Mode is documented at https://learn.microsoft.com/en-us/windows/configuration/set-up-shared-or-guest-pc?tabs=ppkg.
 2. Incorporated a new scheduled task in the autologon scenarios that automatically restarts the subscribe process to prevent a AAD.Broker timeout.
 
 ## 4.4 
+
 This is a [Feature] release.
+
 1. This version uses a WMI Event Subscription to detect YUBIKEY (If desired) or Smart Card removal events and perform the appropriate Remote Desktop client for Windows reset or Lock Workstation actions based on signed-in user.
 2. All scheduled tasks are removed. This version no longer monitors MSRDC connections.
 
 ## 3.0.0
+
 This is a [Feature] and [Bug Fix] release.
+
 1. Unified the code base between the AVD Custom and the Shell Launcher version for simpler maintenance and deployment.
 2. Fixed a bug in the URI scheme used to pick the AVD feed url.
 
 ## 1.1.0
+
 This is a [Feature] release.
+
 1. Added the Keyboard Filter feature to block many well-known keyboard shortcuts/combinations that can cause confusion.
 2. Fixed a bug where the AVD Client wasn't reset after a restart of the thin client. Reconfigured the Launch-AVDClient.vbs to reset if the client registry key was present.
 
 ## 1.0.1
+
 This is a [Bug Fix] release.
+
 1. Added the removal of OneDrive into the installer to prevent issues with the sync engine causing applocker pop-ups.
 
 ## 1.0.0
+
 Initial Release
+
 # Usage
 
 ## Manual Installation

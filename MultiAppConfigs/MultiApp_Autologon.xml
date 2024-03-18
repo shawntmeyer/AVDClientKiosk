@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<AssignedAccessConfiguration xmlns="http://schemas.microsoft.com/AssignedAccess/2017/config" xmlns:v3="http://schemas.microsoft.com/AssignedAccess/2020/config" xmlns:v5="http://schemas.microsoft.com/AssignedAccess/2022/config">
+<AssignedAccessConfiguration xmlns="http://schemas.microsoft.com/AssignedAccess/2017/config" xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config" xmlns:v5="http://schemas.microsoft.com/AssignedAccess/2022/config">
   <Profiles>
     <Profile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}">
       <AllAppsList>
         <AllowedApps>
-          <App AppUserModelId="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
           <App DesktopAppPath="%windir%\System32\WindowsPowerShell\v1.0\Powershell.exe" />
           <App DesktopAppPath="%windir%\System32\cscript.exe" />
           <App DesktopAppPath="%windir%\System32\wscript.exe" />
@@ -15,8 +14,7 @@
       <v5:StartPins>
         <![CDATA[
           { "pinnedList":[
-            {"packagedAppId":"windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"},
-            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Remote Desktop.lnk"}
+            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Azure Virtual Desktop.lnk"}
           ] }
         ]]>
       </v5:StartPins>
@@ -24,6 +22,9 @@
     </Profile>
   </Profiles>
   <Configs>
-      <v3:GlobalProfile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}"/>
+      <config>
+        <AutoLogonAccount rs5:DisplayName="Kiosk User"/>
+        <DefaultProfile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}"/>
+      </config>
   </Configs>
 </AssignedAccessConfiguration>
