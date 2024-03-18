@@ -6,10 +6,14 @@
 
     * Remote Desktop client shell
     * Remote Desktop client shell with autologon
-    * Custom Explorer shell
-    * Custom Explorer shell with autologon
+    * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11)
+    * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11), both with autologon
 
-    These options are controlled by the combination of the two switch parameters - AVDClientShell and Autologon. Additionally, you can choose to
+    These options are controlled by the combination of the two switch parameters - AVDClientShell and Autologon.
+    
+    When the AVDClientShell switch parameter is not used, then you can utilize the -ShowDisplaySettings switch parameter to allow access to the Display Settings page.
+    
+    Additionally, you can choose to
 
     * Install the latest Remote Desktop client for Windows and Visual C++ Redistributables directly from the web.
     * Apply the latest applicable Security Technical Implementation Guides (STIG) group policy settings into the local group policy object via the
@@ -21,14 +25,16 @@
     This script completes a series of configuration tasks based on the parameters chosen. These tasks can include:
 
     * Applocker policy application to block Internet Explorer, Edge, Wordpad, and Notepad
-    * Provisioning packages to remove pinned items from the Start Menu for the custom explorer shell option.
+    * Provisioning packages to remove pinned items from the Start Menu for the custom explorer shell option with Windows 10.
+    * Provisioning packages to enable SharedPC mode.
     * Multi-Local Group Policy configuration to limit interface elements.
     * Built-in application removal.
-    * Shell Launcher configuration in all but the Custom Explorer shell (without autologon)
+    * Shell Launcher configuration for the AVDClientShell and Windows 10 Autologon scenarios
+    * Multi-App Kiosk configuration for Windows 11 when the AVDClientShell switch parameter is not used.
     * Remote Desktop client for Windows install (if selected)
     * STIG application (if selected)
     * Start Layout modification for the custom explorer shell options
-    * Custom Azure Virtual Desktop client shortcuts or shell launcher configuration that launches the Remote Desktop client for Windows
+    * Custom Azure Virtual Desktop client shortcuts that launches the Remote Desktop client for Windows
       via a script to enable WMI Event subscription.
 
 .NOTES 
@@ -62,13 +68,13 @@ When the default 'explorer' shell is used additional local group policy settings
 This switch parameter determines if autologon is enabled through the Shell Launcher configuration. The Shell Launcher feature will automatically
 create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts.
 
-.PARAMETER SharedPC
-This switch parameter determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically
-deleted on logoff.
-
 .PARAMETER InstallAVDClient
 This switch parameter determines if the latest Remote Desktop client for Windows is automatically downloaded from the Internet and installed
 on the system prior to configuration.
+
+.PARAMETER SharedPC
+This switch parameter determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically
+deleted on logoff.
 
 .PARAMETER ShowDisplaySettings
 This switch parameter determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set,
@@ -634,25 +640,24 @@ If ($AVDClientShell) {
 } Else {
     if($Windows10) {
         $nonAdminsFile = 'nonadmins-ExplorerShell.txt'
-
-    } Else {
-        $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
-    }
-    $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    if ($ShowDisplaySettings) {
-        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
-        Write-Log -EntryType Information -EventId 61 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    } Else {
+        $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
+        Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-HideSettings.txt" '2>&1'
         Write-Log -EntryType Information -EventId 61 -Message "Hid Settings App and Control Panel for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    }
-}
+        If (!$WifiAdapter) {
+            $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWifi.txt" '2>&1'
+            Write-Log -EntryType Information -EventId 62 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
+        }
+    } Else {
+        $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
+        $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
+        Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
-# Hide Taskbar Tray if no Wifi Adapter Present.
-If (!$WifiAdapter) {
-    $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWifi.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 65 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
+    }
+    if ($ShowDisplaySettings) {
+        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
+        Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    }
 }
 
 # Configure Feed URL for all Users
