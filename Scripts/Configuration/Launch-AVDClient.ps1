@@ -7,18 +7,20 @@
 
 .DESCRIPTION 
     This script first creates a WMI Event Subscriber that looks for the removal of a PNP device that matches either a YUBIKEY (Vendor ID 1050)
-    or a Smart Card (PNPDeviceID always starts with SCFILTER). This subscription is configured with an action to relaunch this script and kill
-    the PowerShell process executing this instance if the logged in user is 'KioskUser0' because this is an autologon kiosk user and lock the
-    computer if it is any other user.
+    or a Smart Card (PNPDeviceID always starts with SCFILTER). If the $Autologon parameter is $true, this subscription is configured with an
+    action to disconnect all open RDP sessions. If the $Autologon parameter is $false, then the action will lock the client computer.
 
     After the WMI Subscriber is created, the script then launches the AVD Client with a command line that it determines based on the signed-in
     user and whether there is cached credential information for the user in the AVD client. When launching the client, the process details are
     passed through to this script.
 
-    The script monitors the MSRDCW process (AVD Client) every 5 seconds until there is an exit code. Once there is an exit code, the script
-    either restarts this script and kills the parent PowerShell process when the signed-in user is 'KioskUser0' or logs the user off if the
-    signed-in user was not 'KioskUser0' and the exit code is 0 indicating that the user clicked the 'X' button at the top right of the AVD
-    Client.
+    The script monitors the MSRDCW process (AVD Client) every 5 seconds until there is an exit code. Once there is an exit code, the performs a
+    series of actions depending on the value of several parameters.
+    * If the $Autologon parameter is $true and the exit code is not equal to -1, the script first stops the Microsoft AAD Broker Plugin
+      (the Azure/Entra ID sign-in process) and then, if $MultiApp is $false exits the script or, when $MultiApp is $true, the script restarts
+      itself and kills the parent PowerShell process to prevent conflicts.
+    * If the $Autologon parameter is $false, the exit code is 0, and $MultiApp equals $false, then the script logs off the user.
+    * Otherwise, the script exits.
  
 .NOTES 
     The query for the WMI Event Subscription can be adjusted to run more/less frequently on the line that begins with '$Query'. The time is an
@@ -50,6 +52,8 @@ param (
     [Parameter()]
     [bool]$AutoLogon = $false,
     [Parameter()]
+    [bool]$MultiApp = $false,
+    [Parameter()]
     [string]$SubscribeUrl = '<SubscribeUrl>',
     [Parameter()]
     [Bool]$Yubikey = $false
@@ -57,39 +61,59 @@ param (
 $VBScriptPath = $PSCommandPath.Replace('.ps1', '.vbs')
 Start-Transcript -Path "$env:Temp\$(($MyInvocation.MyCommand.Name).Replace('.ps1', '.log'))" -Force
 
+#region WMI Event Subscription
 # Create a WMI Event Subscription if this is an Autologon Kiosk or Yubikey removal should trigger an action.
 If ($AutoLogon -or $Yubikey) {
     If ($AutoLogon -and $Yubikey) {
         # YUBIKEY is detected as USB Device with Vendor ID = 1050
         $Query = "SELECT * FROM __InstanceDeletionEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_PnPEntity' AND (TargetInstance.PNPDeviceID LIKE 'USB%VID_1050%' OR TargetInstance.PNPDeviceID LIKE 'SCFILTER%')"
-        $SourceIdentifier = "Remove_YUBIKEY_or_SMARTCARD_Event"
+        $SourceIdentifier = "YUBIKEY_or_SMARTCARD_Removed_AutoLogon"
     } Elseif ($AutoLogon -and !$Yubikey) {
         $Query = "SELECT * FROM __InstanceDeletionEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_PnPEntity' AND TargetInstance.PNPDeviceID LIKE 'SCFILTER%'"
-        $SourceIdentifier = "Remove_SMARTCARD_Event"
+        $SourceIdentifier = "SMARTCARD_Removed_AutoLogon"
     } Elseif (!$AutoLogon -and $Yubikey) {
         $Query = "SELECT * FROM __InstanceDeletionEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_PnPEntity' AND TargetInstance.PNPDeviceID LIKE 'USB%VID_1050%'"
-        $SourceIdentifier = "Remove_YUBIKEY_Event"
+        If ($MultiApp) {
+            $SourceIdentifier = "YUBIKEY_Removed_MultiApp"
+        } Else {
+            $SourceIdentifier = "YUBIKEY_Removed"
+        }
     }
 
     Get-EventSubscriber -Force | Where-Object {$_.SourceIdentifier -eq $SourceIdentifier} | Unregister-Event -Force -ErrorAction SilentlyContinue
+    
     $EventAction = {
         $pnpEntity = $EventArgs.NewEvent.TargetInstance
+        $SourceIdentifier = $EventSubscriber.SourceIdentifier
         Write-Output "Device Removed:`n`tCaption: $($pnpEntity.Caption)`n`tPNPDeviceID: $($pnpEntity.PNPDeviceID)`n`tManufacturer: $($pnpEntity.Manufacturer)"
-        If ($env:UserName -eq 'KioskUser0') {
-            Write-Output "Relaunching this script."
-            Stop-Transcript
-            Start-Process -FilePath "wscript.exe" -ArgumentList "`"$VBScriptPath`""
-            # Kill current Powershell process to prevent multiple powershell processes from running.
-            Get-Process -Id $PID | Stop-Process -Force
-        } Else {
+        If ($SourceIdentifier -like '*AutoLogon') {
+            If (Get-Process | Where-Object {$_.Name -eq 'msrdcw'}) {
+                If (Get-Process | Where-Object {$_.Name -eq 'msrdc'}) {
+                    Write-Output "Disconnecting all open session host connections."
+                    Stop-Process -Name 'msrdc' -Force
+                    $counter = 0
+                    Do {
+                        $counter ++
+                        Start-Sleep -Seconds 1
+                    } Until ($counter -eq 30 -or (!(Get-Process | Where-Object {$_.Name -eq 'msrdc'})))
+                } Else {
+                    Write-Output "No open session host connections."
+                }
+            } Else {
+                Write-Output "The Remote Desktop Client is not running."
+            }
+        } Elseif($SourceIdentifier -notlike "*MultiApp" -and $pnpEntity.PNPDeviceID -like 'USB*VID_1050*') {
             Write-Output "Locking the computer."
             Start-Process -FilePath 'rundll32.exe' -ArgumentList "user32.dll`,LockWorkStation"
         }
     }
     Register-WmiEvent -Query $Query -Action $EventAction -SourceIdentifier $SourceIdentifier -SupportEvent
 }
+#endregion
+
+
 # Handle Client Reset in the Autologon scenario
-If ($Env:UserName -eq 'KioskUser0' -and (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc')) {
+If ($AutoLogon -and (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc')) {
     Write-Output 'User Information Cached. Resetting the Remote Desktop Client.'
     Get-Process | Where-Object {$_.Name -eq 'msrdcw'} | Stop-Process -Force
     Get-Process | Where-Object {$_.Name -eq 'Microsoft.AAD.BrokerPlugin'} | Stop-Process -Force
@@ -111,13 +135,11 @@ If ($AutoLogon) {
     $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -PassThru
 }
 
-<#---Wait for this to be available on Azure US Government
-
+# Wait for JSON File to be populated or catch the case where the Remote Desktop Client window is closed.
+# We have to catch ExitCode 0 as a separate condition since it evaluates as null.
 $ClientDir = "$env:UserProfile\AppData\Local\rdclientwpf"
 $JSONFile = Join-Path -Path $ClientDir -ChildPath 'ISubscription.json'
 
-# Wait for JSON File to be populated or catch the case where the Remote Desktop Client window is closed.
-# We have to catch ExitCode 0 as a separate condition since it evaluates as null.
 do {
     If (Test-Path $JSONFile) {
         $AVDInfo = Get-Content $JSONFile | ConvertFrom-Json
@@ -135,23 +157,24 @@ If ($User) {
         Start-Process -FilePath "$URL"
     }
 }
---#>
 
-# Check again to make sure the MSRDCW window has not been closed. If it has not then wait for the window to exit before continuing.
+# Enter a loop that waits for the Azure Virtual Desktop client to exit. If it has not then wait for the window to exit before continuing.
 Do {
     Start-Sleep -Seconds 5
 } Until ($null -ne $MSRDCW.ExitCode)
 
 Write-Output "The Remote Desktop Client closed with exit code [$($MSRDCW.exitcode)]."
 
-If ($Env:UserName -eq 'KioskUser0' -and $MSRDCW.ExitCode -ne -1) {
+If ($AutoLogon -and $MSRDCW.ExitCode -ne -1) {
     # ExitCode -1 is returned when the AVD client is forceably closed with Stop-Process.
     Get-Process | Where-Object {$_.Name -eq 'Microsoft.AAD.BrokerPlugin'} | Stop-Process -Force
-    Write-Output 'Relaunching this script.'
-    Stop-Transcript
-    Start-Process -FilePath "wscript.exe" -ArgumentList "`"$VBScriptPath`""
-    Get-Process -Id $PID | Stop-Process -Force    
-} Elseif($MSRDCW.ExitCode -eq 0) {
+    If (-not $MultiApp) {
+        Write-Output "Relaunching this script"
+        Start-Process -FilePath "wscript.exe" -ArgumentList "`"$VBScriptPath`""
+        Stop-Transcript
+        Get-Process -Id $PID | Stop-Process -Force   
+    }     
+} Elseif(-not $MultiApp -and $MSRDCW.ExitCode -eq 0) {
     # Sign out the user if they closed the Remote Desktop Client using the [X] at the top right of the window.
     Write-Output "Logging off user."
     Write-Output "Exiting `"$PSCommandPath`""

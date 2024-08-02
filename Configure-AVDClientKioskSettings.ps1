@@ -85,6 +85,12 @@ This switch parameter determines if the latest DoD Security Technical Implementa
 from https://public.cyber.mil/stigs/gpo and applied via the Local Group Policy Object (LGPO) tool to the system. If they are, then several
 delta settings are applied to allow the system to communicate with Azure Active Directory and complete autologon (if applicable).
 
+.PARAMETER CustomMultiApp
+This switch parameter determines if the system is configured to show multiple applications on the Start Menu and allow them to launch. In order to use this configuration,
+you must provide updated Start-Menu files for Windows 10 or MultiAppConfigs for Windows 11 with the following names and locations:
+    * Windows 10: StartMenu\Custom-LayoutModification.xml (This file must include the correct values to match the ShowDisplaySettings parameters.)
+    * Windows 11: MultiAppConfigs\Custom-MultiApp.xml (This file must include the correct values to match the AutoLogon and ShowDisplaySettings parameters.)
+
 .PARAMETER Yubikey
 This switch parameter determines if the WMI Event Subscription Filter also monitors for Yubikey removal.
 
@@ -95,26 +101,30 @@ param (
 
     [switch]$ApplySTIGs,
 
-    [ValidateSet('AzureCloud','AzureUSGovernment')]
+    [ValidateSet('AzureCloud', 'AzureUSGovernment')]
     [string]$EnvironmentAVD = 'AzureUSGovernment',
 
     [switch]$InstallAVDClient,
 
-    [Parameter(Mandatory, ParameterSetName='AutologonClientShell')]
-    [Parameter(Mandatory, ParameterSetName='DirectLogonClientShell')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
     [switch]$AVDClientShell,
 
-    [Parameter(Mandatory, ParameterSetName='AutologonClientShell')]
-    [Parameter(Mandatory, ParameterSetName='AutologonExplorerShell')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
     [switch]$AutoLogon,
 
-    [Parameter(ParameterSetName='DirectLogonClientShell')]
-    [Parameter(ParameterSetName='DirectLogonExplorerShell')]
+    [Parameter(ParameterSetName = 'DirectLogonClientShell')]
+    [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
     [switch]$SharedPC,
 
-    [Parameter(ParameterSetName='AutologonExplorerShell')]
-    [Parameter(ParameterSetName='DirectLogonExplorerShell')]
+    [Parameter(ParameterSetName = 'AutologonExplorerShell')]
+    [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
     [switch]$ShowDisplaySettings,
+
+    [Parameter(ParameterSetName = 'AutologonExplorerShell')]
+    [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
+    [switch]$CustomMultiApp,
 
     [switch]$Yubikey
 )
@@ -150,16 +160,17 @@ $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Schedule
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11
-If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') {$Windows10 = $true}
-If ($OS.Name -match 'LTSC') {$LTSC = $true}
+If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') { $Windows10 = $true }
+If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Set AVD feed subscription Url.
 If ($EnvironmentAVD -eq 'AzureUSGovernment') {
     $SubscribeUrl = 'https://rdweb.wvd.azure.us'
-} Else {
+}
+Else {
     $SubscribeUrl = 'https://client.wvd.microsoft.com'
 }
 # Detect Wifi Adapter in order to show Wifi Settings in system tray when necessary.
-$WifiAdapter = Get-NetAdapter | Where-Object {$_.Name -like '*Wi-Fi*' -or $_.Name -like '*Wifi*' -or $_.MediaType -like '*802.11*'}
+$WifiAdapter = Get-NetAdapter | Where-Object { $_.Name -like '*Wi-Fi*' -or $_.Name -like '*Wifi*' -or $_.MediaType -like '*802.11*' }
 # Set default exit code to 0
 $ScriptExitCode = 0
 
@@ -170,20 +181,19 @@ $ScriptExitCode = 0
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     $scriptArguments = $null
     Try {
-        foreach($k in $PSBoundParameters.keys)
-        {
-            switch($PSBoundParameters[$k].GetType().Name)
-            {
-                "SwitchParameter"   { If($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
-                "String"            { If($PSBoundParameters[$k] -match '_') { $scriptArguments += "-$k `"$($PSBoundParameters[$k].Replace('_',' '))`" "} Else { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " } }
-                "Int32"             { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
-                "Boolean"           { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
-                "Version"           { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
+        foreach ($k in $PSBoundParameters.keys) {
+            switch ($PSBoundParameters[$k].GetType().Name) {
+                "SwitchParameter" { If ($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
+                "String" { If ($PSBoundParameters[$k] -match '_') { $scriptArguments += "-$k `"$($PSBoundParameters[$k].Replace('_',' '))`" " } Else { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " } }
+                "Int32" { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
+                "Boolean" { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
+                "Version" { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
             }
         }
         If ($null -ne $scriptArguments) {
             $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`" $scriptArguments" -PassThru -Wait -NoNewWindow
-        } Else {
+        }
+        Else {
             $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`"" -PassThru -Wait -NoNewWindow
         }
     }
@@ -224,76 +234,79 @@ Function Get-PendingReboot {
 
     .NOTES
     #>
-	Try {
-	    ## Setting pending values to false to cut down on the number of else statements
+    Try {
+        ## Setting pending values to false to cut down on the number of else statements
         $RebootPending = $false
-	    $CompPendRen = $false
+        $CompPendRen = $false
         $PendFileRename = $false
         $SCCM = $false
 
-	    ## Setting CBSRebootPend to null since not all versions of Windows has this value
-	    $CBSRebootPend = $null
+        ## Setting CBSRebootPend to null since not all versions of Windows has this value
+        $CBSRebootPend = $null
 
-	    ## Making registry connection to the local/remote computer
-	    $HKLM = [UInt32] "0x80000002"
-	    $WMI_Reg = [WMIClass] "\\.\root\default:StdRegProv"
+        ## Making registry connection to the local/remote computer
+        $HKLM = [UInt32] "0x80000002"
+        $WMI_Reg = [WMIClass] "\\.\root\default:StdRegProv"
 						
-	    ## query the CBS Reg Key
+        ## query the CBS Reg Key
 	    
-		$RegSubKeysCBS = $WMI_Reg.EnumKey($HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\")
-		$CBSRebootPend = $RegSubKeysCBS.sNames -contains "RebootPending"		
+        $RegSubKeysCBS = $WMI_Reg.EnumKey($HKLM, "SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\")
+        $CBSRebootPend = $RegSubKeysCBS.sNames -contains "RebootPending"		
 	    							
-	    ## Query WUAU from the registry
-	    $RegWUAURebootReq = $WMI_Reg.EnumKey($HKLM,"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\")
-	    $WUAURebootReq = $RegWUAURebootReq.sNames -contains "RebootRequired"
+        ## Query WUAU from the registry
+        $RegWUAURebootReq = $WMI_Reg.EnumKey($HKLM, "SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\")
+        $WUAURebootReq = $RegWUAURebootReq.sNames -contains "RebootRequired"
 						
-	    ## Query PendingFileRenameOperations from the registry
-	    $RegSubKeySM = $WMI_Reg.GetMultiStringValue($HKLM,"SYSTEM\CurrentControlSet\Control\Session Manager\","PendingFileRenameOperations")
-	    $RegValuePFRO = $RegSubKeySM.sValue
+        ## Query PendingFileRenameOperations from the registry
+        $RegSubKeySM = $WMI_Reg.GetMultiStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\Session Manager\", "PendingFileRenameOperations")
+        $RegValuePFRO = $RegSubKeySM.sValue
 
-	    ## Query JoinDomain key from the registry - These keys are present if pending a reboot from a domain join operation
-	    $Netlogon = $WMI_Reg.EnumKey($HKLM,"SYSTEM\CurrentControlSet\Services\Netlogon").sNames
-	    $PendDomJoin = ($Netlogon -contains 'JoinDomain') -or ($Netlogon -contains 'AvoidSpnSet')
+        ## Query JoinDomain key from the registry - These keys are present if pending a reboot from a domain join operation
+        $Netlogon = $WMI_Reg.EnumKey($HKLM, "SYSTEM\CurrentControlSet\Services\Netlogon").sNames
+        $PendDomJoin = ($Netlogon -contains 'JoinDomain') -or ($Netlogon -contains 'AvoidSpnSet')
 
-	    ## Query ComputerName and ActiveComputerName from the registry
-	    $ActCompNm = $WMI_Reg.GetStringValue($HKLM,"SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName\","ComputerName")            
-	    $CompNm = $WMI_Reg.GetStringValue($HKLM,"SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName\","ComputerName")
+        ## Query ComputerName and ActiveComputerName from the registry
+        $ActCompNm = $WMI_Reg.GetStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName\", "ComputerName")            
+        $CompNm = $WMI_Reg.GetStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName\", "ComputerName")
 
-	    If (($ActCompNm -ne $CompNm) -or $PendDomJoin) {
-	        $CompPendRen = $true
-	    }
+        If (($ActCompNm -ne $CompNm) -or $PendDomJoin) {
+            $CompPendRen = $true
+        }
 						
-	    ## If PendingFileRenameOperations has a value set $RegValuePFRO variable to $true
-	    If ($RegValuePFRO) {
-		    $PendFileRename = $true
-	    }
+        ## If PendingFileRenameOperations has a value set $RegValuePFRO variable to $true
+        If ($RegValuePFRO) {
+            $PendFileRename = $true
+        }
 
-	    ## Determine SCCM 2012 Client Reboot Pending Status
-	    ## To avoid nested 'if' statements and unneeded WMI calls to determine if the CCM_ClientUtilities class exist, setting EA = 0
+        ## Determine SCCM 2012 Client Reboot Pending Status
+        ## To avoid nested 'if' statements and unneeded WMI calls to determine if the CCM_ClientUtilities class exist, setting EA = 0
         
-	    ## Try CCMClientSDK
-	    Try {
-	        $CCMClientSDK = Invoke-WmiMethod -ComputerName LocalHost -Namespace 'ROOT\ccm\ClientSDK' -Class 'CCM_ClientUtilities' -Name DetermineIfRebootPending -ErrorAction 'Stop'
-	    } Catch {
-	        $CCMClientSDK = $null
-	    }
+        ## Try CCMClientSDK
+        Try {
+            $CCMClientSDK = Invoke-WmiMethod -ComputerName LocalHost -Namespace 'ROOT\ccm\ClientSDK' -Class 'CCM_ClientUtilities' -Name DetermineIfRebootPending -ErrorAction 'Stop'
+        }
+        Catch {
+            $CCMClientSDK = $null
+        }
 
-	    If ($CCMClientSDK) {
-	        If ($CCMClientSDK.ReturnValue -ne 0) {
-		        Write-Warning "Error: DetermineIfRebootPending returned error code $($CCMClientSDK.ReturnValue)"          
-		    }
-		    If ($CCMClientSDK.IsHardRebootPending -or $CCMClientSDK.RebootPending) {
-		        $SCCM = $true
-		    }
-	    } Else {
-	        $SCCM = $False
-	    }
-	    If ($CompPendRen -or $CBSRebootPend -or $WUAURebootReq -or $SCCM -or $PendFileRename) { $RebootPending = $true }
+        If ($CCMClientSDK) {
+            If ($CCMClientSDK.ReturnValue -ne 0) {
+                Write-Warning "Error: DetermineIfRebootPending returned error code $($CCMClientSDK.ReturnValue)"          
+            }
+            If ($CCMClientSDK.IsHardRebootPending -or $CCMClientSDK.RebootPending) {
+                $SCCM = $true
+            }
+        }
+        Else {
+            $SCCM = $False
+        }
+        If ($CompPendRen -or $CBSRebootPend -or $WUAURebootReq -or $SCCM -or $PendFileRename) { $RebootPending = $true }
         Return $RebootPending
 
-	} Catch {
-	    Write-Warning "$_"				
-	}						
+    }
+    Catch {
+        Write-Warning "$_"				
+    }						
 }
 
 function Update-ACL {
@@ -302,22 +315,22 @@ function Update-ACL {
     [OutputType([int])]
     Param
     (
-        [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
+        [Parameter(Mandatory = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)]
         $Path,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         $Identity,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         $FileSystemRights,
         $InheritanceFlags = 'ContainerInherit,ObjectInherit',
         $PropogationFlags = 'None',
         [Parameter(Mandatory)]
-        [ValidateSet('Allow','Deny')]
+        [ValidateSet('Allow', 'Deny')]
         $Type
     )
 
-   If (Test-Path $Path) {
+    If (Test-Path $Path) {
         $NewAcl = Get-ACL -Path $Path
         $FileSystemAccessRuleArgumentList = $Identity, $FileSystemRights, $InheritanceFlags, $PropogationFlags, $type
         $FileSystemAccessRule = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $FileSystemAccessRuleArgumentList
@@ -332,15 +345,15 @@ function Update-ACLInheritance {
     [OutputType([int])]
     Param
     (
-        [Parameter(Mandatory=$true,
-                   Position=0)]
+        [Parameter(Mandatory = $true,
+            Position = 0)]
         [string]$Path,
-        [Parameter(Mandatory=$false,
-                   Position=1)]
+        [Parameter(Mandatory = $false,
+            Position = 1)]
         [bool]$DisableInheritance = $false,
 
-        [Parameter(Mandatory=$true,
-                   Position=2)]
+        [Parameter(Mandatory = $true,
+            Position = 2)]
         [bool]$PreserveInheritedACEs = $true
     )
 
@@ -363,7 +376,7 @@ Function Write-Log {
         $EventSource = $EventSource,
         [Parameter()]
         [string]
-        [ValidateSet('Information','Warning','Error')]
+        [ValidateSet('Information', 'Warning', 'Error')]
         $EntryType = 'Information',
         [Parameter()]
         [Int]
@@ -374,9 +387,11 @@ Function Write-Log {
     )
     If ($EntryType -eq 'Error') {
         Write-Error $Message
-    } Elseif ($EntryType -eq 'Warning') {
+    }
+    Elseif ($EntryType -eq 'Warning') {
         Write-Warning -Message $Message
-    } Else {
+    }
+    Else {
         Write-Output $Message
     }
     Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
@@ -432,7 +447,8 @@ If (!$LTSC) {
 If (Test-Path -Path "$env:SystemRoot\Syswow64\onedrivesetup.exe") {
     Write-Log -EntryType Information -EventId 26 -Message "Removing Per-User installation of OneDrive."
     Start-Process -FilePath "$env:SystemRoot\Syswow64\onedrivesetup.exe" -ArgumentList "/uninstall" -Wait -ErrorAction SilentlyContinue
-} ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
+}
+ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
     Write-Log -EntryType Information -EventId 26 -Message "Removing Per-Machine Installation of OneDrive."
     $OneDriveSetup = Get-ChildItem -Path "$env:ProgramFiles\Microsoft OneDrive" -Filter 'onedrivesetup.exe' -Recurse
     If ($OneDriveSetup) {
@@ -451,7 +467,8 @@ If ($ApplySTIGs) {
         # Remove Logon Banner
         Write-Log -EntryType Information -EventId 28 -Message "Running Script to remove the logon banner because this is an autologon kiosk."
         & "$DirConfigurationScripts\Apply-STIGAutoLogonExceptions.ps1"
-    } Else {        
+    }
+    Else {        
         Write-Log -EntryType Information -EventId 28 -Message "Running Script to allow PKU2U online identities required for AAD logon."
         & "$DirConfigurationScripts\Apply-STIGDirectSignOnExceptions.ps1"
     }
@@ -501,6 +518,7 @@ $Content = Get-Content -Path $FileToUpdate
 $Content = $Content.Replace('<SubscribeUrl>', $SubscribeUrl)
 If ($Yubikey) { $Content = $Content.Replace('$Yubikey = $false', '$Yubikey = $true') }
 If ($AutoLogon) { $Content = $Content.Replace('$AutoLogon = $false', '$AutoLogon = $true') }
+If ($CustomMultiApp) { $Content = $Content.Replace('$MultiApp = $false', '$MultiApp = $true') }
 $Content | Set-Content -Path $FileToUpdate
 
 $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
@@ -514,21 +532,21 @@ Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination
 
 #region Provisioning Packages
 
-$ProvisioningPackages = @()
+$ProvisioningPackages = [System.Collections.Generic.List[string]]::new()
 If ($SharedPC) {
     Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object {$_.Name -like '*SharedPC*'}).FullName
+    $ProvisioningPackages.Add((Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*SharedPC*' }).FullName)
 }
 If (-not $AVDClientShell -and $Windows10) {
     # Installing provisioning packages. Currently only one is included to hide the pinned items on the left of the Start Menu.
     # No GPO settings are available to do this.
     Write-Log -EntryType Information -EventId 45 -Message "Adding Provisioning Package to remove pinned items from Start Menu"
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object {$_.Name -like '*PinnedFolders*'}).FullName
+    $ProvisioningPackages.Add((Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*PinnedFolders*' }).FullName)
     If (!$ShowDisplaySettings) {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object {$_.Name -like '*Settings*'}).FullName
+        $ProvisioningPackages.Add((Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*Settings*' }).FullName)
     }
     If ($AutoLogon) {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object {$_.Name -like '*Autologon*'}).FullName
+        $ProvisioningPackages.Add((Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*Autologon*' }).FullName)
     }
 }
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
@@ -556,7 +574,7 @@ If (-not ($AVDClientShell)) {
     $LocationIcon = $ObjShell.CreateShortcut($PathLinkRD).IconLocation
     $LinkAVD = "Azure Virtual Desktop.lnk"
 
-    ForEach($DirShortcut in $DirsShortcuts) {
+    ForEach ($DirShortcut in $DirsShortcuts) {
         $PathLinkAVD = Join-Path $DirShortcut -ChildPath $LinkAVD
         $Shortcut = $ObjShell.CreateShortcut($PathLinkAVD)
         #Set values
@@ -568,11 +586,14 @@ If (-not ($AVDClientShell)) {
         $Shortcut.Save()
     }
 
-    $dirStartup = "$env:SystemDrive\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-    If (-not (Test-Path -Path $dirStartup)) {
-        $null = New-Item -Path $dirStartup -ItemType Directory -Force
+    if (-not $CustomMultiApp) {
+        # Copy the shortcut to the Startup folder for all users which automatically starts the Azure Virtual Desktop program.
+        $dirStartup = "$env:SystemDrive\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+        If (-not (Test-Path -Path $dirStartup)) {
+            $null = New-Item -Path $dirStartup -ItemType Directory -Force
+        }
+        Copy-Item -Path "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\$LinkAVD" -Destination $dirStartup -Force
     }
-    Copy-Item -Path "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\$LinkAVD" -Destination $dirStartup -Force
 
     If ($AutoLogon) {
         $TaskName = "(AVD Client) - Hide KioskUser0 Start Button Context Menu"
@@ -587,13 +608,15 @@ If (-not ($AVDClientShell)) {
         $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
         $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
         Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-        If (Get-ScheduledTask | Where-Object {$_.TaskName -eq "$TaskName"}) {
+        If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
             Write-Log -EntryType Information -EventId 50 -Message "Scheduled Task created successfully."
-        } Else {
+        }
+        Else {
             Write-Log -EntryType Error -EventId 51 -Message "Scheduled Task not created."
             $ScriptExitCode = 1618
         }
-    } Else {
+    }
+    Else {
         Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
         # Set Default profile to hide Start Menu Right click
         $Groups = @(
@@ -610,10 +633,14 @@ If (-not ($AVDClientShell)) {
 
     If ($Windows10) {
         Write-Log -EntryType Information -EventId 53 -Message "Copying Start Menu Layout file for Non Admins to '$DirKiosk' directory."
-        If ($ShowDisplaySettings) {
-            $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings.xml"
-        } Else {
-            $StartMenuFile = "$DirStartMenu\Win10-LayoutModification.xml"
+        If ($CustomMultiApp) {
+            $StartMenuFile = "$DirStartMenu\Custom-LayoutModification.xml"
+        }
+        Elseif ($ShowDisplaySettings) {
+            $StartMenuFile = "$DirStartMenu\LayoutModificationWithSettings.xml"
+        }
+        Else {
+            $StartMenuFile = "$DirStartMenu\LayoutModification.xml"
         }
         Copy-Item -Path $StartMenuFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -Force
     }
@@ -622,13 +649,14 @@ If (-not ($AVDClientShell)) {
 #endregion Start Menu
 
 #region User Logos
-
-$null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
-Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
-Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
-Write-Log -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
-Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
+If (-not $CustomMultiApp) {
+    $null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
+    Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
+    Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
+    Write-Log -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
+    Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
+}
 
 #endregion User Logos
 
@@ -639,8 +667,9 @@ If ($AVDClientShell) {
     $nonAdminsFile = 'nonadmins-AVDClientShell.txt'
     $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
     Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-} Else {
-    if($Windows10) {
+}
+Else {
+    if ($Windows10) {
         $nonAdminsFile = 'nonadmins-ExplorerShell.txt'
         $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
         Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -650,7 +679,8 @@ If ($AVDClientShell) {
             $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWifi.txt" '2>&1'
             Write-Log -EntryType Information -EventId 62 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
         }
-    } Else {
+    }
+    Else {
         $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
         $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
         Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -666,7 +696,8 @@ If ($AVDClientShell) {
 $outfile = "$env:Temp\Users-AVDURL.txt"
 If ($AutoLogon) {
     $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
-} Else {
+}
+Else {
     $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-AutoSubscribe.txt'
 }
 (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
@@ -683,7 +714,8 @@ If ($AutoLogon) {
     Write-Log -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-autologon.txt" '2>&1'
     Write-Log -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
-} Else {
+}
+Else {
     If (!$Yubikey) {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
         Write-Log -EntryType Information -EventId 82 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -727,7 +759,7 @@ ForEach ($Entry in $RegKeys) {
     Write-Log -EntryType Information -EventId 99 -Message "Processing Registry Value to '$Description'."
 
     If ($Key -like 'HKCU\*') {
-        $Key = $Key.Replace("HKCU\","HKLM\Default\")
+        $Key = $Key.Replace("HKCU\", "HKLM\Default\")
     }
     
     If ($null -ne $Data -and $Data -ne '') {
@@ -739,7 +771,7 @@ ForEach ($Entry in $RegKeys) {
     Else {
         # This is a delete action
         # Get the current value so we can restore it later if needed.
-        $keyTemp = $Key.Replace("HKLM\","HKLM:\")
+        $keyTemp = $Key.Replace("HKLM\", "HKLM:\")
         If (Get-ItemProperty -Path "$keyTemp" -Name "$Value" -ErrorAction SilentlyContinue) {
             $CurrentRegValue = Get-ItemPropertyValue -Path "$keyTemp" -Name $Value
             If ($CurrentRegValue) {
@@ -765,7 +797,8 @@ If ($LastExitCode -ne 0) {
     Else {
         Write-Log -EntryType Error -EventId 107 -Message "Default User hive unloaded with exit code [$LastExitCode]."
     }
-} Else {
+}
+Else {
     Write-Log -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
 }
 
@@ -779,7 +812,8 @@ Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Polic
 # Then apply the new AppLocker Policy
 If ($Windows10) {
     $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "AVDClientKioskAppLockerPolicy.xml"
-} Else {
+}
+Else {
     $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "MultiAppKioskAppLockerPolicy.xml"
 }
 [xml]$Policy = Get-ApplockerPolicy -Local -XML
@@ -805,13 +839,15 @@ If ($AutoLogon -or $AVDClientShell -or !$Windows10) {
     Write-Log -EntryType Information -EventId 113 -Message "Starting Shell Launcher Configuration Section."
     . "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
     If ($AutoLogon -and $AVDClientShell) {
-        $configFile = "$DirShellLauncherSettings\AVDClient_AutoLogon.xml"
+        $configFile = "$DirShellLauncherSettings\AVDClient-AutoLogon.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling AVD Client Shell Launcher Settings with Autologon via WMI MDM bridge."
-    } Elseif ($AVDClientShell) {
+    }
+    Elseif ($AVDClientShell) {
         $configFile = "$DirShellLauncherSettings\AVDClient.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling AVD Client Shell Launcher Settings via WMI MDM bridge."
-    } Elseif ($AutoLogon -and $Windows10) {
-        $configFile = "$DirShellLauncherSettings\Explorer_AutoLogon.xml"
+    }
+    Elseif ($AutoLogon -and $Windows10) {
+        $configFile = "$DirShellLauncherSettings\Explorer-AutoLogon.xml"
         Write-Log -EntryType Information -EventID 114 -Message "Enabling Explorer Shell Launcher Settings with Autologon via the WMI MDM bridge."
     }
     If ($configFile) {
@@ -820,23 +856,31 @@ If ($AutoLogon -or $AVDClientShell -or !$Windows10) {
         Set-ShellLauncherConfiguration -FilePath "$DirKiosk\ShellLauncher.xml"
         If (Get-ShellLauncherConfiguration) {
             Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
-        } Else {
+        }
+        Else {
             Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
             Stop-Transcript
             Exit 1
         }
-    } ElseIf (!$Windows10 -and !$AVDClientShell) {
+    }
+    ElseIf (!$Windows10 -and !$AVDClientShell) {
         Write-Log -EntryType Information -EventId 113 -Message "Configuring Multi-App Kiosk Settings."
-        If ($AutoLogon -and !$ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiApp_Autologon.xml" }
-        If ($AutoLogon -and $ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiAppWithSettings_Autologon.xml" }
-        If (!$AutoLogon -and !$ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiApp.xml" }
-        if (!$AutoLogon -and $ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiAppWithSettings.xml" }
+        If ($CustomMultiApp) {
+            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "Custom-MultiApp.xml"
+        }
+        Else {
+            If ($AutoLogon -and !$ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiApp-Autologon.xml" }
+            If ($AutoLogon -and $ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiAppWithSettings-Autologon.xml" }
+            If (!$AutoLogon -and !$ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiApp.xml" }
+            if (!$AutoLogon -and $ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiAppWithSettings.xml" }
+        }        
         Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
         Copy-Item -Path $configFile -Destination "$DirKiosk\MultiAppKioskConfiguration.xml" -Force
         Set-MultiAppKioskConfiguration -FilePath "$DirKiosk\MultiAppKioskConfiguration.xml"
         If (Get-MultiAppKioskConfiguration) {
             Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
-        } Else {
+        }
+        Else {
             Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
             Stop-Transcript
             Exit 1        
@@ -868,9 +912,10 @@ $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-exec
 $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
 Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-If (Get-ScheduledTask | Where-Object {$_.TaskName -eq "$TaskName"}) {
+If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
     Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
-} Else {
+}
+Else {
     Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
     $ScriptExitCode = 1618
 }
@@ -879,7 +924,7 @@ If (Get-ScheduledTask | Where-Object {$_.TaskName -eq "$TaskName"}) {
 
 #region Prevent Microsoft AAD Broker Timeout
 
-If ($AutoLogon) {
+If ($AutoLogon -and -not($MultiAppKiosk)) {
     $TaskName = "(AVD Client) - Restart AAD Sign-in"
     $TaskDescription = 'Restarts the AAD Sign-in process if there are no active connections to prevent a stale sign-in attempt.'
     Write-Log -EntryType Information -EventId 135 -Message "Creating Scheduled Task: '$TaskName'."
@@ -894,9 +939,10 @@ If ($AutoLogon) {
     $TaskPrincipal = New-ScheduledTaskPrincipal -UserId KioskUser0 -LogonType Interactive
     $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -Compatibility Win8 -StartWhenAvailable
     Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Description $TaskDescription -Principal $TaskPrincipal -Settings $TaskSettings -Trigger $TaskTrigger
-    If (Get-ScheduledTask | Where-Object {$_.TaskName -eq "$TaskName"}) {
+    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
         Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
-    } Else {
+    }
+    Else {
         Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
         $ScriptExitCode = 1618
     }
@@ -908,7 +954,8 @@ If ($ScriptExitCode -eq 1618) {
     Write-Log -EntryType Error -EventId 135 -Message "At least one critical failure occurred. Exiting Script and restarting computer."
     Stop-Transcript
     Restart-Computer -Force
-} Else {
+}
+Else {
     $ScriptExitCode -eq 1641
 }
 
