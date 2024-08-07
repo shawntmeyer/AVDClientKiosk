@@ -558,7 +558,7 @@ ForEach ($Package in $ProvisioningPackages) {
 
 #endregion Provisioning Packages
 
-#region Start Menu
+#region Custom AVD Client Shortcut
 
 If (-not ($AVDClientShell)) {
     # Create custom Remote Desktop Client shortcut and configure custom start menu for Non-Admins
@@ -568,31 +568,29 @@ If (-not ($AVDClientShell)) {
     Write-Log -EntryType Information -EventId 48 -Message "Creating a custom AVD Shortcut in Start Menu."
     [string]$StringVersion = $Version
     $ObjShell = New-Object -ComObject WScript.Shell
-    [array]$DirsShortcuts = @("$env:ProgramData\Microsoft\Windows\Start Menu\Programs")
+    $DirStartMenuPrograms = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs"
     $LinkRemoteDesktop = "Remote Desktop.lnk"
-    $PathLinkRD = Join-Path $DirsShortcuts[0] -ChildPath $LinkRemoteDesktop
+    $PathLinkRD = Join-Path $DirStartMenuPrograms -ChildPath $LinkRemoteDesktop
     $LocationIcon = $ObjShell.CreateShortcut($PathLinkRD).IconLocation
     $LinkAVD = "Azure Virtual Desktop.lnk"
 
-    ForEach ($DirShortcut in $DirsShortcuts) {
-        $PathLinkAVD = Join-Path $DirShortcut -ChildPath $LinkAVD
-        $Shortcut = $ObjShell.CreateShortcut($PathLinkAVD)
-        #Set values
-        $Shortcut.TargetPath = "wscript.exe"
-        $Shortcut.Arguments = "`"$env:SystemDrive\KioskSettings\Launch-AVDClient.vbs`""
-        $Shortcut.WorkingDirectory = "$env:ProgramFiles\Remote Desktop"
-        $Shortcut.Description = "Launches Remote Desktop Client and logon prompt. Kiosk Configuration Version: $StringVersion"
-        $Shortcut.IconLocation = $LocationIcon
-        $Shortcut.Save()
-    }
-
+    $PathLinkAVD = Join-Path $DirStartMenuPrograms -ChildPath $LinkAVD
+    $Shortcut = $ObjShell.CreateShortcut($PathLinkAVD)
+    #Set values
+    $Shortcut.TargetPath = "wscript.exe"
+    $Shortcut.Arguments = "`"$env:SystemDrive\KioskSettings\Launch-AVDClient.vbs`""
+    $Shortcut.WorkingDirectory = "$env:ProgramFiles\Remote Desktop"
+    $Shortcut.Description = "Launches Remote Desktop Client and logon prompt. Kiosk Configuration Version: $StringVersion"
+    $Shortcut.IconLocation = $LocationIcon
+    $Shortcut.Save()
+    
     if (-not $CustomMultiApp) {
         # Copy the shortcut to the Startup folder for all users which automatically starts the Azure Virtual Desktop program.
-        $dirStartup = "$env:SystemDrive\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+        $DirStartup = "$env:SystemDrive\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
         If (-not (Test-Path -Path $dirStartup)) {
             $null = New-Item -Path $dirStartup -ItemType Directory -Force
         }
-        Copy-Item -Path "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\$LinkAVD" -Destination $dirStartup -Force
+        Copy-Item -Path $PathLinkAVD -Destination $DirStartup -Force
     }
 
     If ($AutoLogon) {
@@ -722,6 +720,11 @@ Else {
     }
     $null = cmd /c lgpo /s "$DirGPO\MachineInactivityTimeout.inf" '2>&1'
     Write-Log -EntryType Information -EventId 83 -Message "Set 'Interactive logon: Machine inactivity limit' to '900 seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+}
+
+If ($CustomMultiApp) {
+    $null = cmd /c lgpo.exe /t "$DirGPO\users-LowRiskFileTypes.txt" '2>&1'
+    Write-Log -EntryType Information -EventId 84 -Message "Configured Low Risk File Types for kiosk user via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 #endregion Local GPO Settings
@@ -867,6 +870,10 @@ If ($AutoLogon -or $AVDClientShell -or !$Windows10) {
         Write-Log -EntryType Information -EventId 113 -Message "Configuring Multi-App Kiosk Settings."
         If ($CustomMultiApp) {
             $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "Custom-MultiApp.xml"
+            $layoutFile = Join-Path -Path $DirMultiAppSettings -ChildPath "Custom-LayoutModification.xml"
+            If (Test-Path -Path $layoutFile) {
+                Copy-Item -Path $layoutFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -Force
+            }
         }
         Else {
             If ($AutoLogon -and !$ShowDisplaySettings) { $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "MultiApp-Autologon.xml" }

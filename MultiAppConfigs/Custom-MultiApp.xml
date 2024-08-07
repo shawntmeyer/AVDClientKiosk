@@ -15,15 +15,66 @@
           <App DesktopAppPath="%PROGRAMFILES%\Amazon Web Services, Inc\Amazon Web Services\msedgewebview2.exe" />
           <App DesktopAppPath="%PROGRAMFILES%\Amazon Web Services, Inc\Amazon Web Services\WorkspacesClientDiagnosticUploader.exe" />
           <App DesktopAppPath="%WINDIR%\System32\conhost.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\appprotection.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\bgblursvc.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Citrix.DesktopViewer.App.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Citrix.PrefUI.App.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\concentr.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\config.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\cpviewer.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Ctx64Injector64.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\ctxapconfig.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CtxBrowserInt.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CtxCFRUI.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CtxTwnPA.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\HdxRtcEngine.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\icaconf.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\NMHost.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\pcl2bmp.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\pdfPrintHelper.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\RawPrintHelper.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\redirector.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\SetIntegrityLevel.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\vdrcghost64.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\WebHelper.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\wfcrun32.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\wfcwow64.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\wfica32.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\XpsNativePrintHelper.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\XpsPrintHelper.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\AuthManager\AuthManSvr.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\AuthManager\PrimaryAuthModule.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\AuthManager\storebrowse.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\BCR\HdxBrowserCef.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CitrixEnterpriseBrowser\CitrixEnterpriseBrowser.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CitrixEnterpriseBrowser\CitrixEnterpriseBrowser_proxy.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CitrixEnterpriseBrowser\native_bridge.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\CitrixEnterpriseBrowser\nmh_launcher.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\AnalyticsSrv.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\CitrixReceiverUpdater.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\CitrixWorkspaceNotification.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\CitrixWorkspacePluginInfo.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\ConfigurationWizard.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\CWAFeatureFlagUpdater.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\PrefPanel.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\Receiver.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\Restarter.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\SRProxy.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\Receiver\UpdaterService.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\SelfServicePlugin\CemAutoEnrollHelper.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\SelfServicePlugin\CleanUp.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\SelfServicePlugin\NPSPrompt.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfService.exe" />
+          <App DesktopAppPath="%PROGRAMFILES(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServicePlugin.exe" />
         </AllowedApps>
       </AllAppsList>
       <v5:StartPins>
         <![CDATA[
           { "pinnedList":[
             {"packagedAppId":"windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"},
-            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Azure Virtual Desktop.lnk"}
-            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Amazon Workspaces.lnk"}
-
+            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Azure Virtual Desktop.lnk"},
+            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Amazon Workspaces.lnk"},
+            {"packagedAppId":"Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App", "tileId":"MSEdge.Citrix"}
           ] }
         ]]>
       </v5:StartPins>
@@ -31,9 +82,9 @@
     </Profile>
   </Profiles>
   <Configs>
-    <config>
+    <Config>
       <AutoLogonAccount rs5:DisplayName="Kiosk User"/>
       <DefaultProfile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}"/>
-    </config>
+    </Config>
   </Configs>
 </AssignedAccessConfiguration>

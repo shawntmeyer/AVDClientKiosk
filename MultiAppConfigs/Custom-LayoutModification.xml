@@ -1,0 +1,30 @@
+<LayoutModificationTemplate
+    Version="1"
+    xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification"
+    xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
+    xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout"
+    xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout"
+>
+  <LayoutOptions StartTileGroupCellWidth="6" />
+  <DefaultLayoutOverride>
+    <StartLayoutCollection>
+      <defaultlayout:StartLayout GroupCellWidth="6" xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout">
+        <start:Group xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout">
+          <start:SecondaryTile
+            AppUserModelID="Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge"
+            TileID="MSEdge.Citrix"
+            Arguments="--launch-tile --app-id=citrix --app-url=https://www.citrix.com"
+            DisplayName="Citrix"
+            Square150x150LogoUri="ms-appx:///Assets/MicrosoftEdgeSquare150x150.png"
+            Wide310x150LogoUri="ms-appx:///Assets/MicrosoftEdgeWide310x150.png"
+            ShowNameOnSquare150x150Logo="true"
+            ShowNameOnWide310x150Logo="false"
+            BackgroundColor="#000000"
+            Size="2x2"
+            Row="0"
+            Column="0"/>
+        </start:Group>
+      </defaultlayout:StartLayout>
+    </StartLayoutCollection>
+  </DefaultLayoutOverride>
+</LayoutModificationTemplate>

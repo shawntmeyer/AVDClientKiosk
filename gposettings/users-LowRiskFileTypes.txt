@@ -1,0 +1,4 @@
+User
+SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Associations
+LowRiskFileTypes
+SZ:.ica
