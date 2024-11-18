@@ -68,7 +68,7 @@ This section documents the parameters and the manual installation instructions
 **Table 2:** Set-AVDClientKioskSettings.ps1 Parameters
 
 | Parameter Name | Type | Description | Notes/Requirements |
-|----------------|:----:|-------------|--------------------|
+|:---------------|:----:|:------------|:-------------------|
 | ApplySTIGs | Switch | Determines if the latest DoD Security Technical Implementation Guide Group Policy Objects are automatically downloaded from [Cyber Command](https://public.cyber.mil/stigs/gpo) and applied via the Local Group Policy Object (LGPO) tool to the system. If they are, then several delta settings are applied to allow the system to communicate with Entra Id and complete autologon (if applicable). | Requires access to https://public.cyber.mil/stigs/gpo |
 | Autologon | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. These features will automatically create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts. ||
 | AVDClientShell | Switch | Determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'. When not specified the default 'explorer' shell is used and on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. ||
