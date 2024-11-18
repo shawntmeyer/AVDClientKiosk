@@ -85,45 +85,54 @@ This section documents the parameters and the manual installation instructions
 
 1. Execute PowerShell as SYSTEM by running the following command:
 
-  ```psexec64 -s -i powershell```
+    ```
+    psexec64 -s -i powershell
+    ```
 
 2. In the newly opened PowerShell window, execute the following:
 
-  ``` powershell
-  set-executionpolicy bypass -scope process
-  ```
+    ``` powershell
+    set-executionpolicy bypass -scope process
+    ```
 
 3. Change directories to the source directory.
 
 4. Then execute the script using the correct parameters as exemplified below:
 
-  Install using the default parameter values from the PowerShell prompt using:
+    * Default parameter values:
   
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1
-  ```
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1
+      ```
 
-  Change default values using the available parameters, such as:
+    * Apply the latest STIGs
+  
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -ApplySTIGs
+      ```
+    * Install the Remote Desktop client, enable SharedPC Mode (Delete User Profiles), and show display settings
+    
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -SharedPC -ShowDisplaySettings
+      ```
 
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -ApplySTIGs
-  ```
+    * Enable the AVD Client Shell
+    
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -AVDClientShell
+      ```
 
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -SharedPC
-  ```
+    * Enable Autologon with the AVD Client Shell
+  
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -AutoLogon -AVDClientShell
+      ```
 
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -ApplySTIGs -AVDClientShell
-  ```
-
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -AutoLogon -AVDClientShell
-  ```
-
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -AutoLogon -AVDClientShell -Yubikey
-  ```
+    * Enable Autologon with Yubikey option
+     
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -AutoLogon -Yubikey
+      ```
 
 ### Microsoft Endpoint Manager (Intune) Deployment
 
