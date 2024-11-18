@@ -1,0 +1,9 @@
+User:Non-Administrators
+Software\Policies\Microsoft\Windows\WindowsCopilot
+TurnOffWindowsCopilot
+DWORD:1
+
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+NoRecycleFiles
+DWORD:1

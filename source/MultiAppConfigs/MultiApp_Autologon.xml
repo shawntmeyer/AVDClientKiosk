@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<AssignedAccessConfiguration xmlns="http://schemas.microsoft.com/AssignedAccess/2017/config" xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config" xmlns:v5="http://schemas.microsoft.com/AssignedAccess/2022/config">
+  <Profiles>
+    <Profile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}">
+      <AllAppsList>
+        <AllowedApps>
+          <App DesktopAppPath="%windir%\System32\WindowsPowerShell\v1.0\Powershell.exe" />
+          <App DesktopAppPath="%windir%\System32\cscript.exe" />
+          <App DesktopAppPath="%windir%\System32\wscript.exe" />
+          <App DesktopAppPath="%PROGRAMFILES%\Remote Desktop\msrdcw.exe" />
+          <App DesktopAppPath="%PROGRAMFILES%\Remote Desktop\msrdc.exe" />
+        </AllowedApps>
+      </AllAppsList>
+      <v5:StartPins>
+        <![CDATA[
+          { "pinnedList":[
+            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Azure Virtual Desktop.lnk"}
+          ] }
+        ]]>
+      </v5:StartPins>
+      <Taskbar ShowTaskbar="true"/>
+    </Profile>
+  </Profiles>
+  <Configs>
+      <config>
+        <AutoLogonAccount rs5:DisplayName="Kiosk User"/>
+        <DefaultProfile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}"/>
+      </config>
+  </Configs>
+</AssignedAccessConfiguration>
