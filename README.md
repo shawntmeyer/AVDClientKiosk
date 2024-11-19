@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The source folder contains a script and supporting artifacts to configure a Windows 10 or later operating system to act as a custom AVD client (Remote Desktop) kiosk. The custom configuration is built with a varied combination of:
+The solution in this repo is designed to configure a Windows 10 or later operating system to act as a custom AVD client kiosk using the Remote Desktop Windows client. The custom configuration is built with a varied combination of:
 
-- A Shell Launcher or Multi-App configuration applied via the Assigned Access CSP WMI Bridge. The assigned access configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters and the operating system version.
+- A Shell Launcher or Multi-App configuration applied via the Assigned Access CSP WMI Bridge or custom locked down interface in the case of Windows 10 without the AVDClientShell parameter set. The assigned access configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters and the operating system version.
 - a multi-user local group policy object for non-administrative users.
 - a local group policy object that affects computer settings.
 - an applocker policy that disables Windows Search, Notepad, Internet Explorer, WordPad, and Edge for all Non-Administrators.
@@ -16,6 +16,7 @@ The source folder contains a script and supporting artifacts to configure a Wind
 2. A supported version of Windows 10 (Education, Enterprise, Enterprise LTSC, IoT Enterprise, IoT Enterprise LTSC) or Windows 11 22H2 (Build Number 22621) and later (Education, Enterprise, IoT Enterprise) or Windows 11 Enterprise LTSC 2024 or Windows 11 IoT Enteprise LTSC 2024.
 > [!WARNING]
 > This solution does not support Windows 11 21H2!
+3. For the direct logon scenario (the 'Autologon' switch is not used), when desiring to support Smart Card authentication without Yubikeys (the 'Yubikey' switch is not used), you must set the 'Smart Card Policy Service' to start automatically in order to track smart card logon events and lock the workstation when the smart card is removed.
 
 ## User Interface and Behavior
 
