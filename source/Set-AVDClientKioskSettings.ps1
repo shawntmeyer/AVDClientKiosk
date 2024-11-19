@@ -68,6 +68,9 @@ When the default 'explorer' shell is used additional local group policy settings
 This switch parameter determines if autologon is enabled through the Shell Launcher configuration. The Shell Launcher feature will automatically
 create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts.
 
+.PARAMETER AuthenticationDeviceRemovalAction
+This string parameter determines what action is taken when a smart card or Yubikey is removed from the system. The options are 'Lock' and 'Logoff'.
+
 .PARAMETER InstallAVDClient
 This switch parameter determines if the latest Remote Desktop client for Windows is automatically downloaded from the Internet and installed
 on the system prior to configuration.
@@ -103,6 +106,11 @@ param (
     [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
     [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
     [switch]$AVDClientShell,
+
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
+    [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
+    [ValidateSet('Lock', 'Logoff')]
+    $AuthenticationDeviceRemovalAction = 'Lock',
 
     [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
     [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
@@ -506,6 +514,7 @@ Copy-Item -Path "$DirConfigurationScripts\Launch-AVDClient.vbs" -Destination $Di
 $FileToUpdate = "$DirKiosk\Launch-AVDClient.ps1"
 $Content = Get-Content -Path $FileToUpdate
 $Content = $Content.Replace('<SubscribeUrl>', $SubscribeUrl)
+$Content = $Content.Replace('<Action>', $AuthenticationDeviceRemovalAction)
 If ($Yubikey) { $Content = $Content.Replace('$Yubikey = $false', '$Yubikey = $true') }
 If ($AutoLogon) { $Content = $Content.Replace('$AutoLogon = $false', '$AutoLogon = $true') }
 $Content | Set-Content -Path $FileToUpdate
@@ -717,8 +726,14 @@ If ($AutoLogon) {
 }
 Else {
     If (!$Yubikey) {
-        $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
-        Write-Log -EntryType Information -EventId 82 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        if ($AuthenticationDeviceRemovalAction -eq 'Lock') {
+            $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
+            Write-Log -EntryType Information -EventId 82 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        }
+        Else {
+            $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
+            Write-Log -EntryType Information -EventId 82 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        }
     }
     $null = cmd /c lgpo /s "$DirGPO\MachineInactivityTimeout.inf" '2>&1'
     Write-Log -EntryType Information -EventId 83 -Message "Set 'Interactive logon: Machine inactivity limit' to '900 seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"

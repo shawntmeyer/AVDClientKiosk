@@ -48,9 +48,11 @@
 [CmdletBinding()]
 param (
     [Parameter()]
+    [string]$AuthenticationDeviceRemovalAction = '<Action>',
+    [Parameter()]
     [bool]$AutoLogon = $false,
     [Parameter()]
-    [string]$SubscribeUrl = '<SubscribeUrl>',
+    [string]$SubscribeUrl = '<SubscribeUrl>', 
     [Parameter()]
     [Bool]$Yubikey = $false
 )
@@ -81,9 +83,15 @@ If ($AutoLogon -or $Yubikey) {
             Start-Process -FilePath "wscript.exe" -ArgumentList "`"$VBScriptPath`""
             # Kill current Powershell process to prevent multiple powershell processes from running.
             Get-Process -Id $PID | Stop-Process -Force
-        } Else {
-            Write-Output "Locking the computer."
-            Start-Process -FilePath 'rundll32.exe' -ArgumentList "user32.dll`,LockWorkStation"
+        } Else {            
+            If($AuthenticationDeviceRemovalAction -eq 'Lock') {
+                Write-Output "Locking the computer."
+                Start-Process -FilePath 'rundll32.exe' -ArgumentList "user32.dll`,LockWorkStation"
+            }
+            Else {
+            Write-Output "Logging off user."
+               Get-WmiObject -Class Win32_OperatingSystem | Invoke-WmiMethod -Name Win32Shutdown -Argument 0
+            }
         }
     }
     Register-WmiEvent -Query $Query -Action $EventAction -SourceIdentifier $SourceIdentifier -SupportEvent
