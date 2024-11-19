@@ -22,7 +22,7 @@ The solution in this repo is designed to configure a Windows 10 or later operati
 
 ### Summary
 
-The user interface experience is determined by several factors and parameters. The parameters are all documented in the [Parameters section](#parameters) below, but the following table outlines the affects of the user interface parameters and operating system.
+The user interface experience is determined by several factors and parameters. The parameters are all documented in the [Parameters section](#parameters) below, but the following tables outline the resulting user interface and device removal behavior based on the parameter values and operating system.
 
 **Table 1:** Azure Virtual Desktop User Interface Summary
 
