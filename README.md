@@ -2,9 +2,9 @@
 
 ## Introduction
 
-The source folder contains a script and supporting artifacts to configure a Windows operating system to act as a custom AVD Client kiosk. The custom configuration is built with a varied combination of:
+The solution in this repo is designed to configure a Windows 10 or later operating system to act as a custom AVD client kiosk using the Remote Desktop Windows client. The custom configuration is built with a varied combination of:
 
-- A Shell Launcher or Multi-App configuration applied via the Assigned Access CSP WMI Bridge. The assigned access configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters and the operationg system version as follows:
+- A Shell Launcher or Multi-App configuration applied via the Assigned Access CSP WMI Bridge or custom locked down interface in the case of Windows 10 without the AVDClientShell parameter set. The assigned access configuration varies depending on the 'AutoLogon' and 'AVDClientShell' parameters and the operating system version.
 - a multi-user local group policy object for non-administrative users.
 - a local group policy object that affects computer settings.
 - an applocker policy that disables Windows Search, Notepad, Internet Explorer, WordPad, and Edge for all Non-Administrators.
@@ -12,10 +12,11 @@ The source folder contains a script and supporting artifacts to configure a Wind
 
 ## Prerequisites
 
-1. A supported version of Windows 10 (Education, Enterprise, Enterprise LTSC, IoT Enterprise, IoT Enterprise LTSC) or Windows 11 22H2 (Build Number 22621) and later (Education, Enterprise, IoT Enterprise) or Windows 11 Enterprise LTSC 2024 or Windows 11 IoT Enteprise LTSC 2024.
+1. The ability to run the installation script as SYSTEM. The instructions are provided in the [Installation section](#installation).
+2. A supported version of Windows 10 (Education, Enterprise, Enterprise LTSC, IoT Enterprise, IoT Enterprise LTSC) or Windows 11 22H2 (Build Number 22621) and later (Education, Enterprise, IoT Enterprise) or Windows 11 Enterprise LTSC 2024 or Windows 11 IoT Enteprise LTSC 2024.
 > [!WARNING]
 > This solution does not support Windows 11 21H2!
-2. The ability to run the installation script as SYSTEM. The instructions are provided in the [Installation section](#installation).
+3. For the direct logon scenario (the 'Autologon' switch is not used), when desiring to support Smart Card authentication without Yubikeys (the 'Yubikey' switch is not used), you must set the 'Smart Card Policy Service' to start automatically in order to track smart card logon events and lock the workstation when the smart card is removed.
 
 ## User Interface and Behavior
 
@@ -25,25 +26,24 @@ The user interface experience is determined by several factors and parameters. T
 
 **Table 1:** Azure Virtual Desktop User Experience Summary
 
-| AVDClientShell | AutoLogon | Operating System | User Inteface | Authentication Device Removal |
+| AVDClientShell | AutoLogon | Operating System | User Interface | Authentication Device Removal |
 |:--------------:|:---------:|:----------------:|---------------|-------------------------------|
 | True           | True      | Windows 10 +     | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The Windows 10 (or later) client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
 | True           | False     | Windows 10 +   | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The user will be required to sign in to the Windows 10 (or later) client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
-| False          | True      | Windows 10     | The default shell remains explorer.exe; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and Display Settings if the option is chosen. The Shell Launcher configuration of the Assigned Access CSP is used to configure the Windows 10 client with autologon to the shell with the 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
-| False          | True      | Windows 11     | A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions and the Remote Desktop client along with Display Settings if the option is chosen. The Windows 11+ client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
+| False          | True      | Windows 10     | The default shell remains explorer.exe; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and Display Settings if the option is chosen. The Shell Launcher configuration of the Assigned Access CSP is used to configure the Windows 10 client with autologon to the shell with the 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed and then restarted showing the Entra ID logon dialog box. |
+| False          | True      | Windows 11     | A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions and the Remote Desktop client along with Display Settings if the option is chosen. The Windows 11 22H2+ client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed and then restarted showing the Entra ID logon dialog box. |
 | False          | False     | Windows 10     | *This is the default configuration if no parameters are specified when running the script on Windows 10.* The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and display settings if the option is chosen. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
-| False          | False     | Windows 11     | *This is the default configuration if no parameters are specified when running the script on Windows 11 +.* A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and the display settings if the option is chosen. The user will be required to sign in to the Windows 11 client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
+| False          | False     | Windows 11     | *This is the default configuration if no parameters are specified when running the script on Windows 11 22H2+.* A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and the display settings if the option is chosen. The user will be required to sign in to the Windows 11 client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
 
 ### Multi-App Kiosk
 
-When the operating system of the thin client device is Windows 11 22H2 or greater, and the **AVDClientShell** parameter is **not** specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk). The user interface experience with the **ShowDisplaySettings** parameter selected is shown in the video and pictures below.
+When the operating system of the thin client device is Windows 11 22H2 or greater, and the **AVDClientShell** switch parameter is **not** specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk). The user interface experience with the **ShowDisplaySettings** parameter selected is shown in the video and pictures below.
 
 https://github.com/user-attachments/assets/b85689b2-8f15-4177-9f4e-ad012d5dce51
 
 **Picture 1:** Multi-App Showing a client connection
 
 ![Multi-App Showing a client connection](docs/media/multi-app-showing-client-and-connection.png)
-
 
 **Picture 2:** Multi-App Showing Display Settings
 
