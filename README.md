@@ -39,29 +39,36 @@ The source folder contains a script and supporting artifacts to configure a Wind
 
 ### Summary
 
-The user interface experience is determined by several factors and parameters. The parameters are all documented in the [Parameters section](#parameters) below, but the following table outlines the affects of the user interface parameters and operating system.
+The user interface experience is determined by several factors and parameters. The parameters are all documented in the [Parameters section](#parameters) below, but the following tables outline the resulting user interface and device removal behavior based on the parameter values and operating system.
 
-**Table 1:** Azure Virtual Desktop User Experience Summary
+**Table 1:** Azure Virtual Desktop User Interface Summary
 
-| AVDClientShell | AutoLogon | Operating System | User Inteface | Authentication Device Removal |
-|:--------------:|:---------:|:----------------:|---------------|-------------------------------|
-| True           | True      | Windows 10 +     | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The Windows 10 (or later) client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
-| True           | False     | Windows 10 +   | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The user will be required to sign in to the Windows 10 (or later) client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
-| False          | True      | Windows 10     | The default shell remains explorer.exe; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and Display Settings if the option is chosen. The Shell Launcher configuration of the Assigned Access CSP is used to configure the Windows 10 client with autologon to the shell with the 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
-| False          | True      | Windows 11     | A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions and the Remote Desktop client along with Display Settings if the option is chosen. The Windows 11+ client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is automatically reset removing their user credentials and the feed. |
-| False          | False     | Windows 10     | *This is the default configuration if no parameters are specified when running the script on Windows 10.* The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and display settings if the option is chosen. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
-| False          | False     | Windows 11     | *This is the default configuration if no parameters are specified when running the script on Windows 11 +.* A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and the display settings if the option is chosen. The user will be required to sign in to the Windows 11 client and will be automatically signed in to the Remote Desktop client. | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are automatically signed-off. |
+| AVDClientShell | AutoLogon | Operating System | User Interface |
+|:--------------:|:---------:|------------------|----------------|
+| True           | True      | Windows 10+ | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The Windows 10 (or later) client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. |
+| True           | False     | Windows 10+ | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The user will be required to sign in to the Windows 10 (or later) client and will be automatically signed in to the Remote Desktop client. |
+| False          | True      | Windows 10 | The default shell remains explorer.exe; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and Display Settings if the option is chosen. The Shell Launcher configuration of the Assigned Access CSP is used to configure the Windows 10 client with autologon to the shell with the 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. |
+| False          | True      | Windows 11 | A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions and the Remote Desktop client along with Display Settings if the option is chosen. The Windows 11 22H2+ client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. |
+| False          | False     | Windows 10 | *This is the default configuration if no parameters are specified when running the script on Windows 10.* The explorer shell is the default shell; however, it is heavily customized and locked down to allow only the Remote Desktop client to be executed from the customized Start Menu. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and display settings if the option is chosen. The user will be required to sign in to the Windows 10 client and will be automatically signed in to the Remote Desktop client. |
+| False          | False     | Windows 11 | *This is the default configuration if no parameters are specified when running the script on Windows 11 22H2+.* A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions, the Remote Desktop client interface, and the display settings if the option is chosen. The user will be required to sign in to the Windows 11 client and will be automatically signed in to the Remote Desktop client. |
+
+**Table 2:** Azure Virtual Desktop Device Removal Action Summary
+
+| AutoLogon | AuthenticationDeviceRemovalAction | Result of Device Removal |
+|:---------:|:---------------------------------:|-------------------------------|
+| True      | N/A | If the user removes their YUBIKEY (if option selected) or Smart Card or closes the Remote Desktop client, then the client is closed, reset to remove their user credentials and the feed, and then restarted with the Entra Id logon dialog displayed. |
+| False     | Lock | If the user removes their YUBIKEY (if option selected) or Smart Card the local workstation is locked. If they close the Remote Desktop Client, then they are forcefully logged off. |
+| False     | Logoff | If the user removes their YUBIKEY (if option selected) or Smart Card they are forcefully logged off the local workstation. If they close the Remote Desktop Client, then they are also forcefully logged off the local workstation. |
 
 ### Multi-App Kiosk
 
-When the operating system of the thin client device is Windows 11 22H2 or greater, and the **AVDClientShell** parameter is **not** specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk). The user interface experience with the **ShowDisplaySettings** parameter selected is shown in the video and pictures below.
+When the operating system of the thin client device is Windows 11 22H2 or greater, and the **AVDClientShell** switch parameter is **not** specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk). The user interface experience with the **ShowDisplaySettings** parameter selected is shown in the video and pictures below.
 
 https://github.com/user-attachments/assets/b85689b2-8f15-4177-9f4e-ad012d5dce51
 
 **Picture 1:** Multi-App Showing a client connection
 
 ![Multi-App Showing a client connection](docs/media/multi-app-showing-client-and-connection.png)
-
 
 **Picture 2:** Multi-App Showing Display Settings
 
@@ -86,14 +93,15 @@ This section documents the parameters and the manual installation instructions
 **Table 2:** Set-AVDClientKioskSettings.ps1 Parameters
 
 | Parameter Name | Type | Description | Notes/Requirements |
-|----------------|:----:|-------------|--------------------|
+|:---------------|:----:|:------------|:-------------------|
 | ApplySTIGs | Switch | Determines if the latest DoD Security Technical Implementation Guide Group Policy Objects are automatically downloaded from [Cyber Command](https://public.cyber.mil/stigs/gpo) and applied via the Local Group Policy Object (LGPO) tool to the system. If they are, then several delta settings are applied to allow the system to communicate with Entra Id and complete autologon (if applicable). | Requires access to https://public.cyber.mil/stigs/gpo |
+| AuthenticationDeviceRemovalAction | String | Determines the action to take when a user removes either a smart card or Yubikey (when option chosen). Possible values are 'Lock' or 'Logoff'. | Default is 'Lock'. Only valid in the direct logon mode (Autologon is not specified). | 
 | Autologon | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. These features will automatically create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts. ||
 | AVDClientShell | Switch | Determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'. When not specified the default 'explorer' shell is used and on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. ||
 | EnvironmentAVD | String | Determines the Azure environment to which you are connecting. It ultimately determines the Url of the Remote Desktop Feed which varies by environment by setting the $SubscribeUrl variable and replacing placeholders in several files during installation. The list of Urls can be found at https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace. | Default is 'AzureUSGovernment' |
 | InstallAVDClient | Switch | Determines if the latest Remote Desktop client for Windows and the Visual Studio C++ Redistributables are downloaded from the Internet and installed prior to configuration. | Requires Internet Access to https://go.microsoft.com/fwlink/?linkid=2139369 and https://aka.ms/vs/17/release/vc_redist.x64.exe |
-| SharedPC | Switch | Determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically deleted on logoff. ||
-| ShowDisplaySettings | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. ||
+| SharedPC | Switch | Determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically deleted on logoff. | Only valid for direct logon mode (Autologon is not set). |
+| ShowDisplaySettings | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when 'AVDClientShell' is not selected. |
 | Version | Version |  Allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version. ||
 | Yubikey | Switch | Determines if the WMI Event Subscription Filter also monitors for Yubikey removal. ||
 
@@ -103,45 +111,54 @@ This section documents the parameters and the manual installation instructions
 
 1. Execute PowerShell as SYSTEM by running the following command:
 
-  ```psexec64 -s -i powershell```
+    ```
+    psexec64 -s -i powershell
+    ```
 
 2. In the newly opened PowerShell window, execute the following:
 
-  ``` powershell
-  set-executionpolicy bypass -scope process
-  ```
+    ``` powershell
+    set-executionpolicy bypass -scope process
+    ```
 
 3. Change directories to the source directory.
 
 4. Then execute the script using the correct parameters as exemplified below:
 
-  Install using the default parameter values from the PowerShell prompt using:
+    * Default parameter values:
   
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1
-  ```
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1
+      ```
 
-  Change default values using the available parameters, such as:
+    * Apply the latest STIGs
+  
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -ApplySTIGs
+      ```
+    * Install the Remote Desktop client, enable SharedPC Mode (Delete User Profiles), and show display settings
+    
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -SharedPC -ShowDisplaySettings
+      ```
 
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -ApplySTIGs
-  ```
+    * Enable the AVD Client Shell
+    
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -AVDClientShell
+      ```
 
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -SharedPC
-  ```
+    * Enable Autologon with the AVD Client Shell
+  
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -AutoLogon -AVDClientShell
+      ```
 
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -ApplySTIGs -AVDClientShell
-  ```
-
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -AutoLogon -AVDClientShell
-  ```
-
-  ``` powershell
-  .\Set-AVDClientKioskSettings.ps1 -AutoLogon -AVDClientShell -Yubikey
-  ```
+    * Enable Autologon with Yubikey option
+     
+      ``` powershell
+      .\Set-AVDClientKioskSettings.ps1 -AutoLogon -Yubikey
+      ```
 
 ### Microsoft Endpoint Manager (Intune) Deployment
 
