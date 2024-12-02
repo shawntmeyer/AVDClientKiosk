@@ -70,13 +70,19 @@ The user interface experience is determined by several factors and parameters. T
 
 #### Multi-App Kiosk
 
-When the operating system of the client device is Windows 11 22H2 or greater, and the **AVDClientShell** switch parameter is <u>not</u> specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk). The user interface experience with the `ShowDisplaySettings` parameter selected is shown in the video and pictures below.
+When the operating system of the client device is Windows 11 22H2 or greater, and the `AVDClientShell` switch parameter is <u>not</u> specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk).
+
+The user interface experience with the `ShowDisplaySettings` switch parameter selected is shown in the video and figures below. You can also see that the remote desktop connection automatically launched because it was the only resource assigned to the user.
 
 https://github.com/user-attachments/assets/b85689b2-8f15-4177-9f4e-ad012d5dce51
+
+The figure below illustrates the Multi-App interface and the ease at which a user can have multiple sessions open.
 
 **Figure 2:** Multi-App Showing a client connection
 
 ![Multi-App Showing a client connection](docs/media/multi-app-showing-client-and-connection.png)
+
+The figure below illustrates the Settings applet restricted to allow the user to adjust display settings. This would primarily be used in a multi-monitor scenario.
 
 **Figure 3:** Multi-App Showing Display Settings
 
@@ -84,9 +90,13 @@ https://github.com/user-attachments/assets/b85689b2-8f15-4177-9f4e-ad012d5dce51
 
 #### Shell Launcher
 
-When the `AVDClientShell` parameter is selected on any operating system, the default user shell (explorer.exe) is replaced with the [Remote Desktop client](https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-remote-desktop-client?tabs=windows) using the [Shell Launcher CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/shell-launcher). The user interface experience is shown in the video and figure below. 
+When the `AVDClientShell` parameter is selected on any operating system, the default user shell (explorer.exe) is replaced with the [Remote Desktop client](https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-remote-desktop-client?tabs=windows) using the [Shell Launcher CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/shell-launcher).
+
+The user interface experience is shown in the video and figure below. 
 
 https://github.com/user-attachments/assets/5252b15d-a953-4b5a-9e3f-541c493df85e
+
+In the figure below, you can see that the interface no longer has a taskbar or Start Menu. This configuration makes it harder to interact with multiple open sessions after going full screen, but not impossible especially with keyboard shortcuts such as WINDOWSKEY-LEFT or RIGHT ARROW.
 
 **Figure 4:** Shell Launcher full screen
 
