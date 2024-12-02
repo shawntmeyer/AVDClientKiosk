@@ -171,21 +171,23 @@ The table below details the Scenarios and allowed combination of parameters. If 
 > [!Important]
 > You need to run the PowerShell script with system priviledges. The easiest way to do this is to download [PSExec](https://learn.microsoft.com/en-us/sysinternals/downloads/psexec). Then extract the Zip to a folder and open an administrative command prompt.
 
-1. Execute PowerShell as SYSTEM by running the following command:
+1. Either clone the repo or download it as a zip file. If downloading the repo as a zip file, then extract it to a new folder.
+
+2. Execute PowerShell as SYSTEM by running the following command:
 
     ```
     psexec64 -s -i powershell
     ```
 
-2. In the newly opened PowerShell window, execute the following:
+3. In the newly opened PowerShell window, execute the following:
 
     ``` powershell
     set-executionpolicy bypass -scope process
     ```
 
-3. Change directories to the source directory.
+4. Change directories to the local 'source' directory.
 
-4. Then execute the script using the correct parameters as exemplified below: (All options are not shown).
+5. Then execute the script using the correct parameters as exemplified below: (All options are not shown).
 
     * Scenario 1 Options
 
