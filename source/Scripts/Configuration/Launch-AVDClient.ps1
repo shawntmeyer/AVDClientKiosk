@@ -394,8 +394,8 @@ If ($Env:UserName -eq 'KioskUser0' -and $MSRDCW.ExitCode -ne -1) {
     Restart-Script  
 }
 Elseif ($MSRDCW.ExitCode -eq 0) {
-    # Sign out the user if they closed the Remote Desktop Client using the [X] at the top right of the window.
-    Write-Log -EventID 595 -Message "The Remote Desktop client was closed by the user. Logging off user."
-    Get-WmiObject -Class Win32_OperatingSystem | Invoke-WmiMethod -Name Win32Shutdown -Argument 0
+    # Restart the system if the user closed the Remote Desktop Client using the [X] at the top right of the window.
+    Write-Log -EventID 595 -Message "The Remote Desktop client was closed by the user. Restarting the system."
+    Get-WmiObject -Class Win32_OperatingSystem | Invoke-WmiMethod -Name Win32Shutdown -Argument 2
 }
 Write-Log -EventID 599 -Message "Exiting `"$($MyInvocation.MyCommand.Name)`""

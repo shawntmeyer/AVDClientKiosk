@@ -100,15 +100,16 @@ The table below outlines the actions taken based on the `Autologon`, `Triggers`,
 
 | AutoLogon | Trigger | DeviceType | TriggerAction | Behavior |
 |:---------:|:-------:|:----------:|:-------------:|----------|
-| True | IdleTimeout | | ResetClient | The client launch script starts a timer at 0. Every 60 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 60 seconds. If it is not true, then the counter is reset to 0. If the counter reaches the value specified by the `Timeout` parameter, then the launch script resets the client removing the cached credentials and restarts the launch script. |
+| True | IdleTimeout | | ResetClient | The client launch script starts a timer at 0. Every 60 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 60 seconds. If it is not True, then the counter is reset to 0. If the counter reaches the value specified by the `Timeout` parameter, then the launch script resets the client removing the cached credentials and restarts the launch script. |
 | True | SessionDisconnect | | ResetClient | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason codes that indicate the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script resets the client removing the cached credentials and restarts the launch script. |
-| True | DeviceRemoval | Either | ResetClient | The client launch script creates a WMI Event Filter that fires when a user removes their authentication device - either a SmartCard (`SmartCard`) or FIDO security key (`DeviceVendorId`) - or closes the Remote Desktop client, then the launch script resets the client removing the cached credentials and restarts the launch script. |
+| True | DeviceRemoval | Either | ResetClient | The client launch script creates a WMI Event Filter that fires when a user removes their authentication device - either a SmartCard (`SmartCard`) or a FIDO2 passkey device (`DeviceVendorId`) or closes the Remote Desktop client, then the launch script resets the client removing the cached credentials and restarts the launch script. |
 | | IdleTimeout | | Lock | The system will lock the computer after the amount of time specified in the `Timeout` parameter using the [Interactive Logon Machine Inactivity Limit built-in policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-machine-inactivity-limit) Windows. |
 | | IdleTimeout | | Logoff | The client launch script starts a timer at 0. Every 60 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 60 seconds. If it is not true, then the counter is reset to 0. If the counter reaches the value specified by the `Timeout` parameter, then the launch script will logoff the user. |
 | | DeviceRemoval | SmartCard | Lock | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to lock the system when the smart card is removed. |
-| | DeviceRemoval | FIDO2 | Lock |  The client launch script creates a WMI Event Filter that fires when a user removes their FIDO passkey device as specified using the `DeviceVendorID` parameter. When the event is detected, the script locks the computer. |
+| | DeviceRemoval | FIDO2 | Lock |  The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2) as specified using the `DeviceVendorID` parameter. When the event is detected, the script locks the computer. |
 | | DeviceRemoval | SmartCard | Logoff | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to Force Logoff the user when the smart card is removed. |
-| | DeviceRemoval | FIDO2 | Logoff |  The client launch script creates a WMI Event Filter that fires when a user removes their FIDO passkey device. When the event is detected, the script forcefully logs the user off the computer. |
+| | DeviceRemoval | FIDO2 | Logoff |  The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2). When the event is detected, the script forcefully logs the user off the computer. |
+| | | | | The only behavior automatically configured when no Triggers and no TriggerAction is defined is that the system will automatically restart when the Remote Desktop client is closed by the user. |
 
 ## Installation
 
@@ -126,7 +127,7 @@ The table below describes each parameter and any requirements or usage informati
 | `Autologon` | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. | When configured, Windows will automatically create a new user, 'KioskUser0', which will not have a password and be configured to automatically logon when Windows starts. **This is the primary parameter used to configure the kiosk for Scenario 2**. |
 | `AVDClientShell` | Switch | Determines whether the default Windows shell (explorer.exe) is replaced by the Remote Desktop client for Windows. | When not specified the default shell is used and, on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. |
 | `DeviceVendorID` | String | Defines the Vendor ID of the hardware FIDO2 authentication token that, if removed, will trigger the action defined in `TriggerAction`. | You can find the Vendor ID by looking at the Hardware IDs property of the device in device manager. See the [example for a Yubikey](docs\media\HardwareIds.png). This value is only used when `Triggers` contains 'DeviceRemoval'. |
-| `EnvironmentAVD` | String | Determines the Azure environment to which you are connecting. | Determines the Url of the Remote Desktop Feed which varies by environment by setting the '$SubscribeUrl' variable and replacing placeholders in several files during installation. The list of Urls can be found at https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace. Default is 'AzureUSGovernment' |
+| `EnvironmentAVD` | String | Determines the Azure environment to which you are connecting. | Determines the Url of the Remote Desktop Feed which varies by environment by setting the '$SubscribeUrl' variable and replacing placeholders in several files during installation. The list of Urls can be found at https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace. Default is 'AzureCloud' |
 | `InstallAVDClient` | Switch | Determines if the latest Remote Desktop client for Windows and the Visual Studio C++ Redistributables are downloaded from the Internet and installed prior to configuration. | Requires access to https://go.microsoft.com/fwlink/?linkid=2139369 and https://aka.ms/vs/17/release/vc_redist.x64.exe |
 | `SharedPC` | Switch | Determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically deleted on logoff. | Only valid for direct logon mode ("Autologon" switch is not used). |
 | `ShowDisplaySettings` | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when the `AVDClientShell` switch is not specified. |
@@ -150,37 +151,37 @@ The table below details the Scenarios and allowed combination of parameters. If 
 <td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval'</td><td align="center">specified</td><td align="center"></td><td align="center">Lock or Logoff</td>
 </tr>
 <tr>
-<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval'</td><td align="center"></td><td align="center">true</td><td align="center">Lock or Logoff</td>
+<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval'</td><td align="center"></td><td align="center">True</td><td align="center">Lock or Logoff</td>
 </tr>
 <tr>
 <td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center">specified</td><td align="center"></td><td align="center">Lock or Logoff</td>
 </tr>
 <tr>
-<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval', 'IdleTimeoute'<td align="center"></td><td align="center">true</td><td align="center">Lock or Logoff</td>
+<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval', 'IdleTimeoute'<td align="center"></td><td align="center">True</td><td align="center">Lock or Logoff</td>
 </tr>
 <tr>
 <td align="center">1</td><td align="center"></td><td align="center">'IdleTimeout'</td><td align="center"></td><td align="center"></td><td align="center">Lock or Logoff</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'DeviceRemoval'</td><td align="center">specified</td><td align="center"></td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval'</td><td align="center">specified</td><td align="center"></td><td align="center">ResetClient</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'DeviceRemoval'</td><td align="center"></td><td align="center">true</td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval'</td><td align="center"></td><td align="center">True</td><td align="center">ResetClient</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center">specified</td><td align="center"></td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center">specified</td><td align="center"></td><td align="center">ResetClient</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center"></td><td align="center">true</td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center"></td><td align="center">True</td><td align="center">ResetClient</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'IdleTimeout'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'IdleTimeout'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'IdleTimeout', 'SessionDisconnect'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'IdleTimeout', 'SessionDisconnect'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
 </tr>
 <tr>
-<td align="center">2</td><td align="center">true</td><td align="center">'SessionDisconnect'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
+<td align="center">2</td><td align="center">True</td><td align="center">'SessionDisconnect'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
 </tr>
 <tr>
 <td align="center">3</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td>

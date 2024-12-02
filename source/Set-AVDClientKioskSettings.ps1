@@ -33,7 +33,7 @@
     * Multi-App Kiosk configuration for Windows 11 when the AVDClientShell switch parameter is not used.
     * Remote Desktop client for Windows install (If selected)
     * STIG application (If selected)
-    * Start Layout modIfication for the custom explorer shell options
+    * Start layout modification for the custom explorer shell options
     * Custom Azure Virtual Desktop client shortcuts that launches the Remote Desktop client for Windows
       via a script to enable WMI Event subscription.
 
@@ -91,18 +91,18 @@ When AutoLogon is false, you can leave this empty or choose 'IdleTimeout' or 'De
 If this value is not set then the TriggerAction is not used.
 
 .PARAMETER TriggerAction
-This string parameter determines what occurs when the specIfied trigger is detected. The possible values are dIfferent depending on the value of $Autologon.
+This string parameter determines what occurs when the specified trigger is detected. The possible values are different depending on the value of $Autologon.
 When AutoLogon is true then 'ResetClient' is allowed.
 When AutoLogon is false then 'Lock' or 'Logoff' are allowed.
 
 .PARAMETER DeviceVendorID
-This string parameter defines the Vendor ID of the hardware authentication token that If removed will trigger the action defined in "TriggerAction".
+This string parameter defines the Vendor ID of the hardware authentication token that if removed will trigger the action defined in "TriggerAction".
 This value is only used when "Triggers" contains "DeviceRemoval".
     .EXAMPLE
     -DeviceVendorID '1050' # Yubikey Vendor ID
 
 .PARAMETER SmartCard
-This switch parameter determines If SmartCard removal will trigger the 'TriggerAction'. This value is only used when 'Triggers' contains 'DeviceRemoval'.
+This switch parameter determines if SmartCard removal will trigger the 'TriggerAction'. This value is only used when 'Triggers' contains 'DeviceRemoval'.
 
 .PARAMETER Version
 This version parameter allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version.
@@ -124,7 +124,7 @@ param (
     [string]$DeviceVendorID,
 
     [ValidateSet('AzureCloud', 'AzureUSGovernment')]
-    [string]$EnvironmentAVD = 'AzureUSGovernment',
+    [string]$EnvironmentAVD = 'AzureCloud',
 
     [switch]$InstallAVDClient,
 
@@ -153,24 +153,24 @@ param (
 # To do, convert to dynamic parameters with Parameter Sets and Validation Sets
 If ($AutoLogon) {
     If ($TriggerAction -eq 'Lock' -or $TriggerAction -eq 'Logoff') {
-        Throw 'You cannot specIfy a TriggerAction of Lock or Logoff with AutoLogon'
+        Throw 'You cannot specify a TriggerAction of Lock or Logoff with AutoLogon'
     } Else {
         $TriggerAction = 'ResetClient'
     }
 }
 Else {
     If ($TriggerAction -eq 'ResetClient') {
-        Throw 'You cannot specIfy a TriggerAction of ResetClient without AutoLogon'
+        Throw 'You cannot specify a TriggerAction of ResetClient without AutoLogon'
     }
     If ($Triggers -contains 'DeviceRemoval' -and $SmartCard -eq $false -and ($null -eq $DeviceVendorID -or $DeviceVendorID -eq '')) {
-        Throw 'You must specIfy either a DeviceVendorID or SmartCard when Triggers contains "DeviceRemoval"'
+        Throw 'You must specify either a DeviceVendorID or SmartCard when Triggers contains "DeviceRemoval"'
     } ElseIf ($Triggers -contains 'DeviceRemoval' -and $SmartCard -and ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '')) {
-        Throw 'You cannot specIfy both a SmartCard and DeviceVendorID when the Triggers contain "DeviceRemoval"'
+        Throw 'You cannot specify both a SmartCard and DeviceVendorID when the Triggers contain "DeviceRemoval"'
     }
 }
 #endegion
 
-# Restart in 64-Bit PowerShell If not already running in 64-bit mode
+# Restart in 64-Bit PowerShell if not already running in 64-bit mode
 # primarily designed to support Microsoft Endpoint Manager application deployment
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     $scriptArguments = $null
@@ -233,10 +233,15 @@ Else {
 If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
     $SecurityKey = $true
 }
-If (($AutoLogon -eq $True) -or ($Triggers -contains 'DeviceRemoval' -and $SecurityKey) -or ($Triggers -contains 'IdleTimeout' -and $TriggerAction -eq 'Logoff')) {
+# Only create the custom launch shortcut when necessary. It is only necessary when:
+# 1. AutoLogon is enabled (Scenario 2) or
+# 2. DeviceRemoval trigger is enabled and a SecurityKey is defined or
+# 3. IdleTimeout trigger is enabled and the TriggerAction is Logoff or
+# 4. No triggers are defined and no TriggerAction is defined and AutoLogon is disabled. (Scenario 3)
+If (($AutoLogon -eq $True) -or ($Triggers -contains 'DeviceRemoval' -and $SecurityKey) -or ($Triggers -contains 'IdleTimeout' -and $TriggerAction -eq 'Logoff') -or (-not $AutoLogon -and ($null -eq $Triggers -or $Triggers -eq '') -and ($null -eq $TriggerAction -or $TriggerAction -eq ''))) {
     $CustomLaunchScript = $true
 }
-# Detect WIfi Adapter in order to show WIfi Settings in system tray when necessary.
+# Detect Wifi Adapter in order to show Wifi Settings in system tray when necessary.
 $WifiAdapter = Get-NetAdapter | Where-Object { $_.Name -like '*Wi-Fi*' -or $_.Name -like '*Wifi*' -or $_.MediaType -like '*802.11*' }     
     
 # Set default exit code to 0
@@ -250,7 +255,7 @@ Function Get-PendingReboot {
         Gets the pending reboot status on a local or remote computer.
 
     .DESCRIPTION
-        This function will query the registry on a local or remote computer and determine If the
+        This function will query the registry on a local or remote computer and determine if the
         system is pending a reboot, from Microsoft updates, Configuration Manager Client SDK, Pending Computer 
         Rename, Domain Join or Pending File Rename Operations. For Windows 2008+ the function will query the 
         CBS registry key as another factor in determining pending reboot state.  "PendingFileRenameOperations" 
@@ -261,7 +266,7 @@ Function Get-PendingReboot {
         CCMClientSDK = SCCM 2012 Clients only (DetermineIfRebootPending method) otherwise $null value
         PendComputerRename = Detects either a computer rename or domain join operation (Windows 2003+)
         PendFileRename = PendingFileRenameOperations (Windows 2003+)
-        PendFileRenVal = PendingFilerenameOperations registry value; used to filter If need be, some Anti-
+        PendFileRenVal = PendingFilerenameOperations registry value; used to filter if need be, some Anti-
                         Virus leverage this key for def/dat removal, giving a false positive PendingReboot
 
     .EXAMPLE
@@ -298,7 +303,7 @@ Function Get-PendingReboot {
         $RegSubKeySM = $WMI_Reg.GetMultiStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\Session Manager\", "PendingFileRenameOperations")
         $RegValuePFRO = $RegSubKeySM.sValue
 
-        ## Query JoinDomain key from the registry - These keys are present If pending a reboot from a domain join operation
+        ## Query JoinDomain key from the registry - These keys are present if pending a reboot from a domain join operation
         $Netlogon = $WMI_Reg.EnumKey($HKLM, "SYSTEM\CurrentControlSet\Services\Netlogon").sNames
         $PendDomJoin = ($Netlogon -contains 'JoinDomain') -or ($Netlogon -contains 'AvoidSpnSet')
 
@@ -622,7 +627,7 @@ If (-not ($AVDClientShell)) {
         $Shortcut.Save()
     }
     Else {
-        # Do not need special Remote Desktop Client shortcut If not using AutoLogon or a Device Other than SmartCards. Updating it to start maximized.
+        # Do not need special Remote Desktop Client shortcut if not using AutoLogon or a Device Other than SmartCards. Updating it to start maximized.
         $ShortcutPath = $PathLinkRD
         $Shortcut = $ObjShell.CreateShortcut($ShortcutPath)
         $Shortcut.WindowStyle = 3
@@ -675,21 +680,21 @@ If (-not ($AVDClientShell)) {
         Write-Log -EntryType Information -EventId 53 -Message "Copying Start Menu Layout file for Non Admins to '$DirKiosk' directory."
         If ($ShowDisplaySettings) {
             If ($CustomLaunchScript) {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModIficationWithSettings_AVDClient.xml"
+                $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings_AVDClient.xml"
             }
             Else {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModIficationWithSettings.xml"
+                $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings.xml"
             }
         }
         Else {
             If ($CustomLaunchScript) {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModIfication_AVDClient.xml"
+                $StartMenuFile = "$DirStartMenu\Win10-LayoutModification_AVDClient.xml"
             }
             Else {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModIfication.xml"
+                $StartMenuFile = "$DirStartMenu\Win10-LayoutModification.xml"
             }
         }
-        Copy-Item -Path $StartMenuFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModIfication.xml" -Force
+        Copy-Item -Path $StartMenuFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -Force
     }
 }
     
@@ -721,8 +726,8 @@ Else {
         Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-HideSettings.txt" '2>&1'
         Write-Log -EntryType Information -EventId 61 -Message "Hid Settings App and Control Panel for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-        If (-not $WIfiAdapter) {
-            $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWIfi.txt" '2>&1'
+        If (-not $WifiAdapter) {
+            $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWifi.txt" '2>&1'
             Write-Log -EntryType Information -EventId 62 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
         }
     }
@@ -793,10 +798,10 @@ $null = cmd /c REG LOAD "HKLM\Default" "$env:SystemDrive\Users\default\ntuser.da
 Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
 
 # Import registry keys file
-Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file for modIfication of default user hive."
+Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file for modification of default user hive."
 $RegKeys = Import-Csv -Path $FileRegKeys
 
-# create the reg key restore file If it doesn't exist, else load it to compare for appending new rows.
+# create the reg key restore file if it doesn't exist, else load it to compare for appending new rows.
 Write-Log -EntryType Information -EventId 97 -Message "Creating a Registry key restore file for Kiosk Mode uninstall."
 $FileRestore = "$DirKiosk\RegKeyRestore.csv"
 New-Item -Path $FileRestore -ItemType File -Force | Out-Null
@@ -830,7 +835,7 @@ ForEach ($Entry in $RegKeys) {
     }
     Else {
         # This is a delete action
-        # Get the current value so we can restore it later If needed.
+        # Get the current value so we can restore it later if needed.
         $keyTemp = $Key.Replace("HKLM\", "HKLM:\")
         If (Get-ItemProperty -Path "$keyTemp" -Name "$Value" -ErrorAction SilentlyContinue) {
             $CurrentRegValue = Get-ItemPropertyValue -Path "$keyTemp" -Name $Value
@@ -886,7 +891,7 @@ Else {
 Set-AppLockerPolicy -XmlPolicy "$FileAppLockerKiosk"
 Write-Log -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
 Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
-# Start the service If not already running
+# Start the service if not already running
 If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
     Start-Service -Name AppIDSvc
 }
@@ -1015,7 +1020,7 @@ Else {
 
 If ($AutoLogon) {
     $TaskName = "(AVD Client) - Restart AAD Sign-in"
-    $TaskDescription = 'Restarts the AAD Sign-in process If there are no active connections to prevent a stale sign-in attempt.'
+    $TaskDescription = 'Restarts the AAD Sign-in process if there are no active connections to prevent a stale sign-in attempt.'
     Write-Log -EntryType Information -EventId 135 -Message "Creating Scheduled Task: '$TaskName'."
     $TaskScriptEventSource = 'AAD Sign-in Restart'
     New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue
