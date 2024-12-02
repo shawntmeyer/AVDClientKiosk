@@ -200,10 +200,7 @@ The table below highlights the allowed combination of parameters. If a cell if l
 
 3. Change directories to the source directory.
 
-4. Then execute the script using the correct parameters as exemplified below:
-
-   > [!Important]
-   > These parameter combinations are not the only ones possible. See Table 3 above.
+4. Then execute the script using the correct parameters as exemplified below: (All options are not shown).
 
     * Scenario 1 Options
 
