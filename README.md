@@ -150,53 +150,21 @@ The table below details the Scenarios and allowed combination of parameters. If 
 
 **Table 3:** Parameter Usage Matrix
 
-<table>
-<tr valign="top">
-<th align="center" rowspan="2">Scenario</th><th align="center" rowspan="2">AutoLogon</th><th align="center" rowspan="2">Triggers</th><th align="center" colspan="2">Devices</th><th rowspan="2">TriggerAction</th>
-</tr>
-<tr>
-<th align="center">DeviceVendorID</th><th align="center">SmartCard</th>
-</tr>
-<tr>
-<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval'</td><td align="center">specified</td><td align="center"></td><td align="center">Lock or Logoff</td>
-</tr>
-<tr>
-<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval'</td><td align="center"></td><td align="center">True</td><td align="center">Lock or Logoff</td>
-</tr>
-<tr>
-<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center">specified</td><td align="center"></td><td align="center">Lock or Logoff</td>
-</tr>
-<tr>
-<td align="center">1</td><td align="center"></td><td align="center">'DeviceRemoval', 'IdleTimeoute'<td align="center"></td><td align="center">True</td><td align="center">Lock or Logoff</td>
-</tr>
-<tr>
-<td align="center">1</td><td align="center"></td><td align="center">'IdleTimeout'</td><td align="center"></td><td align="center"></td><td align="center">Lock or Logoff</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval'</td><td align="center">specified</td><td align="center"></td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval'</td><td align="center"></td><td align="center">True</td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center">specified</td><td align="center"></td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'DeviceRemoval', 'IdleTimeout'</td><td align="center"></td><td align="center">True</td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'IdleTimeout'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'IdleTimeout', 'SessionDisconnect'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">2</td><td align="center">True</td><td align="center">'SessionDisconnect'</td><td align="center"></td><td align="center"></td><td align="center">ResetClient</td>
-</tr>
-<tr>
-<td align="center">3</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td>
-</tr>
-</table>
+| Scenario | Autologon | Triggers | DeviceVendorID | SmartCard | TriggerAction |
+|:--------:|:---------:|:--------:|:--------------:|:---------:|:-------------:|
+| 1 | | 'DeviceRemoval' | *specified* | | 'Lock' or 'Logoff' |
+| 1 | | 'DeviceRemoval' | | True | 'Lock' or 'Logoff' |
+| 1 | | 'DeviceRemoval', 'IdleTimeout' | *specified* | | 'Lock' or 'Logoff' |
+| 1 | | 'DeviceRemoval', 'IdleTimeout' | | True | 'Lock' or 'Logoff' |
+| 1 | | 'IdleTimeout' | | | 'Lock' or 'Logoff' |
+| 2 | True | 'DeviceRemoval' | *specified* | | 'ResetClient' |
+| 2 | True | 'DeviceRemoval' | | True | 'ResetClient' |
+| 2 | True | 'DeviceRemoval', 'IdleTimeout' | *specified* | | 'ResetClient' |
+| 2 | True | 'DeviceRemoval', 'IdleTimeout' | | True | 'ResetClient' |
+| 2 | True | 'IdleTimeout' | | | 'ResetClient' |
+| 2 | True | 'IdleTimeout', 'SessionDisconnect' | | | 'ResetClient' |
+| 2 | True | 'SessionDisconnect' | | | 'ResetClient' |
+| 3 | | | | | | 
 
 ### Manual Installation
 
