@@ -768,8 +768,6 @@ If ($AutoLogon) {
 }
 Else {
     If ($Triggers -contains 'DeviceRemoval' -and $SmartCard -and -not $SecurityKey) {
-        Write-Log -EntryType Information -EventId 82 -Message "Setting 'Smart Card Policy Service' to start Automatically (Delayed Start)."
-        Get-Service -Name 'ScPolicySvc' | Set-Service -StartupType AutomaticDelayedStart
         If ($TriggerAction -eq 'Lock') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
             Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"

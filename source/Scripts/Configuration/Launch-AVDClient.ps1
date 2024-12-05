@@ -141,40 +141,39 @@ Else {
     # Start client without subscribe Url in non-Autologon scenario because GPO will handle the subscription.
     $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -PassThru -WindowStyle Maximized
 }
-# Remove this condition when this feature is available in Azure US Government
-if ($SubscribeUrl -notmatch '.us') {
-    $ClientDir = "$env:UserProfile\AppData\Local\rdclientwpf"
-    $JSONFile = Join-Path -Path $ClientDir -ChildPath 'ISubscription.json'
 
-    # Wait for JSON File to be populated or catch the case where the Remote Desktop Client window is closed.
-    # We have to catch ExitCode 0 as a separate condition since it evaluates as null.
-    do {
-        If (Test-Path $JSONFile) {
-            $AVDInfo = Get-Content $JSONFile | ConvertFrom-Json
-            $WorkSpaceOID = $AVDInfo.TenantCollection.TenantID
-            $User = $AVDInfo.Username
-        }
-        Start-Sleep -Seconds 1
-    } until ($null -ne $User -or $null -ne $MSRDCW.ExitCode)
+$ClientDir = "$env:UserProfile\AppData\Local\rdclientwpf"
+$JSONFile = Join-Path -Path $ClientDir -ChildPath 'ISubscription.json'
 
-    If ($User) {
-        Write-Log -EventID 505 -Message 'User Information Found. Determining if user has only 1 resource assigned to connect to that resource automatically.'
-        $Apps = $AVDInfo.TenantCollection.remoteresourcecollection
-        If ($SubscribeUrl -match '.us') { $env = 'avdgov' } Else { $env = 'avdarm' }
-        If ($apps.count -eq 1) {
-            Write-Log -EventID 506 -Message 'Only 1 resource assigned to user. Automatically connecting.'
-            $URL = -join ("ms-avd:connect?workspaceId=", $WorkSpaceOID, "&resourceid=", $apps.ID, "&username=", $User, "&env=", $env, "&version=0")
-            Start-Process -FilePath "$URL"
-        }
+# Wait for JSON File to be populated or catch the case where the Remote Desktop Client window is closed.
+# We have to catch ExitCode 0 as a separate condition since it evaluates as null.
+do {
+    If (Test-Path $JSONFile) {
+        $AVDInfo = Get-Content $JSONFile | ConvertFrom-Json
+        $WorkSpaceOID = $AVDInfo.TenantCollection.TenantID
+        $User = $AVDInfo.Username
+    }
+    Start-Sleep -Seconds 1
+} until ($null -ne $User -or $null -ne $MSRDCW.ExitCode)
+
+If ($User) {
+    Write-Log -EventID 505 -Message 'User Information Found. Determining if user has only 1 resource assigned to connect to that resource automatically.'
+    $Apps = $AVDInfo.TenantCollection.remoteresourcecollection
+    If ($SubscribeUrl -match '.us') { $env = 'usgov' } Else { $env = 'avdarm' }
+    If ($apps.count -eq 1) {
+        Write-Log -EventID 506 -Message 'Only 1 resource assigned to user. Automatically connecting.'
+        $URL = -join ("ms-avd:connect?workspaceId=", $WorkSpaceOID, "&resourceid=", $apps.ID, "&username=", $User, "&env=", $env, "&version=0")
+        Start-Process -FilePath "$URL"
     }
 }
+
 
 If ($Triggers -contains 'DeviceRemoval' -or $Triggers -contains 'SessionDisconnect') {
     # Must set up a WMI Event Subscription to monitor for device removal or session disconnect events.
     If ($Triggers -contains 'DeviceRemoval') {
         If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
-                Write-Log -EventID 510 -Message "Creating WMI Event Subscription to detect the removal of Devices from Vendor ID: $DeviceVendorId."
-                $InstanceDevicePropsQuery = "TargetInstance.PNPDeviceID LIKE '%VID_$DeviceVendorID%'"
+            Write-Log -EventID 510 -Message "Creating WMI Event Subscription to detect the removal of Devices from Vendor ID: $DeviceVendorId."
+            $InstanceDevicePropsQuery = "TargetInstance.PNPDeviceID LIKE '%VID_$DeviceVendorID%'"
         }
         Else {
             Write-Log -EventID 510 -Message "Creating WMI Event Subscription to detect the removal of SmartCards."
@@ -359,14 +358,16 @@ if ($Triggers -contains 'IdleTimeout' -and ($env:Username -eq 'KioskUser0' -or $
                     }
                 }
                 $timer += $interval
-            } else {
+            }
+            else {
                 # Reset the timer if the process is found
                 If ($timer -gt 0) {
                     Write-Log -EventID 544 -Message "Remote Desktop connection(s) found. Resetting Idle Timer after $($timer/60) minutes."
                     $timer = 0
                 }
             }
-        } else {
+        }
+        else {
             If ($timer -gt 0) {
                 Write-Log -EventID 545 -Message "Cached Credentials not found. Resetting Idle Timer after $($timer/60) minutes."
                 $timer = 0
