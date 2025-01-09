@@ -74,6 +74,8 @@ When the operating system of the client device is Windows 11 22H2 or greater, an
 
 The user interface experience with the `ShowDisplaySettings` switch parameter selected is shown in the video and figures below. You can also see that the remote desktop connection automatically launched because it was the only resource assigned to the user.
 
+[![Watch the demo](https://img.youtube.com/vi/HWlUHZ5SBMU/maxresdefault.jpg)](https://youtu.be/HWlUHZ5SBMU)
+
 https://github.com/user-attachments/assets/b85689b2-8f15-4177-9f4e-ad012d5dce51
 
 The figure below illustrates the Multi-App interface and the ease at which a user can have multiple sessions open.
@@ -93,6 +95,8 @@ The figure below illustrates the Settings applet restricted to allow the user to
 When the `AVDClientShell` parameter is selected on any operating system, the default user shell (explorer.exe) is replaced with the [Remote Desktop client](https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-remote-desktop-client?tabs=windows) using the [Shell Launcher CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/shell-launcher).
 
 The user interface experience is shown in the video and figure below. 
+
+[![Watch the demo](https://img.youtube.com/vi/w4rev491RK4/maxresdefault.jpg)](https://youtu.be/w4rev491RK4)
 
 https://github.com/user-attachments/assets/5252b15d-a953-4b5a-9e3f-541c493df85e
 
