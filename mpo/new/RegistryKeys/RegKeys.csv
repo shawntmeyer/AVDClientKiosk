@@ -1,0 +1,13 @@
+Key,Value,Type,Data,Description
+HKCU\Software\Microsoft\Windows\CurrentVersion\Search,SearchBoxTaskBarMode,REG_DWORD,0,Disable Search from Task Bar
+HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced,ShowTaskViewButton,REG_DWORD,0,Disable Task View Button on Task Bar
+HKCU\Software\Microsoft\Windows\CurrentVersion\PenWorkspace,PenWorkspaceButtonDesiredVisibility,REG_DWORD,0,Disable Ink Workspace on Task Bar.
+HKCU\Software\Microsoft\Windows\CurrentVersion\Run,OneDriveSetup,REG_SZ,,Remove OneDriveSetup from starting for each user.
+HKCU\Software\Microsoft\RDclientRadc,EnableMSRDCTelemetry,REG_DWORD,0,Disable Remote Desktop client telemetry data.
+HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced,StartShownOnUpgrade,REG_DWORD,1,Do not open Start Menu Automatically.
+HKLM\SOFTWARE\Microsoft\MSRDC\Policies,AutomaticUpdates,REG_DWORD,0,Disable Updates and Notifications in Remote Desktop Client application.
+HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings,ShowSleepOption,REG_DWORD,0,Disable Sleep in Power Options.
+HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings,ShowHibernateOption,REG_DWORD,0,Disable Hibernate in Power Options. 
+HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FlyoutMenuSettings,ShowLockOption,REG_DWORD,0,Disable Lock in Power Options.
+HKLM\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin,BlockAADWorkplaceJoin,REG_DWORD,1,Disable 'Stay Signed in to all your apps' pop-up.
+HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run,SecurityHealth,REG_EXPAND_SZ,,Disable the Windows Security system tray icon.

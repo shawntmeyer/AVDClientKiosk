@@ -1,0 +1,4 @@
+User
+SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services
+AutoSubscription
+SZ:<url>/api/arm/feeddiscovery

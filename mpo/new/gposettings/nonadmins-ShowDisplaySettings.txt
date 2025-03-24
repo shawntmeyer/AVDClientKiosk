@@ -1,0 +1,14 @@
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+SettingsPageVisibility
+SZ:showonly:display
+
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+RestrictCpl
+DWORD:1
+
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\RestrictCpl
+1
+SZ:Microsoft.Display

@@ -1,0 +1,70 @@
+; Disable the First Logon Animation
+Computer
+Software\Microsoft\Windows\CurrentVersion\Policies\System
+EnableFirstLogonAnimation
+DWORD:0
+; Win11 - Disable Widgets
+Computer
+Software\Policies\Microsoft\Dsh
+AllowNewsAndInterests
+DWORD:0
+; Do not create Edge Desktop Shortcut
+Computer
+Software\Policies\Microsoft\EdgeUpdate
+CreateDesktopShortcutDefault
+DWORD:0
+; Remove Edge Desktop Shortcut
+Computer
+Software\Policies\Microsoft\EdgeUpdate
+RemoveDesktopShortcutDefault
+DWORD:1
+; Remove Windows Consumer Features
+Computer
+Software\Policies\Microsoft\Windows\CloudContent
+DisableWindowsConsumerFeatures
+DWORD:1
+; Hide Recommended Section of Start Menu
+Computer
+Software\Policies\Microsoft\Windows\Explorer
+HideRecommendedSection
+DWORD:1
+; Disable Privacy Options on first logon
+Computer
+Software\Policies\Microsoft\Windows\OOBE
+DisablePrivacyExperience
+DWORD:1
+; Disable Nearby Sharing
+Computer
+Software\Policies\Microsoft\Windows\System
+EnableCdp
+DWORD:0
+; Disable Feeds
+Computer
+Software\Policies\Microsoft\Windows\Windows Feeds
+EnableFeeds
+DWORD:0
+; Disable Cortana
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+AllowCortana
+DWORD:0
+; Disable Cortana Above Lock
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+AllowCortanaAboveLock
+DWORD:0
+; Disable Search Location
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+AllowSearchToUseLocation
+DWORD:0
+; Win11 - Fully Disable Search UI. GPO UI says only applicable to SE but works on Enterprise
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+DisableSearch
+DWORD:1
+; Win11 - Disable Search on TaskBar
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+SearchOnTaskbarMode
+DWORD:0

@@ -1,0 +1,4 @@
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+NoTrayItemsDisplay
+DWORD:1
