@@ -5,6 +5,7 @@
       <AllAppsList>
         <AllowedApps>
           <App AppUserModelId="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
+          <App AppUserModelId="Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App" />
           <App DesktopAppPath="%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" />
           <App DesktopAppPath="%PROGRAMFILES%\Remote Desktop\msrdcw.exe" />
           <App DesktopAppPath="%PROGRAMFILES%\Remote Desktop\msrdc.exe" />
@@ -75,7 +76,7 @@
             {
               "secondaryTile": {
                   "tileId": "MSEdge._pin_ncgoecgnfpphobampgmjcmplpa",
-                  "arguments": " --pin-url=https://mdweb2.uncl.ncsc.mil/citrix/eu2-uweb --profile-directory=Default --launch-tile",
+                  "arguments": " --kiosk https://mdweb2.uncl.ncsc.mil/citrix/eu2-uweb --edge-kiosk-type=public-browsing --no-first-run",
                   "displayName": "EU2 VDI",
                   "packagedAppId": "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App",
                   "smallIconPath": "ms-appdata:///local/Pins/MSEdge._pin_ncgoecgnfpphobampgmjcmplpa/SmallLogo.png",
@@ -87,7 +88,7 @@
             {
             "secondaryTile": {
                 "tileId": "MSEdge._pin_dkkendmjenihpgeblfjlmbeaah",
-                "arguments": " --pin-url=https://ea-vdi.corp.nsa.gov/citrix/desktopweb --profile-directory=Default --launch-tile",
+                "arguments": " --kiosk https://ea-vdi.corp.nsa.gov/citrix/desktopweb --edge-kiosk-type=public-browsing --no-first-run",
                 "displayName": "CORP VDI",
                 "packagedAppId": "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App",
                 "smallIconPath": "ms-appdata:///local/Pins/MSEdge._pin_dkkendmjenihpgeblfjlmbeaah/SmallLogo.png",
