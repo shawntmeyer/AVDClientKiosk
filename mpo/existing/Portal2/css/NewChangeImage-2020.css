@@ -1,0 +1,64 @@
+body {
+	background:#f9f9f9 url(../images/blue.png) repeat top left;
+	color: #FFF;
+	font-family:Times,SegoeUI,"Helvetica Neue",Halvetica, Arial,sans-serif;
+	font-size: 13px;
+}
+a {
+	color: #FFF;
+}
+.unclassBanner {
+	position: absolute;
+	width: 100%;
+	display: inline-block;
+	font-size: 1.2em;
+	top: 5px;
+	color: white;
+}
+.imgTxtFormat a, .imgTxtFormat {
+	color: white;
+	font-size: 1.3em;
+}
+.imgSecondLine {
+	color: white;
+	font-size: 1.2em;
+}
+.imgTxtFormat:hover {
+	background: #004466;
+}
+.imgTxtFormat:focus {
+	background: #004466;
+}
+.imgTxtFormat a:focus {
+	background: #004466;
+}
+.imgTxtFormatBold a, .imgTxtFormatBold {
+	color: white;
+	font-size: 2em;
+	font-weight: bold;
+	font-style: italic;
+}
+.imgTxtFormatBold:hover {
+	background: #004466;
+}
+.imgTxtFormatBold:focus {
+	background: #004466;
+}
+.imgTxtFormatBold a:focus {
+	background: #004466;
+}
+.hiddenLink a {
+	text-decoration: none;
+}
+.bottomBlock {
+	position: sticky;
+	font-size: 1.2em;
+	color: white;
+	bottom; 0px
+	position: center;
+}
+.bottomBanners {
+	width: 100%;
+	display: inline-block;
+	font-size: 1.2em;
+}	
