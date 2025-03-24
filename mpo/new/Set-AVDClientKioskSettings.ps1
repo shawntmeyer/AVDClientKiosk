@@ -151,8 +151,6 @@ $DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Confi
 $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
-# Detect Windows 11
-If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') { $Windows10 = $true }
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Set AVD feed subscription Url.
 If ($EnvironmentAVD -eq 'AzureUSGovernment') {
