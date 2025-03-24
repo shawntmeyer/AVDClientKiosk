@@ -45,7 +45,7 @@ param (
     [version]$Version = '1.0.0',
 
     [ValidateSet('AzureCloud', 'AzureUSGovernment')]
-    [string]$EnvironmentAVD,
+    [string]$EnvironmentAVD='AzureUSGovernment',
 
     [switch]$InstallAVDClient
 )
@@ -260,9 +260,9 @@ If ($SubscribeUrl) {
 #region Registry Edits
 
 Set-RegistryValue -Name 'BlockAADWorkplaceJoin' -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin' -PropertyType 'DWORD' -Value 1
-New-Item -Path 'HKCR:\ms-avdclientlauncher' -Value 'URL:ms-avdclientlauncher' -Force | Out-Null
-Set-RegistryValue -Name 'URL Protocol' -Path 'HKCR:\ms-avdclientlauncher' -PropertyType 'String' -Value ''
-New-Item -Path 'HKCR:\ms-avdclientlauncher\shell\open\command' -Value "$env:SystemRoot\System32\wscript.exe `"$DirAVDClientLauncher\Launch-AVDClient.vbs`"" -ItemType STRING -Force | Out-Null
+New-Item -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher' -Value 'URL:ms-avdclientlauncher' -Force | Out-Null
+Set-RegistryValue -Name 'URL Protocol' -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher' -PropertyType 'String' -Value ''
+New-Item -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher\shell\open\command' -Value "$env:SystemRoot\System32\wscript.exe `"$DirAVDClientLauncher\Launch-AVDClient.vbs`"" -ItemType STRING -Force | Out-Null
 Set-RegistryValue -Name 'Version' -Path 'HKLM:\Software\AVDClientLauncher' -PropertyType 'String' -Value "$($version.ToString())"
 
 #endregion Registry Edits
