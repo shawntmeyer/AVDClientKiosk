@@ -3,7 +3,7 @@
 xmlns:v2="http://schemas.microsoft.com/ShellLauncher/2019/Configuration">
     <Profiles>
         <DefaultProfile>
-            <Shell Shell="%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe --app=file://c:\\kiosksettings\\Portal2\\index.html" V2:AppType="Desktop">
+            <Shell Shell="%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe --app=file://c:/kiosksettings/Portal2/index.html --start-fullscreen" V2:AppType="Desktop" V2:AllAppsFullScreen="false">
                 <DefaultAction Action="RestartDevice" />
             </Shell>
         </DefaultProfile>
