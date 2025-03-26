@@ -37,4 +37,9 @@ SZ:ms-avd:*
 User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 6
+SZ:ms-rd:*
+
+User:Non-Administrators
+SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
+7
 SZ:ms-settings:*

@@ -513,9 +513,10 @@ Else {
     $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-AutoSubscribe.txt'
 }
 (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
-$null = cmd /c lgpo.exe /t "$outfile" '2>&1'
-Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-
+If (!$CustomShell) {
+    $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
+    Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+}
 # Disable Cortana, Search, Feeds, Logon Animations, and Edge Shortcuts. These are computer settings only.
 
 $null = cmd /c lgpo.exe /t "$DirGPO\Computer.txt" '2>&1'
@@ -619,7 +620,8 @@ Else {
 }
 
 #endregion Registry Edits
-
+<#-
+#region Applocker Policy
 if ($CustomShell) {
     Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
     # If there is an existing applocker policy, back it up and store its XML for restore.
@@ -642,6 +644,7 @@ if ($CustomShell) {
     }
 }
 #endregion Applocker Policy
+-#>
 
 #region Assigned Access Configuration
 
@@ -650,6 +653,7 @@ Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access
 
 If ($CustomShell) {
     $ShellConfig = Join-Path -Path $DirShellLauncherSettings -ChildPath 'Edge.xml'
+    Write-Log -EntryType Information -EventId 114 -Message "Applying Shell Launcher configuration from '$ShellConfig'."
     Set-ShellLauncherConfiguration -FilePath $ShellConfig
     If (Get-ShellLauncherConfiguration) {
         Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
