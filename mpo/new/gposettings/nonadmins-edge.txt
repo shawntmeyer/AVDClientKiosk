@@ -12,9 +12,14 @@ DELETEALLVALUES
 User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 1
-SZ:https://ea-vdi-corp.nsa.gov
+SZ:file://c:\\kiosksettings\\Portal2\\index.html
 
 User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 2
+SZ:https://ea-vdi-corp.nsa.gov
+
+User:Non-Administrators
+SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
+3
 SZ:https://mdweb2.uncl.ncsc.mil

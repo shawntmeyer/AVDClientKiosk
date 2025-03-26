@@ -87,6 +87,8 @@ param (
     [ValidateSet('AzureCloud', 'AzureUSGovernment')]
     [string]$EnvironmentAVD = 'AzureUSGovernment',
 
+    [switch]$CustomShell,
+
     [switch]$InstallAVDClient,
 
     [switch]$SharedPC = $true,
@@ -138,10 +140,12 @@ $Script:Dir = Split-Path $Script:FullName
 $EventLog = 'AVD Client Kiosk'
 $EventSource = 'Configuration Script'
 # Source Directories and supporting files
+$DirPortal = Join-Path $Script:Dir -ChildPath 'Portal2'
 $DirAppLocker = Join-Path -Path $Script:Dir -ChildPath "AppLocker"
 $FileAppLockerClear = Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml"
 $DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
+$DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLauncherConfigs"
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
@@ -437,6 +441,10 @@ If (-not (Test-Path $SchedTasksScriptsDir)) {
 }
 Write-Log -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
 Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
+If ($CustomShell) {
+    Write-Log -EntryType Information -EventId 43 -Message "Copying '$DirPortal' to '$DirKiosk'"
+    Copy-Item -Path $DirPortal -Destination $DirKiosk -Recurse -Force
+}
 
 #endregion KioskSettings Directory
 
@@ -455,41 +463,47 @@ ForEach ($Package in $ProvisioningPackages) {
     Install-ProvisioningPackage -PackagePath $Package -ForceInstall -QuietInstall
 }
 
+
+
 #endregion Provisioning Packages
 
 #region Start Menu
 
-<#--
-    
-Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
-# Set Default profile to hide Start Menu Right click
-$Groups = @(
-    "Group1",
-    "Group2",
-    "Group3"
-)
-$WinXRoot = "$env:SystemDrive\Users\Default\Appdata\local\Microsoft\Windows\WinX\{0}"
-foreach ($grp in $Groups) { 
-    $HideDir = Get-ItemProperty -Path ($WinXRoot -f $grp )
-    $HideDir.Attributes = [System.IO.FileAttributes]::Hidden
+if(!$CustomShell) {   
+    Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
+    # Set Default profile to hide Start Menu Right click
+    $Groups = @(
+        "Group1",
+        "Group2",
+        "Group3"
+    )
+    $WinXRoot = "$env:SystemDrive\Users\Default\Appdata\local\Microsoft\Windows\WinX\{0}"
+    foreach ($grp in $Groups) { 
+        $HideDir = Get-ItemProperty -Path ($WinXRoot -f $grp )
+        $HideDir.Attributes = [System.IO.FileAttributes]::Hidden
+    }
 }
-
 #endregion Start Menu
 
 #region Local GPO Settings
 
 # Apply Non-Admin GPO settings
 
-$nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
-$null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+If ($CustomShell) {
+    $nonAdminsFile = 'nonadmins-AVDClientShell.txt'
+    $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
+    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+} Else {
+    $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
+    $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
+    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+}
 $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
 Write-Log -EntryType Information -EventId 62 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 $nonAdminsFile = 'nonadmins-edge.txt'
 $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
 Write-Log -EntryType Information -EventId 63 -Message "Configured Microsoft Edge to restrict URLs to only those for VDI.`nlgpo.exe Exit Code: [$LastExitCode]"
 
---#>
 # Configure Feed URL for all Users
 $outfile = "$env:Temp\Users-AVDURL.txt"
 If ($AutoLogon) {
@@ -503,10 +517,10 @@ $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
 Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
 # Disable Cortana, Search, Feeds, Logon Animations, and Edge Shortcuts. These are computer settings only.
-<#--
+
 $null = cmd /c lgpo.exe /t "$DirGPO\Computer.txt" '2>&1'
 Write-Log -EntryType Information -EventId 75 -Message "Disabled Cortana search, feeds, login animations, and Edge desktop shortcuts via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
---#>
+
 If ($Triggers -contains 'DeviceRemoval' -and $SmartCard) {
     If ($TriggerAction -eq 'Lock') {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
@@ -606,79 +620,88 @@ Else {
 
 #endregion Registry Edits
 
-#region Applocker Policy
-<#--
-Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
-# If there is an existing applocker policy, back it up and store its XML for restore.
-# Else, copy a blank policy to the restore location.
-# Then apply the new AppLocker Policy
-$FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "MultiAppKioskAppLockerPolicy.xml"
-[xml]$Policy = Get-ApplockerPolicy -Local -XML
-If ($Policy.AppLockerPolicy.RuleCollection) {
-    Get-ApplockerPolicy -Local -XML | out-file "$DirKiosk\ApplockerPolicy.xml" -force
+if ($CustomShell) {
+    Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
+    # If there is an existing applocker policy, back it up and store its XML for restore.
+    # Else, copy a blank policy to the restore location.
+    # Then apply the new AppLocker Policy
+    $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "MultiAppKioskAppLockerPolicy.xml"
+    [xml]$Policy = Get-ApplockerPolicy -Local -XML
+    If ($Policy.AppLockerPolicy.RuleCollection) {
+        Get-ApplockerPolicy -Local -XML | out-file "$DirKiosk\ApplockerPolicy.xml" -force
+    }
+    Else {
+        Copy-Item "$FileAppLockerClear" -Destination "$DirKiosk\ApplockerPolicy.xml" -Force
+    }
+    Set-AppLockerPolicy -XmlPolicy "$FileAppLockerKiosk"
+    Write-Log -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
+    Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
+    # Start the service if not already running
+    If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
+        Start-Service -Name AppIDSvc
+    }
 }
-Else {
-    Copy-Item "$FileAppLockerClear" -Destination "$DirKiosk\ApplockerPolicy.xml" -Force
-}
-Set-AppLockerPolicy -XmlPolicy "$FileAppLockerKiosk"
-Write-Log -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
-Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
-# Start the service if not already running
-If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
-    Start-Service -Name AppIDSvc
-}
---#>
 #endregion Applocker Policy
 
-#region Multi-App Kiosk Configuration
+#region Assigned Access Configuration
 
 Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
 . "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
-$configFile = "MultiApp.xml"        
-Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
-$sourceFile = Join-Path -Path $DirMultiAppSettings -ChildPath $configFile
-$destFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
-Copy-Item -Path $sourceFile -Destination $destFile -Force
-Set-MultiAppKioskConfiguration -FilePath $destFile
-If (Get-MultiAppKioskConfiguration) {
-    Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
+
+If ($CustomShell) {
+    $ShellConfig = Join-Path -Path $DirShellLauncherSettings -ChildPath 'Edge.xml'
+    Set-ShellLauncherConfiguration -FilePath $ShellConfig
+    If (Get-ShellLauncherConfiguration) {
+        Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+        Exit 1
+    }
 }
 Else {
-    Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
-    Exit 1        
+    $MultiAppConfig = Join-Path -Path $DirMultiAppSettings -ChildPath 'MultiApp.xml'
+    Set-MultiAppKioskConfiguration -FilePath $MultiAppConfig
+    If (Get-MultiAppKioskConfiguration) {
+        Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
+        Exit 1        
+    }
 }
-    
+  
 #endregion Assigned Access Launcher
 
 #region Keyboard Filter
-<#--
+If ($CustomShell) {
+    # Enable Keyboard Filter
+    Write-Log -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
+    Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
 
-Write-Log -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
-Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
-
-# Configure Keyboard Filter after reboot
-$TaskName = "(AVD Client) - Configure Keyboard Filter"
-Write-Log -EntryType Information -EventId 118 -Message "Creating Scheduled Task: '$TaskName'."
-$TaskScriptEventSource = 'Keyboard Filter Configuration'
-$TaskDescription = "Configures the Keyboard Filter"
-$TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
-$TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
-New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
-$TaskTrigger = New-ScheduledTaskTrigger -AtStartup
-$TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
-$TaskScriptArgs = "$TaskScriptArgs -ShowDisplaySettings"
-$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
-$TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-$TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
-Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-    Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+    # Configure Keyboard Filter after reboot
+    $TaskName = "(AVD Client) - Configure Keyboard Filter"
+    Write-Log -EntryType Information -EventId 118 -Message "Creating Scheduled Task: '$TaskName'."
+    $TaskScriptEventSource = 'Keyboard Filter Configuration'
+    $TaskDescription = "Configures the Keyboard Filter"
+    $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
+    $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
+    New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
+    $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
+    $TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
+    $TaskScriptArgs = "$TaskScriptArgs -ShowDisplaySettings"
+    $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
+    $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
+    Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
+    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
+        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
+        $ScriptExitCode = 1618
+    }
 }
-Else {
-    Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
-    $ScriptExitCode = 1618
-}
---#>
 #endregion Keyboard Filter
 
 If ($ScriptExitCode -eq 1618) {
