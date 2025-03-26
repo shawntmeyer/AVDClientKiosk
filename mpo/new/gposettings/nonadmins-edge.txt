@@ -27,14 +27,14 @@ SZ:https://mdweb2.uncl.ncsc.mil
 User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 4
-SZ:evo:launch
+SZ:evo:*
 
 User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 5
-SZ:ms-avdclientlauncher:
+SZ:ms-avd:*
 
 User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 6
-SZ:ms-settings:display
+SZ:ms-settings:*
