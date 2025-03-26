@@ -604,7 +604,7 @@ Else {
 #endregion Registry Edits
 
 #region Applocker Policy
-<#--
+
 Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
 # If there is an existing applocker policy, back it up and store its XML for restore.
 # Else, copy a blank policy to the restore location.
@@ -626,7 +626,7 @@ If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
 }
 
 #endregion Applocker Policy
---#>
+
 #region Multi-App Kiosk Configuration
 
 Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
