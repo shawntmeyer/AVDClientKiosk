@@ -76,7 +76,7 @@
             {
               "secondaryTile": {
                   "tileId": "MSEdge._pin_ncgoecgnfpphobampgmjcmplpa",
-                  "arguments": " --app=https://mdweb2.uncl.ncsc.mil/citrix/eu2-uweb/",
+                  "arguments": " --app=https://mdweb2.uncl.ncsc.mil/citrix/eu2-uweb/ --launch-tile",
                   "displayName": "EU2 VDI",
                   "packagedAppId": "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App",
                   "smallIconPath": "ms-appdata:///local/Pins/MSEdge._pin_ncgoecgnfpphobampgmjcmplpa/SmallLogo.png",
@@ -88,7 +88,7 @@
             {
               "secondaryTile": {
                   "tileId": "MSEdge._pin_dkkendmjenihpgeblfjlmbeaah",
-                  "arguments": " --app=https://ea-vdi.corp.nsa.gov/citrix/desktopweb/",
+                  "arguments": " --app=https://ea-vdi.corp.nsa.gov/citrix/desktopweb/ --launch-tile",
                   "displayName": "CORP VDI",
                   "packagedAppId": "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App",
                   "smallIconPath": "ms-appdata:///local/Pins/MSEdge._pin_dkkendmjenihpgeblfjlmbeaah/SmallLogo.png",

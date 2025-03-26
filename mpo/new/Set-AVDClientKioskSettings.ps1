@@ -458,6 +458,8 @@ ForEach ($Package in $ProvisioningPackages) {
 #endregion Provisioning Packages
 
 #region Start Menu
+
+<#--
     
 Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
 # Set Default profile to hide Start Menu Right click
@@ -487,7 +489,7 @@ $nonAdminsFile = 'nonadmins-edge.txt'
 $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
 Write-Log -EntryType Information -EventId 63 -Message "Configured Microsoft Edge to restrict URLs to only those for VDI.`nlgpo.exe Exit Code: [$LastExitCode]"
 
-
+--#>
 # Configure Feed URL for all Users
 $outfile = "$env:Temp\Users-AVDURL.txt"
 If ($AutoLogon) {
@@ -501,9 +503,10 @@ $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
 Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
 # Disable Cortana, Search, Feeds, Logon Animations, and Edge Shortcuts. These are computer settings only.
+<#--
 $null = cmd /c lgpo.exe /t "$DirGPO\Computer.txt" '2>&1'
 Write-Log -EntryType Information -EventId 75 -Message "Disabled Cortana search, feeds, login animations, and Edge desktop shortcuts via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-
+--#>
 If ($Triggers -contains 'DeviceRemoval' -and $SmartCard) {
     If ($TriggerAction -eq 'Lock') {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
@@ -604,7 +607,7 @@ Else {
 #endregion Registry Edits
 
 #region Applocker Policy
-
+<#--
 Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
 # If there is an existing applocker policy, back it up and store its XML for restore.
 # Else, copy a blank policy to the restore location.
@@ -624,7 +627,7 @@ Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
 If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
     Start-Service -Name AppIDSvc
 }
-
+--#>
 #endregion Applocker Policy
 
 #region Multi-App Kiosk Configuration
