@@ -603,8 +603,8 @@ Else {
 
 #endregion Registry Edits
 
-#region Applocker Policy 
-
+#region Applocker Policy
+<#--
 Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
 # If there is an existing applocker policy, back it up and store its XML for restore.
 # Else, copy a blank policy to the restore location.
@@ -626,7 +626,7 @@ If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
 }
 
 #endregion Applocker Policy
-
+--#>
 #region Multi-App Kiosk Configuration
 
 Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
@@ -648,6 +648,7 @@ Else {
 #endregion Assigned Access Launcher
 
 #region Keyboard Filter
+<#--
 
 Write-Log -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
 Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
@@ -674,7 +675,7 @@ Else {
     Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
     $ScriptExitCode = 1618
 }
-
+--#>
 #endregion Keyboard Filter
 
 If ($ScriptExitCode -eq 1618) {
