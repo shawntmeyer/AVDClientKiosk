@@ -1,7 +1,13 @@
 {
     "pinnedList": [
         {
+            "desktopAppLink": "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Microsoft Edge.lnk"
+        },
+        {
             "packagedAppId": "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"
+        },
+        {
+            "desktopAppLink": "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\File Explorer.lnk"
         },
         {
             "secondaryTile": {
@@ -28,10 +34,10 @@
             }
         },
         {
-            "desktopAppLink": "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Remote Desktop.lnk"
+            "packagedAppId": "github.com-8B11BEB2_2t1n1bqhyggy0!App"
         },
         {
-            "desktopAppLink": "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Amazon WorkSpaces\\Amazon WorkSpaces.lnk"
+            "packagedAppId": "www.mlb.com-BEEB1F59_pqcrkwtynr6tw!App"
         }
     ]
 }
