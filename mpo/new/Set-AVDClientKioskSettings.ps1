@@ -494,11 +494,6 @@ If ($CustomShell) {
     $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
     Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
-Else {
-    $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
-    $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-}
 $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
 Write-Log -EntryType Information -EventId 62 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 If ($CustomShell) {
