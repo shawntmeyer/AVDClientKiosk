@@ -1,0 +1,3 @@
+Key,Value,Type,Data,Description
+HKCU\Software\Microsoft\Windows\CurrentVersion\Search,SearchBoxTaskBarMode,REG_DWORD,0,Disable Search from Task Bar
+HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced,ShowTaskViewButton,REG_DWORD,0,Disable Task View Button on Task Bar
