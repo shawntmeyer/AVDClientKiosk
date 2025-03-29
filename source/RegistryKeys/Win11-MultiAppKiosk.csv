@@ -1,0 +1,2 @@
+Key,Value,Type,Data,Description
+HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\TrayNotify,SystemTrayChevronVisibility,REG_DWORD,0,Disable System Tray Chevron Visibility.
