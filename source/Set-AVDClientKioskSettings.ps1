@@ -429,6 +429,11 @@ Function Write-Log {
         $Message
     )
     Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
+    Switch ($EntryType) {
+        'Information' { Write-Host "[INFO] $Message" -ForegroundColor Green }
+        'Warning' { Write-Host "[WARNING] $Message" -ForegroundColor Yellow }
+        'Error' { Write-Host "[ERROR] $Message" -ForegroundColor Red }
+    }
 }
 
 #endregion Functions
@@ -604,7 +609,7 @@ If (-not $AVDClientShell) {
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
 ForEach ($Package in $ProvisioningPackages) {
     Copy-Item -Path $Package -Destination "$DirKiosk\ProvisioningPackages" -Force
-    Write-Log -EntryType Information -EventID 46 -Message "Installing $($Package)."
+    Write-Log -EntryType Information -EventID 46 -Message "Installing Provisioning Package: $(Split-Path -Path $Package -Leaf)."
     Install-ProvisioningPackage -PackagePath $Package -ForceInstall -QuietInstall | Out-Null
 }
 
