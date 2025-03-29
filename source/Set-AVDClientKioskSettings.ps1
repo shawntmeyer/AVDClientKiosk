@@ -579,9 +579,8 @@ If ($Triggers -contains 'SessionDisconnect') {
 #region Provisioning Packages
 
 $ProvisioningPackages = @()
-$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableConsumerFeatures*' }).FullName
-$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableLogonAnimation*' }).FullName
-$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableWindowsSpotlight*' }).FullName
+$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Disallow*' }).FullName
+$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableFirstLogonAnimation*' }).FullName
 $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideHibernateAndSleep*' }).FullName
 If ($AutoLogon) {
     $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideFastUserSwitching*' }).FullName
