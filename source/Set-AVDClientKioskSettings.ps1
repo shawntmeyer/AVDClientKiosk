@@ -602,7 +602,8 @@ If (-not $AVDClientShell) {
         $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win10-DisableWindowsInkWorkspace*' }).FullName
     }
     Else {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win11-*' }).FullName
+        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableSearch*' }).FullName
+        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Start-HideRecommendedSection*' }).FullName
     }
 }
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
