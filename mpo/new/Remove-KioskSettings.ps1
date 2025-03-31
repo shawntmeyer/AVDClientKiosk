@@ -77,12 +77,10 @@ Function Write-Log {
         [string]
         $Message
     )
-    If ($EntryType -eq 'Error') {
-        Write-Error $Message
-    } Elseif ($EntryType -eq 'Warning') {
-        Write-Warning -Message $Message
-    } Else {
-        Write-Output $Message
+    Switch ($EntryType) {
+        'Information' { Write-Host "[INFO] $Message" -ForegroundColor Green }
+        'Warning' { Write-Host "[WARNING] $Message" -ForegroundColor Yellow }
+        'Error' { Write-Host "[ERROR] $Message" -ForegroundColor Red }
     }
     Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
 }
@@ -93,10 +91,6 @@ Function Write-Log {
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 
-If (-not (Test-Path $Script:LogDir)) {
-    $null = New-Item -Path $Script:LogDir -ItemType Directory -Force
-}
-Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
 Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
 
 #endregion Initialization and Logging
@@ -282,4 +276,3 @@ If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
 }
 
 Write-Log -EventId 27 -EntryType Information -Message "**** Custom Kiosk Mode removed successfully ****"
-Stop-Transcript

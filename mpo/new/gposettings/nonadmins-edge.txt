@@ -4,8 +4,7 @@ HideFirstRunExperience
 DWORD:1
 
 User:Non-Administrators
-SOFTWARE\Policies\Microsoft\Edge
-URLAllowlist
+SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 *
 DELETEALLVALUES
 
