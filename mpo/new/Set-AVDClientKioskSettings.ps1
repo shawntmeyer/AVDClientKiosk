@@ -141,15 +141,11 @@ $EventLog = 'AVD Client Kiosk'
 $EventSource = 'Configuration Script'
 # Source Directories and supporting files
 $DirPortal = Join-Path $Script:Dir -ChildPath 'Portal2'
-$DirAppLocker = Join-Path -Path $Script:Dir -ChildPath "AppLocker"
-$FileAppLockerClear = Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml"
 $DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
-$DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLauncherConfigs"
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Configuration"
 $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
@@ -383,8 +379,10 @@ $TaskschdLog.SaveChanges()
 #region Remove Previous Versions
 
 # Run Removal Script first in the event that a previous version is installed or in the event of a failed installation.
-Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
-& "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
+If (Get-ItemProperty -Path 'HKLM:\Software\Kiosk' -Name 'Version' -ErrorAction SilentlyContinue) {
+    Write-Log -EntryType Information -EventId 4 -Message 'Previous version of Kiosk Mode detected. Removing previous version.'
+    & "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
+}
 
 #endregion Previous Version Removal
 
@@ -468,6 +466,7 @@ $ProvisioningPackages = @()
 $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Disable*' }).FullName
 $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Disallow*' }).FullName
 $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideHibernateAndSleep*' }).FullName
+$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Start-HideRecommendedSection*' }).FullName
 If ($SharedPC) {
     $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'SharedPC*' }).FullName
 }
@@ -486,8 +485,7 @@ ForEach ($Package in $ProvisioningPackages) {
 
 $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
 Write-Log -EntryType Information -EventId 62 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-$nonAdminsFile = 'nonadmins-edge.txt'
-$null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
+$null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-edge.txt" '2>&1'
 Write-Log -EntryType Information -EventId 63 -Message "Configured Microsoft Edge to restrict URLs to only those for VDI.`nlgpo.exe Exit Code: [$LastExitCode]"
 
 # Configure Feed URL for all Users
