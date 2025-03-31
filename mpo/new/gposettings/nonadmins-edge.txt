@@ -4,6 +4,16 @@ HideFirstRunExperience
 DWORD:1
 
 User:Non-Administrators
+SOFTWARE\Policies\Microsoft\Edge\URLBlocklist
+*
+DELETEALLVALUES
+
+User:Non-Administrators
+SOFTWARE\Policies\Microsoft\Edge\URLBlocklist
+1
+SZ:*
+
+User:Non-Administrators
 SOFTWARE\Policies\Microsoft\Edge\URLAllowlist
 *
 DELETEALLVALUES
