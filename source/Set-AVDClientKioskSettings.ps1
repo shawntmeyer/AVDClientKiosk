@@ -819,8 +819,13 @@ Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive 
 Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file for modification of default user hive."
 $RegKeyFileList = @()
 $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Common.csv'
-If($Windows10 -and !$AVDClientShell) {
-    $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Win10-Explorer.csv'
+If(-not $AVDClientShell) {
+    If ($Windows10) {
+        $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Win10-Explorer.csv'
+    }
+    Else {
+        $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Win11-MultiApp.csv'
+    }
 }
 $RegKeys = $RegKeyFileList | Import-Csv
 

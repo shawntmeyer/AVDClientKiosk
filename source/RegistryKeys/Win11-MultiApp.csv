@@ -1,0 +1,2 @@
+Key,Value,Type,Data,Description
+HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced,StartShownOnUpgrade,REG_DWORD,1,Do not open Start Menu Automatically
