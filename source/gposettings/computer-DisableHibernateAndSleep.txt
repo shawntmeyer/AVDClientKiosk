@@ -1,0 +1,10 @@
+; Disable Hibernate
+Computer
+Software\Policies\Microsoft\Windows\Explorer
+ShowHibernateOption
+DWORD:0
+; Disable Sleep
+Computer
+Software\Policies\Microsoft\Windows\Explorer
+ShowSleepOption
+DWORD:0

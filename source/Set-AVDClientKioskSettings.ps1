@@ -581,31 +581,20 @@ If ($Triggers -contains 'SessionDisconnect') {
 #region Provisioning Packages
 
 $ProvisioningPackages = @()
-$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Disallow*' }).FullName
-$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableFirstLogonAnimation*' }).FullName
-$ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideHibernateAndSleep*' }).FullName
-If ($AutoLogon) {
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideFastUserSwitching*' }).FullName
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideSwitchAccount*' }).FullName
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideUserTile*' }).FullName
-}
+
 If ($SharedPC) {
     $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'SharedPC*' }).FullName
 }
-
 If (-not $AVDClientShell) {
     if ($Windows10) {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win10-DisableCortana*' }).FullName
         $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win10-*PinnedFolders*' }).FullName
         If (-not $ShowDisplaySettings) {
             $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win10-*Settings*' }).FullName
         }
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win10-DisableSearchLocation*' }).FullName
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Win10-DisableWindowsInkWorkspace*' }).FullName
     }
-    Else {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'DisableSearch*' }).FullName
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'Start-HideRecommendedSection*' }).FullName
+    Elseif($AutoLogon) {
+        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideChangeAccountSettings*' }).FullName
+        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like 'HideUserTile*' }).FullName
     }
 }
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
@@ -732,27 +721,45 @@ Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Mic
 
 #region Local GPO Settings
 
+# Apploy Local Computer GPO Settings
+$null = cmd /c lgpo.exe /t "$DirGPO\computer-DisableConsumerFeatures.txt" '2>&1'
+Write-Log -EntryType Information -EventId 60 -Message "Disabled Consumer Features via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+$null = cmd /c lgpo.exe /t "$DirGPO\computer-DisableFirstLogonAnimation.txt" '2>&1'
+Write-Log -EntryType Information -EventId 61 -Message "Disabled First Logon Animation via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+$null = cmd /c lgpo.exe /t "$DirGPO\computer-DisableHibernateAndSleep.txt" '2>&1'
+Write-Log -EntryType Information -EventId 62 -Message "Disabled Hibernate and Sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+
 # Apply Non-Admin GPO settings
+$null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-DisableWindowsSpotlight.txt" '2>&1'
+Write-Log -EntryType Information -EventId 63 -Message "Disabled Windows Spotlight via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+
 If ($AVDClientShell) {
     $nonAdminsFile = 'nonadmins-AVDClientShell.txt'
     $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EntryType Information -EventId 64 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
     If ($Windows10) {
         $nonAdminsFile = 'nonadmins-Win10-ExplorerShell.txt'
         $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-        Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-HideSettings.txt" '2>&1'
-        Write-Log -EntryType Information -EventId 61 -Message "Hid Settings App and Control Panel for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EntryType Information -EventId 64 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        if(-not $ShowDisplaySettings) {
+            $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-HideSettings.txt" '2>&1'
+            Write-Log -EntryType Information -EventId 65 -Message "Hid Settings App and Control Panel for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        }
+    } Else {
+        $null = cmd /c lgpo.exe /t "$DirGPO\computer-DisableSearch.txt" '2>&1'
+        Write-Log -EntryType Information -EventId 66 -Message "Disabled Search via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        $null = cmd /c lgpo.exe /t "$DirGPO\computer-HideRecommendedSection.txt" '2>&1'
+        Write-Log -EntryType Information -EventId 67 -Message "Hid Recommended Section of Start Menu via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
     If (-not $WifiAdapter) {
         $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWifi.txt" '2>&1'
-        Write-Log -EntryType Information -EventId 62 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
+        Write-Log -EntryType Information -EventId 68 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
     }
     If ($ShowDisplaySettings) {
         $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
-        Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EntryType Information -EventId 69 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
 }
 
@@ -771,15 +778,13 @@ Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL f
 If ($Windows10) {
     # Disable Cortana, Search, Feeds, Logon Animations, and Edge Shortcuts. These are computer settings only.
     $null = cmd /c lgpo.exe /t "$DirGPO\computer-Win10.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 75 -Message "Disabled Cortana search, feeds, login animations, and Edge desktop shortcuts via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EntryType Information -EventId 71 -Message "Disabled Cortana search, feeds, login animations, and Edge desktop shortcuts via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 If ($AutoLogon) {
     # Disable Password requirement for screen saver lock and wake from sleep.
-    $null = cmd /c lgpo.exe /t "$DirGPO\disablePasswordForUnlock.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-autologon.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
+    $null = cmd /c lgpo.exe /t "$DirGPO\autologon.txt" '2>&1'
+    Write-Log -EntryType Information -EventId 72 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
     If ($Triggers -contains 'DeviceRemoval' -and $SmartCard -and -not $SecurityKey) {
@@ -816,9 +821,6 @@ $RegKeyFileList = @()
 $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Common.csv'
 If($Windows10 -and !$AVDClientShell) {
     $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Win10-Explorer.csv'
-}
-If(!$Windows10 -and !$AVDClientShell) {
-    $RegKeyFileList += Join-Path -Path $DirRegKeys -ChildPath 'Win11-MultiAppKiosk.csv'
 }
 $RegKeys = $RegKeyFileList | Import-Csv
 

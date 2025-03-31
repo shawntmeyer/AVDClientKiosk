@@ -1,0 +1,40 @@
+; Remove Logoff from Start Menu
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+StartMenuLogOff
+DWORD:1
+; Remove Logoff from CTRL+ALT+DELETE Menu
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\Explorer
+NoLogOff
+DWORD:1
+; Remove Change Password option
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\System
+DisableChangePassword
+DWORD:1
+; Disable Lock Workstation
+User:Non-Administrators
+Software\Microsoft\Windows\CurrentVersion\Policies\System
+DisableLockWorkstation
+DWORD:1
+; Hide Fast User Switching options
+Computer
+Software\Microsoft\Windows\CurrentVersion\Policies\System
+HideFastUserSwitching
+DWORD:1
+; Disable Sign-in when waking from sleep
+Computer
+Software\Policies\Microsoft\Power\PowerSettings\0e796bdb-100d-47d6-a2d5-f7d2daa51f51
+ACSettingIndex
+DWORD:0
+; Disable Sign-in when waking from sleep (battery)
+Computer
+Software\Policies\Microsoft\Power\PowerSettings\0e796bdb-100d-47d6-a2d5-f7d2daa51f51
+DCSettingIndex
+DWORD:0
+; Do not require sign-in when screen saver activates
+User:Non-Administrators
+Software\Policies\Microsoft\Windows\Control Panel\Desktop
+ScreenSaverIsSecure
+SZ:0

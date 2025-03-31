@@ -13,7 +13,7 @@ Computer
 Software\Policies\Microsoft\Windows\OOBE
 DisablePrivacyExperience
 DWORD:1
-; Disable Nearby Sharing
+; Disable Shared Experiences
 Computer
 Software\Policies\Microsoft\Windows\System
 EnableCdp
@@ -22,4 +22,18 @@ DWORD:0
 Computer
 Software\Policies\Microsoft\Windows\Windows Feeds
 EnableFeeds
+DWORD:0
+; Disable Cortana
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+AllowCortana
+DWORD:0
+; Disable Search Location
+Computer
+Software\Policies\Microsoft\Windows\Windows Search
+AllowSearchToUseLocation
+DWORD:0
+; Disable Windows Ink Workspace
+Software\Policies\Microsoft\WindowsInkWorkspace
+AllowWindowsInkWorkspace
 DWORD:0

@@ -129,21 +129,6 @@ DisableRegistryTools
 DWORD:2
 
 User:Non-Administrators
-Software\Policies\Microsoft\Windows\CloudContent
-ConfigureWindowsSpotlight
-DWORD:2
-
-User:Non-Administrators
-Software\Policies\Microsoft\Windows\CloudContent
-DisableWindowsSpotlightOnActionCenter
-DWORD:1
-
-User:Non-Administrators
-Software\Policies\Microsoft\Windows\CloudContent
-IncludeEnterpriseSpotlight
-DWORD:0
-
-User:Non-Administrators
 Software\Policies\Microsoft\Windows\Explorer
 DisableContextMenusInStart
 DWORD:1
@@ -222,4 +207,3 @@ User:Non-Administrators
 Software\Policies\Microsoft\Windows\System
 DisableCMD
 DWORD:2
-
