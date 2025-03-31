@@ -464,8 +464,10 @@ $TaskschdLog.SaveChanges()
 #region Remove Previous Versions
 
 # Run Removal Script first in the event that a previous version is installed or in the event of a failed installation.
-Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
-& "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
+If (Get-ItemProperty -Path 'HKLM:\Software\Kiosk' -Name 'Version' -ErrorAction SilentlyContinue) {
+    Write-Log -EntryType Information -EventId 3 -Message 'Previous version of Kiosk Mode detected. Removing previous version.'
+    & "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
+}
 
 #endregion Previous Version Removal
 
