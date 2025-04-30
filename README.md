@@ -25,22 +25,20 @@ This custom kiosk could be used for numerous scenarios including the three shown
 ## Prerequisites
 
 1. A currently [supported version of a Windows client operating system](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) with the choice of editions based on the use of the **AVDClientShell** parameter as follows:
-   
-   1. The **AVDClientShell** option requires one of the following Windows client editions[^1]:
-      * Education
-      * Enterprise
-      * Enterprise LTSC
-      * IoT Enterprise
-      * IoT Enterprise LTSC
-   
-   2. If you <ins>don't</ins> pick the **AVDClientShell** option, then supported Windows client editions include[^2]:
-      * Education
-      * Enterprise
-      * Enterprise LTSC
-      * IoT Enterprise
-      * IoT Enterprise LTSC
-      * Pro
-      * Pro Education
+   1. The `AVDClientShell` option requires one of the following Windows client editions[^1]:
+      - Education
+      - Enterprise
+      - Enterprise LTSC
+      - IoT Enterprise
+      - IoT Enterprise LTSC
+   2. If you <ins>don't</ins> pick the `AVDClientShell` option, then supported Windows client editions include[^2]:
+      - Education
+      - Enterprise
+      - Enterprise LTSC
+      - IoT Enterprise
+      - IoT Enterprise LTSC
+      - Pro
+      - Pro Education
 
 2. The ability to run the installation script as SYSTEM. The instructions are provided in the [Installation section](#installation).
 
@@ -104,22 +102,49 @@ In the figure below, you can see that the interface no longer has a taskbar or S
 
 ## Triggers and Actions
 
-The table below outlines the actions taken based on the `Autologon`, `Triggers`, `SmartCard` or `DeviceVendorId` (Device Type), and `TriggerAction` parameters.
+The tables below outline the actions taken based on the `Autologon` and *TriggerActionparameters*.
 
-**Table 2:** Trigger Action Summary
+The first trigger action parameter is `DeviceRemovalAction`. This trigger is activated when a security device, defined as either a smart card or a FIDO2 token with a Vendor ID specified in the `DeviceVendorId` parameter is removed from the local system.
 
-| AutoLogon | Trigger | DeviceType | TriggerAction | Behavior |
-|:---------:|:-------:|:----------:|:-------------:|----------|
-| True | IdleTimeout | | ResetClient | The client launch script starts a timer at 0. Every 60 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 60 seconds. If it is not True, then the counter is reset to 0. If the counter reaches the value specified by the `Timeout` parameter, then the launch script resets the client removing the cached credentials and restarts the launch script. |
-| True | SessionDisconnect | | ResetClient | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason codes that indicate the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script resets the client removing the cached credentials and restarts the launch script. |
-| True | DeviceRemoval | Either | ResetClient | The client launch script creates a WMI Event Filter that fires when a user removes their authentication device - either a SmartCard (`SmartCard`) or a FIDO2 passkey device (`DeviceVendorId`) or closes the Remote Desktop client, then the launch script resets the client removing the cached credentials and restarts the launch script. |
-| | IdleTimeout | | Lock | The system will lock the computer after the amount of time specified in the `Timeout` parameter using the [Interactive Logon Machine Inactivity Limit built-in policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-machine-inactivity-limit) Windows. |
-| | IdleTimeout | | Logoff | The client launch script starts a timer at 0. Every 60 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 60 seconds. If it is not true, then the counter is reset to 0. If the counter reaches the value specified by the `Timeout` parameter, then the launch script will logoff the user. |
-| | DeviceRemoval | SmartCard | Lock | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to lock the system when the smart card is removed. |
-| | DeviceRemoval | FIDO2 | Lock |  The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2) as specified using the `DeviceVendorID` parameter. When the event is detected, the script locks the computer. |
-| | DeviceRemoval | SmartCard | Logoff | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to Force Logoff the user when the smart card is removed. |
-| | DeviceRemoval | FIDO2 | Logoff |  The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2). When the event is detected, the script forcefully logs the user off the computer. |
-| | | | | The only behavior automatically configured when no Triggers and no TriggerAction is defined is that the system will automatically restart when the Remote Desktop client is closed by the user. |
+**Table 2:** Device Removal Action Summary
+
+| AutoLogon | DeviceRemovalAction | DeviceType | Behavior |
+| :-------: | :-----------------: | :--------: | :--- |
+| True | ResetClient | Either | The client launch script creates a WMI Event Filter that fires when a user removes their authentication device - either a SmartCard (`SmartCard`) or a FIDO2 passkey device (`DeviceVendorId`) or closes the Remote Desktop client, then the launch script resets the client removing the cached credentials and restarts the launch script. |
+| | Lock | SmartCard | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to lock the system when the smart card is removed. |
+| | Lock | FIDO2 | The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2) as specified using the `DeviceVendorID` parameter. When the event is detected, the script locks the computer. |
+| | Logoff | SmartCard | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to Force Logoff the user when the smart card is removed. |
+| | Logoff | FIDO2 | The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2). When the event is detected, the script forcefully logs the user off the computer. |
+
+The next trigger action parameter is `IdleTimeoutAction`. This trigger is activated when the local device has seen no user activity. It is measured via the inbuilt machine inactivity timer or via the custom launch script as defined in the table below.
+
+**Table 3:** Idle Timeout Action Summary
+
+| AutoLogon | IdleTimeoutAction | Behavior |
+| :-------: | :---------------: | :------- |
+| True | ResetClient | The client launch script starts a timer at 0. Every 30 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 30 seconds. If it is not True, then the counter is reset to 0. If the counter reaches the value specified by the `IdleTimeout` parameter, then the launch script resets the client removing the cached credentials and restarts the launch script. |
+| | Lock | The system will lock the computer after the amount of time specified in the `IdleTimeout` parameter using the [Interactive Logon Machine Inactivity Limit built-in policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-machine-inactivity-limit) Windows. |
+| | Logoff | The client launch script starts a timer at 0. Every 30 seconds, it checks to see if there are open Remote Connections to resources. If this condition there are no open connections, then it increments the counter by 30 seconds. If there are open connections, then the counter is reset to 0. If the counter reaches the value specified by the `IdleTimeout` parameter, then the launch script will logoff the user. |
+
+The next trigger action parameter is `SystemDisconnectAction`. This trigger is activated when a remote desktop connection is disconnected by the system due to inactivity on the remote session host with Entra ID SSO configured to lock the computer or a user connects to the same remote session with another client.
+
+**Table 4:** System Disconnect Action Summary
+
+| AutoLogon | SystemDisconnectAction | Behavior |
+| :-------: | :--------------------: | :------- |
+| True | ResetClient | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 3 that indicates the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script resets the client removing the cached credentials and restarts the launch script. |
+| | Lock | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 3 that indicates the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script locks the local computer. |
+| | Logoff | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 3 that indicates the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script signs the user out of the local computer. |
+
+The next trigger action parameter is `UserDisconnectSignOffAction`. This trigger is activated when a user initiates a sign out in the remote session or disconnects the remote session. It is also triggered when the user closes the AVD Client on the local workstation.
+
+**Table 5:** User Disconnect or SignOut Action Summary
+
+| AutoLogon | UserDisconnectSignOutAction | Behavior |
+| :-------: | :-------------------------: | :------- |
+| True | ResetClient | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 1 or 2 that indicates the connection was closed by the user. When these events are detected and there are no other open remote desktop connections, the launch script resets the client removing the cached credentials and restarts the launch script. |
+| | Lock | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 1 or 2 that indicates the connection was closed by the user. When these events are detected and there are no other open remote desktop connections, the launch script locks the local computer. |
+| | Logoff | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 1 or 2 that indicates the connection was closed by the user. When these events are detected and there are no other open remote desktop connections, the launch script signs the user out of the local computer. |
 
 ## Installation
 
@@ -129,42 +154,25 @@ This section documents the parameters and the manual installation instructions
 
 The table below describes each parameter and any requirements or usage information.
 
-**Table 2:** Set-AVDClientKioskSettings.ps1 Parameters
+**Table 6:** Set-AVDClientKioskSettings.ps1 Parameters
 
 | Parameter Name | Type | Description | Notes/Requirements |
 |:---------------|:----:|:------------|:-------------------|
 | `ApplySTIGs` | Switch | Determines if the latest DoD Security Technical Implementation Guide Group Policy Objects are automatically downloaded from [Cyber Command](https://public.cyber.mil/stigs/gpo) and applied via the Local Group Policy Object (LGPO) tool to the system. | If they are, then several delta settings are applied to allow the system to communicate with Entra Id and complete autologon (if applicable). Requires access to https://public.cyber.mil/stigs/gpo |
 | `Autologon` | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. | When configured, Windows will automatically create a new user, 'KioskUser0', which will not have a password and be configured to automatically logon when Windows starts. **This is the primary parameter used to configure the kiosk for Scenario 2**. |
 | `AVDClientShell` | Switch | Determines whether the default Windows shell (explorer.exe) is replaced by the Remote Desktop client for Windows. | When not specified the default shell is used and, on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. |
-| `DeviceVendorID` | String | Defines the Vendor ID of the hardware FIDO2 authentication token that, if removed, will trigger the action defined in `TriggerAction`. | You can find the Vendor ID by looking at the Hardware IDs property of the device in device manager. See the [example for a Yubikey](docs\media\HardwareIds.png). This value is only used when `Triggers` contains 'DeviceRemoval'. |
 | `EnvironmentAVD` | String | Determines the Azure environment to which you are connecting. | Determines the Url of the Remote Desktop Feed which varies by environment by setting the '$SubscribeUrl' variable and replacing placeholders in several files during installation. The list of Urls can be found at https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace. Default is 'AzureCloud' |
 | `InstallAVDClient` | Switch | Determines if the latest Remote Desktop client for Windows and the Visual Studio C++ Redistributables are downloaded from the Internet and installed prior to configuration. | Requires access to https://go.microsoft.com/fwlink/?linkid=2139369 and https://aka.ms/vs/17/release/vc_redist.x64.exe |
 | `SharedPC` | Switch | Determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically deleted on logoff. | Only valid for direct logon mode ("Autologon" switch is not used). |
-| `ShowDisplaySettings` | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when the `AVDClientShell` switch is not specified. |
-| `SmartCard` | Switch | Determines if SmartCard removal will trigger the action specified by `TriggerAction`. | This value is only used when `Triggers` contains 'DeviceRemoval'. |
-| `Triggers` | string[] | Determines the trigger(s) that will cause the action specified by `TriggerAction` to be carried out. | When the `AutoLogon` switch is specified, you can choose any or all of the following values: 'DeviceRemoval', @('DeviceRemoval', 'IdleTimeout'), 'IdleTimeout', @('IdleTimeout', 'SessionDisconnect'), or 'SessionDisconnect'. When the `AutoLogon` is not specified, you can specify 'DeviceRemoval', @('DeviceRemoval', 'IdleTimeout'), or 'IdleTimeout'. If your choices contain 'DeviceRemoval', then you must use the `SmartCard` switch or specify a `DeviceVendorID`. |
-| `TriggerAction` | String | Determines what occurs when the specified trigger is detected. | The possible values are different depending on whether the `AutoLogon` switch is set. When the `AutoLogon` switch is specified, then 'ResetClient' is aassumed. When the `AutoLogon` switch is not specified, then 'Lock' or 'Logoff' are allowed. |
+| `ShowSettings` | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when the `AVDClientShell` switch is not specified. |
+| `DeviceRemovalAction` | string | determines what occurs when a FIDO Passkey device or SmartCard is removed from the system.  | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
+| `DeviceVendorID` | String | Defines the Vendor ID of the hardware FIDO2 authentication token that, if removed, will trigger the action defined in `DeviceRemovalAction`. | You can find the Vendor ID by looking at the Hardware IDs property of the device in device manager. See the [example for a Yubikey](docs\media\HardwareIds.png). |
+| `SmartCard` | Switch | Determines if SmartCard removal will trigger the action specified by `DeviceRemovalAction`. | This value is only used when `DeviceRemovalAction` is defined. |
+| `IdleTimeoutAction` | string | Determines what occurs when the system is idle for a specified amount of time. | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
+| `IdleTimeout` | int | Determines the number of seconds in the that system will wait before performing the action specified in the `IdleTimeoutAction` parameter. | |
+| `SystemDisconnectAction` | string | Determines what occurs when the remote desktop session connection is disconnected by the system. This could be due to an IdleTimeout on the session host in the SSO scenario or the user has initiated a connection to the session host from another client. | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
+| `UserDisconnectSignOutAction` | string | Determines what occurs when the user disconnects or signs out from the remote session. | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
 | `Version` | Version |  Writes this value to a string value called 'version' at HKLM:\SOFTWARE\Kiosk registry key. | Allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of this registry value. |
-
-The table below details the Scenarios and allowed combination of parameters. If a cell if left blank then it indicates a value cannot be provided for this parameter given the other parameter values specified.
-
-**Table 3:** Parameter Usage Matrix
-
-| Scenario | Autologon | Triggers | DeviceVendorID | SmartCard | TriggerAction |
-|:--------:|:---------:|:--------:|:--------------:|:---------:|:-------------:|
-| 1 | | 'DeviceRemoval' | *specified* | | 'Lock' or 'Logoff' |
-| 1 | | 'DeviceRemoval' | | True | 'Lock' or 'Logoff' |
-| 1 | | 'DeviceRemoval', 'IdleTimeout' | *specified* | | 'Lock' or 'Logoff' |
-| 1 | | 'DeviceRemoval', 'IdleTimeout' | | True | 'Lock' or 'Logoff' |
-| 1 | | 'IdleTimeout' | | | 'Lock' or 'Logoff' |
-| 2 | True | 'DeviceRemoval' | *specified* | | 'ResetClient' |
-| 2 | True | 'DeviceRemoval' | | True | 'ResetClient' |
-| 2 | True | 'DeviceRemoval', 'IdleTimeout' | *specified* | | 'ResetClient' |
-| 2 | True | 'DeviceRemoval', 'IdleTimeout' | | True | 'ResetClient' |
-| 2 | True | 'IdleTimeout' | | | 'ResetClient' |
-| 2 | True | 'IdleTimeout', 'SessionDisconnect' | | | 'ResetClient' |
-| 2 | True | 'SessionDisconnect' | | | 'ResetClient' |
-| 3 | | | | | | 
 
 ### Manual Installation
 
@@ -175,7 +183,7 @@ The table below details the Scenarios and allowed combination of parameters. If 
 
 2. Execute PowerShell as SYSTEM by running the following command:
 
-    ```
+    ``` cmd
     psexec64 -s -i powershell
     ```
 
@@ -189,47 +197,53 @@ The table below details the Scenarios and allowed combination of parameters. If 
 
 5. Then execute the script using the correct parameters as exemplified below: (All options are not shown).
 
-    * Scenario 1 Options
+    - Scenario 1 Options
 
-      * Lock the workstation when a SmartCard is Removed or 15 minutes of inactivity has occurred.
-
-        ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -SmartCard -Triggers 'DeviceRemoval', 'IdleTimeout' -TriggerAction 'Lock' -Timeout 900
-        ```
-
-      * Logoff the user when a Yubikey is Removed or 15 minutes of inactivity has occurred.
+      - Lock the workstation when a SmartCard is Removed or 15 minutes of inactivity has occurred.
 
         ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -DeviceVendorID '1050' -Triggers 'DeviceRemoval', 'IdleTimeout' -TriggerAction 'Logoff' -Timeout 900
+        .\Set-AVDClientKioskSettings.ps1 -DeviceRemovalAction 'Lock' -SmartCard -IdleTimeoutAction 'Lock' -IdleTimeout 900
         ```
 
-    * Scenario 2 Options
+      - Logoff the user when a Yubikey is Removed. Lock after 15 minutes of inactivity has occurred.
 
-      * Reset when SmartCard is Removed:
+        ``` powershell
+        .\Set-AVDClientKioskSettings.ps1 -DeviceRemovalAction 'Logoff' -DeviceVendorID '1050' -IdleTimeoutAction 'Lock' -IdleTimeout 900
+        ```
+
+      - Logoff the user when the user disconnects or signs out of a remote session. Lock after 15 minutes of inactivity.
+
+        ``` powershell
+        .\Set-AVDClientKioskSettings.ps1 -UserDisconnectSignOutAction 'Logoff' -IdleTimeoutAction 'Lock' -IdleTimeout 900
+        ```
+
+    - Scenario 2 Options
+
+      - Reset when SmartCard is Removed:
   
         ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -SmartCard -Triggers 'DeviceRemoval' -TriggerAction 'ResetClient'
+        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -DeviceRemovalAction 'ResetClient' -SmartCard
         ```
 
-      * Reset when Yubikey is Removed
-    
+      - Reset when Yubikey is Removed
+
         ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -DeviceVendorID '1050' -Triggers 'DeviceRemoval' -TriggerAction 'ResetClient'
+        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -DeviceRemovalAction 'ResetClient' -DeviceVendorID '1050'
         ```
 
-      * Reset when Remote Sessions are disconnected
+      - Reset when Remote Sessions are disconnected
 
         ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -Triggers 'SessionDisconnect' -TriggerAction 'ResetClient'
+        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -SystemDisconnectAction 'ResetClient' -UserDisconnectSignOutAction 'ResetClient'
         ```
 
-      * Reset when Remote Sessions are disconnected or 15 minutes of idle time has passed.
+      - Reset when Remote Sessions are disconnected or 15 minutes of idle time has passed.
 
         ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -Triggers 'IdleTimeout', 'SessionDisconnect' -TriggerAction 'ResetClient' -Timeout 900
+        .\Set-AVDClientKioskSettings.ps1 -AutoLogon -SystemDisconnectAction 'ResetClient' -UserDisconnectSignOutAction 'ResetClient' -IdleTimeoutAction 'ResetClient' -IdleTimeout 900
         ```
   
-    * Scenario 3 Options
+    - Scenario 3 Options
 
       For this scenario, you do **not** want to specify a Trigger, any Trigger Actions, or AutoLogon. Instead you would need to configure the system to autologon an Entra ID user using the [AutoLogon SysInternals utility](https://learn.microsoft.com/en-us/sysinternals/downloads/autologon). In addition, you would want to assign only one Remote Application group with a single application to the Entra ID user and ensure that the session hosts in the pool hosting this application do not timeout the user session via the MachineInactivityLimit setting. The custom Launch-AVDClient.ps1 script would automatically launch this single remote application at logon.
 
@@ -237,24 +251,24 @@ The table below details the Scenarios and allowed combination of parameters. If 
       .\Set-AVDClientKioskSettings.ps1
       ```
 
-    * Other Parameters
+    - Other Parameters
 
-      * Replace the Windows default shell with the Remote Desktop client.
+      - Replace the Windows default shell with the Remote Desktop client.
 
         ``` powershell
         .\Set-AVDClientKioskSettings.ps1 -AVDClientShell [other parameters]
         ```
 
-      * Install the Remote Desktop client
+      - Install the Remote Desktop client
 
         ``` powershell
         .\Set-AVDClientKioskSettings.ps1 -InstallAVDClient [other parameters]
         ```
 
-      * Allow Display Settings modification by kiosk users.
-    
+      - Allow Display and Audio Settings modification by kiosk users.
+
         ``` powershell
-        .\Set-AVDClientKioskSettings.ps1 -ShowDisplaySettings [other parameters]
+        .\Set-AVDClientKioskSettings.ps1 -ShowSettings [other parameters]
         ```
 
 ### Microsoft Endpoint Manager (Intune) Deployment
@@ -276,6 +290,7 @@ Remove the configuration from the PowerShell prompt using:
 ``` powershell
 .\Remove-KioskSettings.ps1
 ```
+
 ## Troubleshooting
 
 1. All events from the configuration scripts and scheduled tasks are logged to the **Application and Services Logs | AVD Client Kiosk** event log.
