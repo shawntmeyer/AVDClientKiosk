@@ -363,12 +363,12 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
     }
 }
 
-if ($IdleTimeoutAction) {
+if ($IdleTimeoutAction -eq 'Logoff' -or $IdleTimeoutAction -eq 'ResetClient') {
     Write-Log -EventID 540 -Message "IdleTimeoutAction is configured to '$IdleTimeoutAction'."
     $timer = 0
     $interval = 30 # Check every 30 seconds
     Do {
-        if ($IdleTimeoutAction -eq 'ResetClient' -and (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc\Feeds') -or $IdleTimeoutAction -eq 'Lock' -or $IdleTimeoutAction -eq 'Logoff') {
+        if ($IdleTimeoutAction -eq 'ResetClient' -and (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc\Feeds') -or $IdleTimeoutAction -eq 'Logoff') {
             if (-not (Get-Process | Where-Object { $_.Name -eq 'msrdc' })) {
                 If ($timer -eq 0) {
                     Write-Log -EventID 541 -Message "No active connections found. Starting the Idle Timer"
@@ -382,12 +382,7 @@ if ($IdleTimeoutAction) {
                     If ($IdleTimeoutAction -eq 'ResetClient') {
                         # Restart the script to clear the client cache and kill the current PowerShell process.
                         Restart-Script
-                    }
-                    Elseif ($IdleTimeoutAction -eq 'Lock') {
-                        # Lock the computer if they are not KioskUser0. This is a non-autologon scenario.
-                        Write-Log -EventID 526 -Message "Locking the computer."
-                        Start-Process -FilePath 'rundll32.exe' -ArgumentList "user32.dll`,LockWorkStation"
-                    }
+                    }                    
                     Else {
                         # Logoff the user if they are not KioskUser0. This is a non-autologon scenario.
                         Write-Log -EventID 527 -Message "Logging off user."
