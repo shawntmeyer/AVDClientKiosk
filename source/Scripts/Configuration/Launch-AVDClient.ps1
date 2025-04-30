@@ -425,7 +425,7 @@ If ($Env:UserName -eq 'KioskUser0' -and $MSRDCW.ExitCode -ne -1) {
     Write-Log -EventID 570 -Message "The Remote Desktop client was closed by the user. Restarting Script."
     Restart-Script  
 }
-Else {
+Elseif ($MSRDCW.ExitCode -eq 0) {
     If ($UserDisconnectSignOutAction -eq 'Logoff') {
         Write-Log -EventID 527 -Message "Logging off user."
         Write-Log -EventID 599 -Message "Exiting `"$($MyInvocation.MyCommand.Name)`""
@@ -434,5 +434,10 @@ Else {
     Elseif ($UserDisconnectSignOutAction -eq 'Lock') {
         Write-Log -EventID 526 -Message "Locking the computer."
         Start-Process -FilePath 'rundll32.exe' -ArgumentList "user32.dll`,LockWorkStation"
+    }
+    Else {
+        # Restart the system if the user closed the Remote Desktop Client using the [X] at the top right of the window.
+        Write-Log -EventID 595 -Message "The Remote Desktop client was closed by the user. Restarting the system."
+        Get-WmiObject -Class Win32_OperatingSystem | Invoke-WmiMethod -Name Win32Shutdown -Argument 2
     }
 }

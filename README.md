@@ -102,7 +102,7 @@ In the figure below, you can see that the interface no longer has a taskbar or S
 
 ![Shell Launcher full Screen](docs/media/shellLauncherInterface.png)
 
-## Trigger Actions
+## Triggers and Actions
 
 The table below outlines the actions taken based on the `Autologon`, `Triggers`, `SmartCard` or `DeviceVendorId` (Device Type), and `TriggerAction` parameters.
 
