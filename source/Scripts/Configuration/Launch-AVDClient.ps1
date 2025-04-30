@@ -70,7 +70,7 @@ param (
 
     [string]$IdleTimeoutAction,
 
-    [int]$IdleTimout,
+    [int]$IdleTimeout,
 
     [string]$SystemDisconnectAction,
 
@@ -364,7 +364,7 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
 }
 
 if ($IdleTimeoutAction) {
-    Write-Log -EventID 540 -Message "IdleTimeoutAction is configured."
+    Write-Log -EventID 540 -Message "IdleTimeoutAction is configured to '$IdleTimeoutAction'."
     $timer = 0
     $interval = 30 # Check every 30 seconds
     Do {
