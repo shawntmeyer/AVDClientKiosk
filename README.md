@@ -102,7 +102,7 @@ In the figure below, you can see that the interface no longer has a taskbar or S
 
 ## Triggers and Actions
 
-The tables below outline the actions taken based on the `Autologon` and *TriggerActionparameters*.
+The tables below outline the actions taken based on the `Autologon` and *Trigger Action parameters*.
 
 The first trigger action parameter is `DeviceRemovalAction`. This trigger is activated when a security device, defined as either a smart card or a FIDO2 token with a Vendor ID specified in the `DeviceVendorId` parameter is removed from the local system.
 
