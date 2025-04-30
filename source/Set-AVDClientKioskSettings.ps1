@@ -77,32 +77,40 @@ on the system prior to configuration.
 This switch parameter determines If the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically
 deleted on logoff.
 
-.PARAMETER ShowDisplaySettings
-This switch parameter determines If the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set,
+.PARAMETER ShowSettings
+This switch parameter determines If the Settings App appears on the start menu. The settings app and control panel are restricted to the applets/pages specified in the nonadmins-ShowSettings.txt file. If this value is not set,
 then the Settings app and Control Panel are not displayed or accessible.
 
-.PARAMETER TimeOut
-This integer value determines the number of seconds in the AutoLogon scenario with the Triggers value containing 'IdleTimeout' that the system will stay idle before resetting the client.
-
-.PARAMETER Triggers
-This string array value determines the trigger(s) that will cause the Trigger Action to be carried out.
-When AutoLogon is true, you can choose any or all of the following: 'DeviceRemoval', 'SessionDisconnect', and 'IdleTimeout'.
-When AutoLogon is false, you can leave this empty or choose 'IdleTimeout' or 'DeviceRemoval' (and must select either the SmartCard, the DeviceID option, or both).
-If this value is not set then the TriggerAction is not used.
-
-.PARAMETER TriggerAction
-This string parameter determines what occurs when the specified trigger is detected. The possible values are different depending on the value of $Autologon.
-When AutoLogon is true then 'ResetClient' is allowed.
-When AutoLogon is false then 'Lock' or 'Logoff' are allowed.
+.PARAMETER DeviceRemovalAction
+This string parameter determines what occurs when a FIDO Passkey device or SmartCard is removed from the system. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
+When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
+When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'. You must also use the SmartCard switch parameter or specify a 'DeviceVendorID'.
 
 .PARAMETER DeviceVendorID
-This string parameter defines the Vendor ID of the hardware authentication token that if removed will trigger the action defined in "TriggerAction".
-This value is only used when "Triggers" contains "DeviceRemoval".
-    .EXAMPLE
-    -DeviceVendorID '1050' # Yubikey Vendor ID
+This string parameter defines the Vendor ID of the hardware authentication token that if removed will trigger the action defined in "DeviceRemovalAction".
+This value is only used when "DeviceRemovalAction" contains a value.
 
 .PARAMETER SmartCard
-This switch parameter determines if SmartCard removal will trigger the 'TriggerAction'. This value is only used when 'Triggers' contains 'DeviceRemoval'.
+This switch parameter determines if SmartCard removal will trigger the 'DeviceRemovalAction'. This value is only used when 'DeviceRemovalAction' contains a value.
+
+.PARAMETER IdleTimeoutAction
+This string parameter determines what occurs when the system is idle for a specified amount of time. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
+When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
+When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'.
+
+.PARAMETER IdleTimeOut
+This integer value determines the number of seconds in the that system will wait before performing the action specified in the IdleTimeoutAction parameter.
+
+.PARAMETER SystemDisconnectAction
+This string parameter determines what occurs when the remote desktop session connection is disconnected by the system. This could be due to an IdleTimeout on the session host in the SSO scenario or
+the user has initiated a connection to the session host from another client. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
+When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
+When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'.
+
+.PARAMETER UserDisconnectSignOutAction
+This string parameter determines what occurs when the user disconnects or signs out from the remote session. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
+When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
+When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'.
 
 .PARAMETER Version
 This version parameter allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version.
@@ -120,9 +128,6 @@ param (
     [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
     [switch]$AutoLogon,
 
-    [ValidatePattern("^[0-9A-Fa-f]{4}$")]
-    [string]$DeviceVendorID,
-
     [ValidateSet('AzureCloud', 'AzureUSGovernment')]
     [string]$EnvironmentAVD = 'AzureCloud',
 
@@ -134,37 +139,53 @@ param (
 
     [Parameter(ParameterSetName = 'AutologonExplorerShell')]
     [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
-    [switch]$ShowDisplaySettings,
+    [switch]$ShowSettings,
+
+    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
+    [string]$DeviceRemovalAction,
+
+    [ValidatePattern("^[0-9A-Fa-f]{4}$")]
+    [string]$DeviceVendorID,
 
     [switch]$SmartCard,
 
-    [int]$Timeout = 900,
+    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
+    [string]$IdleTimeoutAction,
 
-    [ValidateSet('DeviceRemoval', 'SessionDisconnect', 'IdleTimeout')]
-    [string[]]$Triggers,
+    [int]$IdleTimeout = 900,
 
     [ValidateSet('Lock', 'Logoff', 'ResetClient')]
-    [string]$TriggerAction,
+    [string]$SystemDisconnectAction,
 
-    [version]$Version = '6.0.0'
+    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
+    [string]$UserDisconnectSignOutAction,
+
+    [version]$Version = '7.0.0'
 )
 
 #region Parameter Validation and Configuration
-# To do, convert to dynamic parameters with Parameter Sets and Validation Sets
+$ActionParameters = @($DeviceRemovalAction, $IdleTimeoutAction, $SystemDisconnectAction, $UserDisconnectSignOutAction)
 If ($AutoLogon) {
-    If ($TriggerAction -eq 'Lock' -or $TriggerAction -eq 'Logoff') {
-        Throw 'You cannot specify a TriggerAction of Lock or Logoff with AutoLogon'
-    } Else {
-        $TriggerAction = 'ResetClient'
+    ForEach ($Action in $ActionParameters) {
+        If ($null -ne $Action) {
+            If ($Action -eq 'Lock' -or $Action -eq 'Logoff') {
+                Throw "You cannot specify a TriggerAction of Lock or Logoff with AutoLogon"
+            }
+        }
     }
 }
 Else {
-    If ($TriggerAction -eq 'ResetClient') {
-        Throw 'You cannot specify a TriggerAction of ResetClient without AutoLogon'
+    ForEach ($Action in $ActionParameters) {
+        If ($null -ne $Action) {
+            If ($Action -eq 'ResetClient') {
+                Throw "You cannot specify a TriggerAction of ResetClient without AutoLogon"
+            }
+        }
     }
-    If ($Triggers -contains 'DeviceRemoval' -and $SmartCard -eq $false -and ($null -eq $DeviceVendorID -or $DeviceVendorID -eq '')) {
-        Throw 'You must specify either a DeviceVendorID or SmartCard when Triggers contains "DeviceRemoval"'
-    } ElseIf ($Triggers -contains 'DeviceRemoval' -and $SmartCard -and ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '')) {
+    If ($DeviceRemovalAction -and $SmartCard -eq $false -and ($null -eq $DeviceVendorID)) {
+        Throw 'You must specify either a DeviceVendorID or SmartCard when DeviceRemoval is a trigger.'
+    }
+    ElseIf ($DeviceRemovalAction -and $SmartCard -and ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '')) {
         Throw 'You cannot specify both a SmartCard and DeviceVendorID when the Triggers contain "DeviceRemoval"'
     }
 }
@@ -235,12 +256,15 @@ If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
 }
 # Only create the custom launch shortcut when necessary. It is only necessary when:
 # 1. AutoLogon is enabled (Scenario 2) or
-# 2. DeviceRemoval trigger is enabled and a SecurityKey is defined or
-# 3. IdleTimeout trigger is enabled and the TriggerAction is Logoff or
-# 4. No triggers are defined and no TriggerAction is defined and AutoLogon is disabled. (Scenario 3)
-If (($AutoLogon -eq $True) -or ($Triggers -contains 'DeviceRemoval' -and $SecurityKey) -or ($Triggers -contains 'IdleTimeout' -and $TriggerAction -eq 'Logoff') -or (-not $AutoLogon -and ($null -eq $Triggers -or $Triggers -eq '') -and ($null -eq $TriggerAction -or $TriggerAction -eq ''))) {
+# 2. SystemDisconnectAction or UserDisconnectSignOutAction is defined or
+# 3. IdleTimeoutAction is Logoff or
+# 4. DeviceRemovalAction is defined and a DeviceVendorId is defined or
+# 5. None of the available triggers and actions are defined (DeviceRemovalAction, IdleTimeoutAction, or SystemDisconnectAction or UserDisconnectSignOutAction). (Scenario 3)
+
+If ($AutoLogon -or $IdleTimeoutAction -eq 'Logoff' -or $SystemDisconnectAction -or $UserDisconnectSignOutAction -or ($DeviceRemovalAction -and $SecurityKey) -or (-not $AutoLogon -and ($null -eq $DeviceRemovalAction -and $null -eq $IdleTimeoutAction -and $null -eq $SystemDisconnectAction -and $null -eq $UserDisconnectSignOutAction))) {
     $CustomLaunchScript = $true
 }
+
 # Detect Wifi Adapter in order to show Wifi Settings in system tray when necessary.
 $WifiAdapter = Get-NetAdapter | Where-Object { $_.Name -like '*Wi-Fi*' -or $_.Name -like '*Wifi*' -or $_.MediaType -like '*802.11*' }     
     
@@ -546,15 +570,15 @@ If ($CustomLaunchScript) {
     $Content = $Content.Replace('[string]$EventLog', "[string]`$EventLog = '$EventLog'") 
     $Content = $Content.Replace('[string]$EventSource', "[string]`$EventSource = '$LaunchScriptSource'")
     If ($AutoLogon) {
-        $Content = $Content.Replace('[bool]$AutoLogon', '[bool]$AutoLogon = $true')
         $Content = $Content.Replace('[string]$SubscribeUrl', "[string]`$SubscribeUrl = '$SubscribeUrl'")
     }
     If ($SecurityKey) { $Content = $Content.Replace('[string]$DeviceVendorID', "[string]`$DeviceVendorID = '$DeviceVendorID'") }
     If ($SmartCard) { $Content = $Content.Replace('[bool]$SmartCard', '[bool]$SmartCard = $true') }
-    If ($Timeout) { $Content = $Content.Replace('[int]$Timeout', "[int]`$Timeout = $Timeout")}
-    If ($Triggers) { $Content = $Content.Replace('[string[]]$Triggers', "[string[]]`$Triggers = @(`"$($Triggers -join '`", `"')`")") }
-    If ($TriggerAction) { $Content = $Content.Replace('[string]$TriggerAction', "[string]`$TriggerAction = '$TriggerAction'") }
-     
+    If ($IdleTimeout) { $Content = $Content.Replace('[int]$IdleTimeout', "[int]`$IdleTimeout = $IdleTimeout") }
+    If ($DeviceRemovalAction) { $Content = $Content.Replace('[string]$DeviceRemovalAction', "[string]`$DeviceRemovalAction = '$DeviceRemovalAction'") }
+    if ($IdleTimeoutAction) { $Content = $Content.Replace('[string]$IdleTimeoutAction', "[string]`$IdleTimeoutAction = '$IdleTimeoutAction'") }
+    If ($SystemDisconnectAction) { $Content = $Content.Replace('[string]$SystemDisconnectAction', "[string]`$SystemDisconnectAction = '$SystemDisconnectAction'") }
+    if ($UserDisconnectSignOutAction) { $Content = $Content.Replace('[string]$UserDisconnectSignOutAction', "[string]`$UserDisconnectSignOutAction = '$UserDisconnectSignOutAction'") }    
     $Content | Set-Content -Path $FileToUpdate
 }
 
@@ -564,7 +588,7 @@ If (-not (Test-Path $SchedTasksScriptsDir)) {
 }
 Write-Log -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
 Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
-If ($Triggers -contains 'SessionDisconnect') {
+If ($SystemDisconnectAction) {
     $parentKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SYSTEM\CurrentControlSet\Services\EventLog", $true)
     $null = $parentKey.CreateSubKey("Microsoft-Windows-TerminalServices-RDPClient/Operational")
 }
@@ -638,47 +662,46 @@ If (-not ($AVDClientShell)) {
     If (-not (Test-Path -Path $dirStartup)) {
         $null = New-Item -Path $dirStartup -ItemType Directory -Force
     }
-    Copy-Item -Path "$ShortcutPath" -Destination $dirStartup -Force
-    
-    If ($AutoLogon) {
-        $TaskName = "(AVD Client) - Hide KioskUser0 Start Button Context Menu"
-        Write-Log -EntryType Information -EventId 49 -Message "Creating Scheduled Task: '$TaskName'."
-        $TaskScriptEventSource = 'Hide Start Button Context Menu'
-        $TaskDescription = "Hide Start Button Right Click Menu"
-        $TaskScriptName = 'Hide-StartButtonRightClickMenu.ps1'
-        $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
-        New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue   
-        $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn
-        $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName -TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`" -AutoLogonUser `"KioskUser0`""
-        $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-        $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
-        Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-        If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-            Write-Log -EntryType Information -EventId 50 -Message "Scheduled Task created successfully."
-        }
-        Else {
-            Write-Log -EntryType Error -EventId 51 -Message "Scheduled Task not created."
-            $ScriptExitCode = 1618
-        }
-    }
-    Else {
-        Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
-        # Set Default profile to hide Start Menu Right click
-        $Groups = @(
-            "Group1",
-            "Group2",
-            "Group3"
-        )
-        $WinXRoot = "$env:SystemDrive\Users\Default\Appdata\local\Microsoft\Windows\WinX\{0}"
-        foreach ($grp in $Groups) { 
-            $HideDir = Get-ItemProperty -Path ($WinXRoot -f $grp )
-            $HideDir.Attributes = [System.IO.FileAttributes]::Hidden
-        }
-    }
+    Copy-Item -Path "$ShortcutPath" -Destination $dirStartup -Force   
     
     If ($Windows10) {
+        If ($AutoLogon) {
+            $TaskName = "(AVD Client) - Hide KioskUser0 Start Button Context Menu"
+            Write-Log -EntryType Information -EventId 49 -Message "Creating Scheduled Task: '$TaskName'."
+            $TaskScriptEventSource = 'Hide Start Button Context Menu'
+            $TaskDescription = "Hide Start Button Right Click Menu"
+            $TaskScriptName = 'Hide-StartButtonRightClickMenu.ps1'
+            $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
+            New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue   
+            $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn
+            $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName -TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`" -AutoLogonUser `"KioskUser0`""
+            $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+            $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
+            Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
+            If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
+                Write-Log -EntryType Information -EventId 50 -Message "Scheduled Task created successfully."
+            }
+            Else {
+                Write-Log -EntryType Error -EventId 51 -Message "Scheduled Task not created."
+                $ScriptExitCode = 1618
+            }
+        }
+        Else {
+            Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
+            # Set Default profile to hide Start Menu Right click
+            $Groups = @(
+                "Group1",
+                "Group2",
+                "Group3"
+            )
+            $WinXRoot = "$env:SystemDrive\Users\Default\Appdata\local\Microsoft\Windows\WinX\{0}"
+            foreach ($grp in $Groups) { 
+                $HideDir = Get-ItemProperty -Path ($WinXRoot -f $grp )
+                $HideDir.Attributes = [System.IO.FileAttributes]::Hidden
+            }
+        }
         Write-Log -EntryType Information -EventId 53 -Message "Copying Start Menu Layout file for Non Admins to '$DirKiosk' directory."
-        If ($ShowDisplaySettings) {
+        If ($ShowSettings) {
             If ($CustomLaunchScript) {
                 $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings_AVDClient.xml"
             }
@@ -737,8 +760,8 @@ Else {
         Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
     }
-    If ($ShowDisplaySettings) {
-        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
+    If ($ShowSettings) {
+        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
         Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
 }
@@ -767,23 +790,23 @@ If ($AutoLogon) {
     Write-Log -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
-    If ($Triggers -contains 'DeviceRemoval' -and $SmartCard -and -not $SecurityKey) {
-        If ($TriggerAction -eq 'Lock') {
+    If ($DeviceRemovalAction -and $SmartCard) {
+        If ($DeviceRemovalAction -eq 'Lock') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
             Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
-        ElseIf ($TriggerAction -eq 'Logoff') {
+        ElseIf ($DeviceRemovalAction -eq 'Logoff') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
             Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
     }
-    If ($Triggers -contains 'IdleTimeout' -and $TriggerAction -eq 'Lock') {
+    If ($IdleTimeoutActon -eq 'Lock') {
         # Will lock the system via the inactivity timeout built-in policy which locks the screen after inactivity.
         $sourceFile = Join-Path -Path $DirGPO -ChildPath 'MachineInactivityTimeout.inf'
         $outFile = Join-Path -Path $env:Temp -ChildPath 'MachineInactivityTimeout.inf'
-        (Get-Content -Path $SourceFile).Replace('900', $Timeout) | Out-File $outFile
+        (Get-Content -Path $SourceFile).Replace('900', $IdleTimeout) | Out-File $outFile
         $null = cmd /c lgpo /s "$outFile" '2>&1'
-        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$Timeout seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$IdleTimeout seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
 }
 
@@ -934,7 +957,7 @@ If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
     }
     ElseIf (-not $Windows10 -and -not $AVDClientShell) {
         If ($AutoLogon) {
-            If ($ShowDisplaySettings) {
+            If ($ShowSettings) {
                 Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
                 $configFile = "AzureVirtualDesktop_Settings_Autologon.xml"
             }
@@ -944,7 +967,7 @@ If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
             }
         }
         Else {
-            If ($ShowDisplaySettings) {
+            If ($ShowSettings) {
                 If ($CustomLaunchScript) {
                     Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings."
                     $configFile = "AzureVirtualDesktop_Settings.xml"
@@ -983,33 +1006,35 @@ If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
 #endregion Assigned Access Launcher
 
 #region Keyboard Filter
+If ($Windows10) {
 
-Write-Log -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
-Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
+    Write-Log -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
+    Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
 
-# Configure Keyboard Filter after reboot
-$TaskName = "(AVD Client) - Configure Keyboard Filter"
-Write-Log -EntryType Information -EventId 118 -Message "Creating Scheduled Task: '$TaskName'."
-$TaskScriptEventSource = 'Keyboard Filter Configuration'
-$TaskDescription = "Configures the Keyboard Filter"
-$TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
-$TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
-New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
-$TaskTrigger = New-ScheduledTaskTrigger -AtStartup
-$TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
-If ($ShowDisplaySettings) {
-    $TaskScriptArgs = "$TaskScriptArgs -ShowDisplaySettings"
-}
-$TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
-$TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-$TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
-Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-    Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
-}
-Else {
-    Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
-    $ScriptExitCode = 1618
+    # Configure Keyboard Filter after reboot
+    $TaskName = "(AVD Client) - Configure Keyboard Filter"
+    Write-Log -EntryType Information -EventId 118 -Message "Creating Scheduled Task: '$TaskName'."
+    $TaskScriptEventSource = 'Keyboard Filter Configuration'
+    $TaskDescription = "Configures the Keyboard Filter"
+    $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
+    $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
+    New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
+    $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
+    $TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
+    If ($ShowDisplaySettings) {
+        $TaskScriptArgs = "$TaskScriptArgs -ShowDisplaySettings"
+    }
+    $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
+    $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
+    Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
+    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
+        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
+        $ScriptExitCode = 1618
+    }
 }
 
 #endregion Keyboard Filter
