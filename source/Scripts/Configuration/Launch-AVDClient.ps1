@@ -430,8 +430,8 @@ Elseif ($MSRDCW.ExitCode -eq 0) {
         Write-Log -EventID 526 -Message "Locking the computer."
         Start-Process -FilePath 'rundll32.exe' -ArgumentList "user32.dll`,LockWorkStation"
     }
-    Else {
-        # Restart the system if the user closed the Remote Desktop Client using the [X] at the top right of the window.
+    Elseif ($null -eq $DeviceRemovalAction -and $null -eq $IdleTimeoutAction -and $null -eq $SystemDisconnectAction -and $null -eq $UserDisconnectSignOutAction) { 
+        # Scenario 3: Restart the system if the user closed the Remote Desktop Client using the [X] at the top right of the window.
         Write-Log -EventID 595 -Message "The Remote Desktop client was closed by the user. Restarting the system."
         Get-WmiObject -Class Win32_OperatingSystem | Invoke-WmiMethod -Name Win32Shutdown -Argument 2
     }
