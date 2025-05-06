@@ -161,7 +161,7 @@ The table below describes each parameter and any requirements or usage informati
 | `ApplySTIGs` | Switch | Determines if the latest DoD Security Technical Implementation Guide Group Policy Objects are automatically downloaded from [Cyber Command](https://public.cyber.mil/stigs/gpo) and applied via the Local Group Policy Object (LGPO) tool to the system. | If they are, then several delta settings are applied to allow the system to communicate with Entra Id and complete autologon (if applicable). Requires access to https://public.cyber.mil/stigs/gpo |
 | `Autologon` | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. | When configured, Windows will automatically create a new user, 'KioskUser0', which will not have a password and be configured to automatically logon when Windows starts. **This is the primary parameter used to configure the kiosk for Scenario 2**. |
 | `AVDClientShell` | Switch | Determines whether the default Windows shell (explorer.exe) is replaced by the Remote Desktop client for Windows. | When not specified the default shell is used and, on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. |
-| `EnvironmentAVD` | String | Determines the Azure environment to which you are connecting. | Determines the Url of the Remote Desktop Feed which varies by environment by setting the '$SubscribeUrl' variable and replacing placeholders in several files during installation. The list of Urls can be found at https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace. Default is 'AzureCloud' |
+| `EnvironmentAVD` | String | Determines the Azure environment to which you are connecting. | Determines the Url of the Remote Desktop Feed which varies by environment by setting the '$SubscribeUrl' variable and replacing placeholders in several files during installation. The possible values are 'AzureCloud', 'AzureChina', 'AzureUSGovernment', 'AzureGovernmentSecret', and 'AzureGovernmentTopSecret'. See [Air-Gapped Cloud Support](#air-gapped-cloud-support) for updating the code to support 'AzureGovernmentSecret' and 'AzureGovernmentTopSecret'. Default is 'AzureCloud' |
 | `InstallAVDClient` | Switch | Determines if the latest Remote Desktop client for Windows and the Visual Studio C++ Redistributables are downloaded from the Internet and installed prior to configuration. | Requires access to https://go.microsoft.com/fwlink/?linkid=2139369 and https://aka.ms/vs/17/release/vc_redist.x64.exe |
 | `SharedPC` | Switch | Determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically deleted on logoff. | Only valid for direct logon mode ("Autologon" switch is not used). |
 | `ShowSettings` | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when the `AVDClientShell` switch is not specified. |
@@ -173,6 +173,38 @@ The table below describes each parameter and any requirements or usage informati
 | `SystemDisconnectAction` | string | Determines what occurs when the remote desktop session connection is disconnected by the system. This could be due to an IdleTimeout on the session host in the SSO scenario or the user has initiated a connection to the session host from another client. | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
 | `UserDisconnectSignOutAction` | string | Determines what occurs when the user disconnects or signs out from the remote session. | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
 | `Version` | Version |  Writes this value to a string value called 'version' at HKLM:\SOFTWARE\Kiosk registry key. | Allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of this registry value. |
+
+### Air-Gapped Cloud Support
+
+In order to use this solution in Microsoft's US Government Air-Gapped clouds, you'll need to get the cloud suffix from the environment. You can do this easily with PowerShell or get the information from our Air-Gapped cloud documentation.
+
+#### PowerShell
+
+1. Connect to the Azure Environment.
+
+   ``` powershell
+   Connect-AzAccount -Environment <EnvironmentName>
+   ```
+
+1. Then get the Resource Manager Url for the environment.
+
+  ``` powershell
+  $ResourceManagerUrl = (Get-AzEnvironment -Name <EnvironmentName>).ResourceManagerUrl
+  ```
+
+1. Then get the cloud suffix.
+
+  ``` powershell
+  $CloudSuffix = $ResourceManagerUrl.Replace('https://management.', '').Replace('/', '')
+  ```
+
+1. Replace the correct instance of <CLOUDSUFFIX> in the Set-AVDClientKioskSettings.ps1 file before running the script.
+
+#### Air-Gapped Cloud Documentation
+
+1. From a corporate Microsoft laptop or AVD session, access either [Azure Government Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-secret/azure/azure-government-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) or [Azure Government Top Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-topsecret/azure/azure-government-top-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) and catpure the value of the subscribe Url which will be in the form of 'https://rdweb.wvd.<CLOUDSUFFIX>'.
+
+1. Replace the correct instance of <CLOUDSUFFIX> in the Set-AVDClientKioskSettings.ps1 file before running the script.
 
 ### Manual Installation
 

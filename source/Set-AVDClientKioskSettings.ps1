@@ -128,7 +128,7 @@ param (
     [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
     [switch]$AutoLogon,
 
-    [ValidateSet('AzureCloud', 'AzureUSGovernment')]
+    [ValidateSet('AzureChina', 'AzureCloud', 'AzureUSGovernment', 'AzureGovernmentSecret', 'AzureGovernmentTopSecret')]
     [string]$EnvironmentAVD = 'AzureCloud',
 
     [switch]$InstallAVDClient,
@@ -245,12 +245,14 @@ $OS = Get-WmiObject -Class Win32_OperatingSystem
 If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') { $Windows10 = $true }
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Set AVD feed subscription Url.
-If ($EnvironmentAVD -eq 'AzureUSGovernment') {
-    $SubscribeUrl = 'https://rdweb.wvd.azure.us'
+Switch ($EnvironmentAVD) {
+    'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn' }
+    'AzureCloud' { $SubscribeUrl = 'https://rdweb.wvd.azure.com' }
+    'AzureUSGovernment' { $SubscribeUrl = 'https://rdweb.wvd.azure.us' }
+    'AzureGovernmentSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>' }
+    'AzureGovernmentTopSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>' }
 }
-Else {
-    $SubscribeUrl = 'https://client.wvd.microsoft.com'
-}
+
 If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
     $SecurityKey = $true
 }
