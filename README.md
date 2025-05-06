@@ -180,7 +180,7 @@ In order to use this solution in Microsoft's US Government Air-Gapped clouds, yo
 
 #### PowerShell
 
-1. Connect to the Azure Environment.
+1. Connect to the Azure Environment. You may need to refer to [Get-Started PowerShell Azure Government Secret](https://review.learn.microsoft.com/en-us/microsoft-government-secret/azure/azure-government-secret/quick-starts/documentation-government-secret-get-started-azure-powershell-connect?branch=live) or [Get-Started PowerShell Azure Government Top Secret](https://review.learn.microsoft.com/en-us/microsoft-government-topsecret/azure/azure-government-top-secret/quickstarts/documentation-government-top-secret-get-started-powershell-connect?branch=live)
 
     ``` powershell
     Connect-AzAccount -Environment <EnvironmentName>
