@@ -202,9 +202,9 @@ In order to use this solution in Microsoft's US Government Air-Gapped clouds, yo
 
 #### Air-Gapped Cloud Documentation
 
-1. From a corporate Microsoft laptop or AVD session, access either [Azure Government Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-secret/azure/azure-government-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) or [Azure Government Top Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-topsecret/azure/azure-government-top-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) and capture the value of the subscribe Url which will be in the form of '<span>https://</span>rdweb.wvd.&lt;CLOUDSUFFIX&gt;'.
+1. From a corporate Microsoft laptop or AVD session, access either [Azure Government Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-secret/azure/azure-government-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) or [Azure Government Top Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-topsecret/azure/azure-government-top-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) and capture the value of the subscribe Url at end of the sentence: 'In the client, you can connect to AVD by subscribing to <span>https://</span>rdweb.wvd.&lt;CLOUDSUFFIX&gt;'.
 
-1. Replace the appropriate instance of '&lt;CLOUDSUFFIX&gt;' in the Set-AVDClientKioskSettings.ps1 file with the cloud suffix as derived from the documentation before running the script.
+1. Replace the appropriate instance of '&lt;CLOUDSUFFIX&gt;' in the Set-AVDClientKioskSettings.ps1 file with the cloud suffix as derived from this sentence before running the script.
 
 ### Manual Installation
 
