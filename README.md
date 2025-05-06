@@ -182,29 +182,29 @@ In order to use this solution in Microsoft's US Government Air-Gapped clouds, yo
 
 1. Connect to the Azure Environment.
 
-   ``` powershell
-   Connect-AzAccount -Environment <EnvironmentName>
-   ```
+    ``` powershell
+    Connect-AzAccount -Environment <EnvironmentName>
+    ```
 
 1. Then get the Resource Manager Url for the environment.
 
-  ``` powershell
-  $ResourceManagerUrl = (Get-AzEnvironment -Name <EnvironmentName>).ResourceManagerUrl
-  ```
+    ``` powershell
+    $ResourceManagerUrl = (Get-AzEnvironment -Name <EnvironmentName>).ResourceManagerUrl
+    ```
 
 1. Then get the cloud suffix.
 
-  ``` powershell
-  $CloudSuffix = $ResourceManagerUrl.Replace('https://management.', '').Replace('/', '')
-  ```
+    ``` powershell
+    $CloudSuffix = $ResourceManagerUrl.Replace('https://management.', '').Replace('/', '')
+    ```
 
-1. Replace the correct instance of <CLOUDSUFFIX> in the Set-AVDClientKioskSettings.ps1 file before running the script.
+1. Replace the correct instance of '\<CLOUDSUFFIX>' in the Set-AVDClientKioskSettings.ps1 file with the actual value before running the script.
 
 #### Air-Gapped Cloud Documentation
 
-1. From a corporate Microsoft laptop or AVD session, access either [Azure Government Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-secret/azure/azure-government-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) or [Azure Government Top Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-topsecret/azure/azure-government-top-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) and catpure the value of the subscribe Url which will be in the form of 'https://rdweb.wvd.<CLOUDSUFFIX>'.
+1. From a corporate Microsoft laptop or AVD session, access either [Azure Government Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-secret/azure/azure-government-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) or [Azure Government Top Secret Virtual Desktop Infrastructure](https://review.learn.microsoft.com/en-us/microsoft-government-topsecret/azure/azure-government-top-secret/services/virtual-desktop-infrastructure/virtual-desktop?branch=live#subscribe-to-azure-virtual-desktop-in-the-windows-client) and capture the value of the subscribe Url which will be in the form of 'https://rdweb.wvd.\<CLOUDSUFFIX>'.
 
-1. Replace the correct instance of <CLOUDSUFFIX> in the Set-AVDClientKioskSettings.ps1 file before running the script.
+1. Replace the correct instance of '\<CLOUDSUFFIX>' in the Set-AVDClientKioskSettings.ps1 file with the actual value before running the script.
 
 ### Manual Installation
 
