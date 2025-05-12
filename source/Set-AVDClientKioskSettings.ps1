@@ -608,7 +608,7 @@ If (-not $AVDClientShell -and $Windows10) {
     # No GPO settings are available to do this.
     Write-Log -EntryType Information -EventId 45 -Message "Adding Provisioning Package to remove pinned items from Start Menu"
     $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*PinnedFolders*' }).FullName
-    If (-not $ShowDisplaySettings) {
+    If (-not $ShowSettings) {
         $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*Settings*' }).FullName
     }
     If ($AutoLogon) {
@@ -1023,8 +1023,8 @@ If ($Windows10) {
     New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
     $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
     $TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
-    If ($ShowDisplaySettings) {
-        $TaskScriptArgs = "$TaskScriptArgs -ShowDisplaySettings"
+    If ($ShowSettings) {
+        $TaskScriptArgs = "$TaskScriptArgs -ShowSettings"
     }
     $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
     $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest

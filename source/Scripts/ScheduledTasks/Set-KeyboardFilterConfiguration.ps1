@@ -8,7 +8,7 @@ param (
     $EventSource,
     [Parameter(Mandatory = $false)]
     [switch]
-    $ShowDisplaySettings,
+    $ShowSettings,
     [Parameter(Mandatory = $true)]
     [string]
     $TaskName
@@ -163,7 +163,7 @@ $PredefinedKeys = @{
     "LaunchApp2" = "Start Application 2 key"
 }
 
-If (!$ShowDisplaySettings) {
+If (!$ShowSettings) {
     $PredefinedKeys.Add('Win+I', 'Open Settings')
 }
 
