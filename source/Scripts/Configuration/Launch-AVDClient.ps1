@@ -140,28 +140,30 @@ Else {
     $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -PassThru -WindowStyle Maximized
 }
 
-$ClientDir = "$env:UserProfile\AppData\Local\rdclientwpf"
-$JSONFile = Join-Path -Path $ClientDir -ChildPath 'ISubscription.json'
+If ($SubscribeUrl -match '.us' -or $SubscribeUrl -match '.com') {
+    $ClientDir = "$env:UserProfile\AppData\Local\rdclientwpf"
+    $JSONFile = Join-Path -Path $ClientDir -ChildPath 'ISubscription.json'
 
-# Wait for JSON File to be populated or catch the case where the Remote Desktop Client window is closed.
-# We have to catch ExitCode 0 as a separate condition since it evaluates as null.
-do {
-    If (Test-Path $JSONFile) {
-        $AVDInfo = Get-Content $JSONFile | ConvertFrom-Json
-        $WorkSpaceOID = $AVDInfo.TenantCollection.TenantID
-        $User = $AVDInfo.Username
-    }
-    Start-Sleep -Seconds 1
-} until ($null -ne $User -or $null -ne $MSRDCW.ExitCode)
+    # Wait for JSON File to be populated or catch the case where the Remote Desktop Client window is closed.
+    # We have to catch ExitCode 0 as a separate condition since it evaluates as null.
+    do {
+        If (Test-Path $JSONFile) {
+            $AVDInfo = Get-Content $JSONFile | ConvertFrom-Json
+            $WorkSpaceOID = $AVDInfo.TenantCollection.TenantID
+            $User = $AVDInfo.Username
+        }
+        Start-Sleep -Seconds 1
+    } until ($null -ne $User -or $null -ne $MSRDCW.ExitCode)
 
-If ($User) {
-    Write-Log -EventID 505 -Message 'User Information Found. Determining if user has only 1 resource assigned to connect to that resource automatically.'
-    $Apps = $AVDInfo.TenantCollection.remoteresourcecollection
-    If ($SubscribeUrl -match '.us') { $env = 'usgov' } Else { $env = 'avdarm' }
-    If ($apps.count -eq 1) {
-        Write-Log -EventID 506 -Message 'Only 1 resource assigned to user. Automatically connecting.'
-        $URL = -join ("ms-avd:connect?workspaceId=", $WorkSpaceOID, "&resourceid=", $apps.ID, "&username=", $User, "&env=", $env, "&version=0")
-        Start-Process -FilePath "$URL"
+    If ($User) {
+        Write-Log -EventID 505 -Message 'User Information Found. Determining if user has only 1 resource assigned to connect to that resource automatically.'
+        $Apps = $AVDInfo.TenantCollection.remoteresourcecollection
+        If ($SubscribeUrl -match '.us') { $env = 'usgov' } Else { $env = 'avdarm' }
+        If ($apps.count -eq 1) {
+            Write-Log -EventID 506 -Message 'Only 1 resource assigned to user. Automatically connecting.'
+            $URL = -join ("ms-avd:connect?workspaceId=", $WorkSpaceOID, "&resourceid=", $apps.ID, "&username=", $User, "&env=", $env, "&version=0")
+            Start-Process -FilePath "$URL"
+        }
     }
 }
 

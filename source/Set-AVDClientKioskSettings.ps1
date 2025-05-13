@@ -454,6 +454,11 @@ Function Write-Log {
         $Message
     )
     Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
+    Switch ($EntryType) {
+        'Information' { Write-Host -Message $Message }
+        'Warning' { Write-Warning -Message $Message }
+        'Error' { Write-Error -Message $Message }
+    }
 }
 
 #endregion Functions
@@ -583,13 +588,14 @@ If ($CustomLaunchScript) {
     if ($UserDisconnectSignOutAction) { $Content = $Content.Replace('[string]$UserDisconnectSignOutAction', "[string]`$UserDisconnectSignOutAction = '$UserDisconnectSignOutAction'") }    
     $Content | Set-Content -Path $FileToUpdate
 }
-
-$SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
-If (-not (Test-Path $SchedTasksScriptsDir)) {
-    $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
+If ($Windows10 -or $AutoLogon) {
+    $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
+    If (-not (Test-Path $SchedTasksScriptsDir)) {
+        $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
+    }
+    Write-Log -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
+    Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
 }
-Write-Log -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
-Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
 If ($SystemDisconnectAction -or $UserDisconnectSignOutAction) {
     $parentKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SYSTEM\CurrentControlSet\Services\EventLog", $true)
     $null = $parentKey.CreateSubKey("Microsoft-Windows-TerminalServices-RDPClient/Operational")
