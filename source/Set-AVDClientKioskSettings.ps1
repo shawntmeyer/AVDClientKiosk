@@ -224,6 +224,11 @@ $Script:Dir = Split-Path $Script:FullName
 # Windows Event Log (.evtx)
 $EventLog = 'AVD Client Kiosk'
 $EventSource = 'Configuration Script'
+# Find LTSC OS (and Windows IoT Enterprise)
+$OS = Get-WmiObject -Class Win32_OperatingSystem
+# Detect Windows 11
+If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') { $Windows10 = $true }
+If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
 $DirAppLocker = Join-Path -Path $Script:Dir -ChildPath "AppLocker"
 $FileAppLockerClear = Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml"
@@ -234,16 +239,17 @@ $DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLaunche
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys.csv"
+If ($Windows10) {
+    $FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win10.csv"
+}
+Else {
+    $FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win11.csv"
+}
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Configuration"
 $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
-# Find LTSC OS (and Windows IoT Enterprise)
-$OS = Get-WmiObject -Class Win32_OperatingSystem
-# Detect Windows 11
-If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') { $Windows10 = $true }
-If ($OS.Name -match 'LTSC') { $LTSC = $true }
+
 # Set AVD feed subscription Url.
 Switch ($EnvironmentAVD) {
     'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn' }
@@ -774,17 +780,14 @@ Else {
     }
 }
 
-# Configure Feed URL for all Users
-$outfile = "$env:Temp\Users-AVDURL.txt"
+# Configure Feed URL for Autologon User
 If ($AutoLogon) {
+    $outfile = "$env:Temp\Users-AVDURL.txt"
     $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
+    (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
+    $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
+    Write-Log -EntryType Information -EventId 70 -Message "Configured Default Connection URL for autologon user via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
-Else {
-    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-AutoSubscribe.txt'
-}
-(Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
-$null = cmd /c lgpo.exe /t "$outfile" '2>&1'
-Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
 # Disable Cortana, Search, Feeds, Logon Animations, and Edge Shortcuts. These are computer settings only.
 $null = cmd /c lgpo.exe /t "$DirGPO\Computer.txt" '2>&1'
@@ -827,9 +830,20 @@ $null = cmd /c REG LOAD "HKLM\Default" "$env:SystemDrive\Users\default\ntuser.da
 Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
 
 # Import registry keys file
-Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file for modification of default user hive."
+Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
 $RegKeys = Import-Csv -Path $FileRegKeys
-
+If (-not $AutoLogon) {
+    #Configure AutoSubscription URL for AVD Client
+    #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
+    $NewEntry = [PSCustomObject]@{
+        Key = 'HKCU\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
+        Value = 'AutoSubscription'
+        Type = 'REG_SZ'
+        Data = "$SubscribeUrl/api/arm/feeddiscovery"
+        Description = 'AVD Client Subscription URL'
+    }
+    $RegKeys += $NewEntry
+}
 # create the reg key restore file if it doesn't exist, else load it to compare for appending new rows.
 Write-Log -EntryType Information -EventId 97 -Message "Creating a Registry key restore file for Kiosk Mode uninstall."
 $FileRestore = "$DirKiosk\RegKeyRestore.csv"
