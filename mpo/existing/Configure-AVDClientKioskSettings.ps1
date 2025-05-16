@@ -47,22 +47,17 @@ param (
     [ValidateSet('AzureCloud', 'AzureUSGovernment')]
     [string]$EnvironmentAVD='AzureUSGovernment',
 
-    [switch]$InstallAVDClient
+    [switch]$InstallAVDClient,
+
+    [string]$DirAVDClientLauncher = 'C:\AVDClientLauncher'
 )
 
 #region Set Variables
 
 $Script:FullName = $MyInvocation.MyCommand.Path
-$Script:Dir = Split-Path $Script:FullName
-$Script:File = [string]$myInvocation.MyCommand.Name
-$Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
-# Log file (.log)
-$Script:LogDir = Join-Path -Path $env:SystemRoot -ChildPath "Logs"
-$date = Get-Date -UFormat "%Y-%m-%d %H-%M-%S"
-$Script:LogName = "$($Script:Name)-$date.log"
-# Source Directories and supporting files
-$DirAVDClientLauncher = Join-Path -Path $env:SystemDrive -ChildPath "AVDClientLauncher"
-
+$EventLog = 'AVD Client Launcher'
+$EventSource = 'Configuration Script'
+$LaunchScriptEventSource = 'Launch Script'
 # Set AVD feed subscription Url.
 If ($EnvironmentAVD -eq 'AzureUSGovernment') {
     $SubscribeUrl = 'https://rdweb.wvd.azure.us'
@@ -202,27 +197,52 @@ function Update-ACLInheritance {
         $NewACL.SetAccessRuleProtection($DisableInheritance, $PreserveInheritedACEs)
         Set-ACL -Path $Path -AclObject $NewACL
     }
+}
 
+Function Write-Log {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string]
+        $EventLog = $EventLog,
+        [Parameter()]
+        [string]
+        $EventSource = $EventSource,
+        [Parameter()]
+        [string]
+        [ValidateSet('Information', 'Warning', 'Error')]
+        $EntryType = 'Information',
+        [Parameter()]
+        [Int]
+        $EventID,
+        [Parameter()]
+        [string]
+        $Message
+    )
+    Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
+    Switch ($EntryType) {
+        'Information' { Write-Host $Message }
+        'Warning' { Write-Warning $Message }
+        'Error' { Write-Error $Message }
+    }
 }
 
 #endregion Functions
 
 #region Initialization
 
-If (-not (Test-Path $Script:LogDir)) {
-    $null = New-Item -Path $Script:LogDir -ItemType Directory -Force
-}
-
-Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
+New-EventLog -LogName $EventLog -Source $LaunchScriptEventSource -ErrorAction SilentlyContinue
+Write-Log -EntryType Information -EventId 1 -Message "Executing '$Script:FullName'."
 
 #endregion
 
 #region Install AVD Client
 
 If ($installAVDClient) {
-    Write-Output "Running Script to install or update Visual C++ Redistributables."
+    Write-Log -EntryType Information -EventID 5 -Message "Running Script to install or update Visual C++ Redistributables."
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Install-VisualC++Redistributables.ps1')
-    Write-Output "Running Script to install or update AVD Client."
+    Write-Log -EntryType Information -EventId 6 -Message "Running Script to install or update AVD Client."
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Install-AVDClient.ps1')
 }
 
@@ -230,13 +250,13 @@ If ($installAVDClient) {
 
 #region AVDClient Directory
 
-Write-Output "Creating AVDClientLauncher Directory at root of system drive."
+Write-Log -EntryType Information -EventID 10 -Message "Creating Directory - '$DirAVDClientLauncher'."
 If (-not (Test-Path $DirAVDClientLauncher)) {
     New-Item -Path $DirAVDClientLauncher -ItemType Directory -Force | Out-Null
 }
 
 # Setting ACLs on the AVD Client Launcher directory to prevent Non-Administrators from changing files. Defense in Depth.
-Write-Output "Configuring Kiosk Directory ACLs"
+Write-Log -EntryType Information -EventId 11 -Message "Configuring $DirAVDClientLauncher Directory ACLs"
 $Group = New-Object System.Security.Principal.NTAccount("Builtin", "Administrators")
 $ACL = Get-ACL $DirAVDClientLauncher
 $ACL.SetOwner($Group)
@@ -247,25 +267,28 @@ Update-ACL -Path $DirAVDClientLauncher -Identity 'System' -FileSystemRights 'Ful
 Update-ACLInheritance -Path $DirAVDClientLauncher -DisableInheritance $true -PreserveInheritedACEs $false
 
 # Copy Client Launch Scripts.
-Write-Output "Copying Launch AVD Client Scripts from '$PSScriptRoot' to '$DirAVDClientLauncher'"
+Write-Log -EventID 15 -Message "Copying Launch AVD Client Scripts from '$PSScriptRoot' to '$DirAVDClientLauncher'"
 Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Launch-AVDClient.ps1') -Destination $DirAVDClientLauncher -Force
 Copy-Item -Path (Join-Path -Path $PSSCriptRoot -ChildPath 'Launch-AVDClient.vbs') -Destination $DirAVDClientLauncher -Force
 # dynamically update parameters of launch script.
 $FileToUpdate = "$DirAVDClientLauncher\Launch-AVDClient.ps1"
+$Content = Get-Content -Path $FileToUpdate
+$Content = $Content.Replace('[string]$EventLog', -Join ('[string]$EventLog', ' = "', $EventLog, '"'))
+$Content = $Content.Replace('[string]$EventSource', -Join ('[string]$EventSource', ' = "', $LaunchScriptEventSource, '"'))
 If ($SubscribeUrl) {
-    $Content = Get-Content -Path $FileToUpdate
     $Content = $Content.Replace('[string]$SubscribeUrl', -Join ('[string]$SubscribeUrl', ' = "', $SubscribeUrl, '"'))
-    $Content | Set-Content -Path $FileToUpdate
 }
-#region Registry Edits
+$Content | Set-Content -Path $FileToUpdate
 
+#region Registry Edits
+<#--
 Set-RegistryValue -Name 'BlockAADWorkplaceJoin' -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin' -PropertyType 'DWORD' -Value 1
 New-Item -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher' -Value 'URL:ms-avdclientlauncher' -Force | Out-Null
 Set-RegistryValue -Name 'URL Protocol' -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher' -PropertyType 'String' -Value ''
 New-Item -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher\shell\open\command' -Value "$env:SystemRoot\System32\wscript.exe `"$DirAVDClientLauncher\Launch-AVDClient.vbs`"" -ItemType STRING -Force | Out-Null
 Set-RegistryValue -Name 'Version' -Path 'HKLM:\Software\AVDClientLauncher' -PropertyType 'String' -Value "$($version.ToString())"
+--#>
 
 #endregion Registry Edits
 
-Write-Output "Ending Kiosk Mode Configuration version '$($version.ToString())'."
-Stop-Transcript
+Write-Log -EventID 50 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())'."
