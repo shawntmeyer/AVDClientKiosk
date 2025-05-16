@@ -281,13 +281,12 @@ If ($SubscribeUrl) {
 $Content | Set-Content -Path $FileToUpdate
 
 #region Registry Edits
-<#--
+
 Set-RegistryValue -Name 'BlockAADWorkplaceJoin' -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin' -PropertyType 'DWORD' -Value 1
 New-Item -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher' -Value 'URL:ms-avdclientlauncher' -Force | Out-Null
 Set-RegistryValue -Name 'URL Protocol' -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher' -PropertyType 'String' -Value ''
 New-Item -Path 'Registry::HKEY_CLASSES_ROOT\ms-avdclientlauncher\shell\open\command' -Value "$env:SystemRoot\System32\wscript.exe `"$DirAVDClientLauncher\Launch-AVDClient.vbs`"" -ItemType STRING -Force | Out-Null
 Set-RegistryValue -Name 'Version' -Path 'HKLM:\Software\AVDClientLauncher' -PropertyType 'String' -Value "$($version.ToString())"
---#>
 
 #endregion Registry Edits
 
