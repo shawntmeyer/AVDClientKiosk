@@ -461,9 +461,9 @@ Function Write-Log {
     )
     Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
     Switch ($EntryType) {
-        'Information' { Write-Host -Message $Message }
-        'Warning' { Write-Warning -Message $Message }
-        'Error' { Write-Error -Message $Message }
+        'Information' { Write-Host $Message }
+        'Warning' { Write-Warning $Message }
+        'Error' { Write-Error $Message }
     }
 }
 
