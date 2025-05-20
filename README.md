@@ -25,7 +25,7 @@ This custom kiosk could be used for numerous scenarios including the three shown
 ## Prerequisites
 
 1. A currently [supported version of a Windows client operating system](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) with the choice of editions based on the use of the **AVDClientShell** parameter as follows:
-   1. The `AVDClientShell` option requires one of the following Windows client editions[^1]:
+   1. The `AVDClientShell` option or `AutoLogon` with Windows 10 requires one of the following Windows client editions[^1]:
       - Education
       - Enterprise
       - Enterprise LTSC
