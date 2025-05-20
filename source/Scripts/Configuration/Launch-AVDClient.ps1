@@ -158,6 +158,12 @@ If ($DeviceRemovalAction) {
     Get-EventSubscriber -Force | Where-Object { $_.SourceIdentifier -eq $SourceIdentifier } | Unregister-Event -Force -ErrorAction SilentlyContinue
     If ($DeviceRemovalAction -eq 'ResetClient') {
         $Action = {
+            [CmdletBinding()]
+            param (
+                [string]$EventLog,
+                [string]$EventSource
+            )
+
             Function Restart-Script {
                 Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 550 -Message "Relaunching $($MyInvocation.MyCommand.Name) after killing all processes." -ErrorAction SilentlyContinue
                 $ProcessList = 'Microsoft.AAD.BrokerPlugin', 'msrdc', 'msrdcw'
@@ -169,8 +175,7 @@ If ($DeviceRemovalAction) {
                 # Kill current Powershell process to prevent multiple powershell processes from running.
                 Get-Process -Id $PID | Stop-Process -Force
             }
-            [string]$EventLog
-            [string]$EventSource
+            
             If (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc\Feeds') { $CachePresent = $true }
             If (Get-Process | Where-Object { $_.Name -eq 'msrdcw' }) { $MSRDCWOpen = $true }
             $pnpEntity = $EventArgs.NewEvent.TargetInstance
@@ -185,8 +190,11 @@ If ($DeviceRemovalAction) {
     }
     ElseIf ($DeviceRemovalAction -eq 'Lock') {
         $Action = {
-            [string]$EventLog
-            [string]$EventSource
+            [CmdletBinding()]
+            param (
+                [string]$EventLog,
+                [string]$EventSource
+            )
             $pnpEntity = $EventArgs.NewEvent.TargetInstance
             Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 525 -Message "Device Removed:`n`tCaption: $($pnpEntity.Caption)`n`tPNPDeviceID: $($pnpEntity.PNPDeviceID)`n`tManufacturer: $($pnpEntity.Manufacturer)" -ErrorAction SilentlyContinue
             Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 526 -Message "Locking the computer." -ErrorAction SilentlyContinue                  
@@ -195,9 +203,12 @@ If ($DeviceRemovalAction) {
     }
     Else {
         $Action = {
+            [CmdletBinding()]
+            param (
+                [string]$EventLog,
+                [string]$EventSource
+            )
             $pnpEntity = $EventArgs.NewEvent.TargetInstance
-            [string]$EventLog
-            [string]$EventSource
             Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 525 -Message "Device Removed:`n`tCaption: $($pnpEntity.Caption)`n`tPNPDeviceID: $($pnpEntity.PNPDeviceID)`n`tManufacturer: $($pnpEntity.Manufacturer)" -ErrorAction SilentlyContinue
             Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 526 -Message "Logging off the user." -ErrorAction SilentlyContinue
             Get-WmiObject -Class Win32_OperatingSystem | Invoke-WmiMethod -Name Win32Shutdown -Argument 0
@@ -212,6 +223,14 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
     $SourceIdentifier = "Session_Disconnect_Event"
     Get-EventSubscriber -Force | Where-Object { $_.SourceIdentifier -eq $SourceIdentifier } | Unregister-Event -Force -ErrorAction SilentlyContinue
     $Action = {
+        [CmdletBinding()]
+        param (
+            [string]$EventLog,
+            [string]$EventSource,
+            [string]$SystemDisconnectAction,
+            [string]$UserDisconnectSignOutAction
+        )
+
         Function Restart-Script {
             Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 550 -Message "Relaunching $($MyInvocation.MyCommand.Name) after killing all processes." -ErrorAction SilentlyContinue
             $ProcessList = 'Microsoft.AAD.BrokerPlugin', 'msrdc', 'msrdcw'
@@ -242,13 +261,9 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
             }
             Return $true
         }
-        [string]$EventLog
-        [string]$EventSource
-        [string]$SystemDisconnectAction
-        [string]$UserDisconnectSignOutAction
+
         If (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc\Feeds') { $CachePresent = $true }
         If (Get-Process | Where-Object { $_.Name -eq 'msrdcw' }) { $MSRDCWOpen = $true }
-        If (Get-Process | Where-Object { $_.Name -eq 'msrdc' }) { $MSRDC = $true }
 
         If ($Env:UserName -eq 'KioskUser0' -and $MSRDCWOpen -and -not $CachePresent) {
             Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 530 -Message "The MSRDCW window is open and there are no cached credentials. Nothing to do." -ErrorAction SilentlyContinue
@@ -347,6 +362,7 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
             }
         }
     }
+    Register-CimIndicationEvent -Query $Query -Action $Action -SourceIdentifier $SourceIdentifier -SupportEvent
 }
 
 if ($IdleTimeoutAction -eq 'Logoff' -or $IdleTimeoutAction -eq 'ResetClient') {
