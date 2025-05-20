@@ -1,6 +1,12 @@
 # Version History
 
-## 6.0 (Current Version)
+## 7.0 (Current Version)
+
+This is a [feature] release.
+
+1. Reconfigured Parameters so that each trigger could have a different action.
+
+## 6.0
 
 This is a [feature] release.
 
