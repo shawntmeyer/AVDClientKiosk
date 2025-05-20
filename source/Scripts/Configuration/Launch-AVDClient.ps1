@@ -244,6 +244,8 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
         }
         [string]$EventLog
         [string]$EventSource
+        [string]$SystemDisconnectAction
+        [string]$UserDisconnectSignOutAction
         If (Test-Path -Path 'HKCU:\Software\Microsoft\RdClientRadc\Feeds') { $CachePresent = $true }
         If (Get-Process | Where-Object { $_.Name -eq 'msrdcw' }) { $MSRDCWOpen = $true }
         If (Get-Process | Where-Object { $_.Name -eq 'msrdc' }) { $MSRDC = $true }
@@ -263,7 +265,7 @@ If ($SessionDisconnectAction -or $UserDisconnectSignOutAction) {
                 }                
             }
             # This is main section where we look at session host disconnect events in the event log and determine if we need to take action.
-            Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 575 -Message "SFiltering Session Disconnect (EventId: 1026) messages in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log." -ErrorAction SilentlyContinue
+            Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 575 -Message "Filtering Session Disconnect (EventId: 1026) messages in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log." -ErrorAction SilentlyContinue
 
             # Initial event filter
             $TwoMinsAgo = (Get-Date).AddMinutes(-2)
