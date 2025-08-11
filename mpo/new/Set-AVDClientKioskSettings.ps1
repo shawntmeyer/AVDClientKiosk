@@ -365,12 +365,7 @@ Write-Log -EntryType Information -EventId 63 -Message "Configured Microsoft Edge
 
 # Configure Feed URL for all Users
 $outfile = "$env:Temp\Users-AVDURL.txt"
-If ($AutoLogon) {
-    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
-}
-Else {
-    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-AutoSubscribe.txt'
-}
+$sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-AutoSubscribe.txt'
 (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
 $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
 Write-Log -EntryType Information -EventId 70 -Message "Configured AVD Feed URL for all users via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
