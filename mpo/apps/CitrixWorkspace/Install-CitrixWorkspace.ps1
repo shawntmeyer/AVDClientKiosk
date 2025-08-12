@@ -1,4 +1,7 @@
-$URL = 'https://downloadplugins.citrix.com/ReceiverUpdates/Prod/Receiver/Win/CitrixWorkspaceApp25.3.10.69.exe'
+$Script:FullName = $MyInvocation.MyCommand.Path
+$Script:File = $MyInvocation.MyCommand.Name
+$Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
+$Script:Args = $null
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
@@ -24,11 +27,17 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     }
     Exit
 }
-$ProgressPreference = 'SilentlyContinue'
+$SoftwareName = 'Citrix Workspace App'
+[String]$Script:LogDir = "$($env:SystemRoot)\Logs\Software"
+If (-not(Test-Path -Path $Script:LogDir)) {
+    New-Item -Path $Script:LogDir -ItemType Dir -Force
+}
 
-$InstallerPath = Join-Path -Path $Env:TEMP -ChildPath 'CitrixWorkspaceApp.exe'
-Invoke-WebRequest -Uri $URL -OutFile $InstallerPath
-# Install Citrix Workspace App silently with minimal components
+[string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ','') + ".log"
+Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+Write-Output "Starting Citrix Workspace App Installation."
+$InstallerPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.exe').FullName
+Write-Output "Found Installer: '$InstallerPath'."
 $Installer = Start-Process -FilePath $InstallerPath -ArgumentList `
     "/silent", `
     "ADDLOCAL=ReceiverInside,ICA_Client,BCR_Client,USB,DesktopViewer,AM,SSON,WebHelper", `
@@ -37,6 +46,7 @@ $Installer = Start-Process -FilePath $InstallerPath -ArgumentList `
     "startAppProtection" `
     -PassThru
 $ParentPID = $Installer.Id
+Write-Output "Process ID: $ParentPID"
 # Wait for the installation to complete
 $Installer.WaitForExit()
 # Check for child MSI processes (with timeout)
@@ -48,10 +58,12 @@ $foundChildProcesses = $false
 do {
     $ChildMsis = Get-CimInstance -ClassName Win32_Process | Where-Object {$_.ParentProcessId -eq $ParentPID -and $_.Name -eq "msiexec.exe"}
     If ($ChildMsis.Count -gt 0) {
-        Write-Host "Waiting for Citrix Workspace App installation to complete..."
+        Write-Output "Waiting for Citrix Workspace App installation to complete..."
         Start-Sleep -Seconds 5
     } Elseif (!$foundChildProcesses -and $waited -lt $maxWait){
         Start-Sleep -Seconds 1
         $waited++
     }
 } while ($ChildMsis.Count -gt 0 -or(!$foundChildProcesses -and $waited -lt $maxWait))
+Write-Output "Installation Complete."
+Stop-Transcript
