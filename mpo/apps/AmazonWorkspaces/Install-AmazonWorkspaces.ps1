@@ -505,7 +505,6 @@ Function Set-RegistryValue {
 If ($DeploymentType -ne 'UnInstall') {
     [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ','') + ".log"
     Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
-    Write-Output "Retrieving latest $SoftwareName version from Internet."
     Write-Output "Installing '$SoftwareName' via cmdline:"
     Write-Output "     'msiexec.exe /i `"$MSIPath`" /qn $MSIProperties'"
     $Installer = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$MSIPath`" /qn $MSIProperties" -Wait -PassThru
