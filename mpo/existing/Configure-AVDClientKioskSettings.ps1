@@ -49,9 +49,7 @@ param (
 
     [switch]$InstallAVDClient,
 
-    [string]$DirAVDClientLauncher = 'C:\AVDClientLauncher',
-
-    [string]$DirPortal = 'c:\Portal2'
+    [string]$DirAVDClientLauncher = 'C:\AVDClientLauncher'
 )
 
 #region Set Variables
@@ -72,35 +70,6 @@ Else {
 }
 
 #endregion Set Variables
-
-#region Restart Script in 64-bit powershell if necessary
-
-If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
-    $scriptArguments = $null
-    Try {
-        foreach ($k in $PSBoundParameters.keys) {
-            switch ($PSBoundParameters[$k].GetType().Name) {
-                "SwitchParameter" { If ($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
-                "String" { If ($PSBoundParameters[$k] -match '_') { $scriptArguments += "-$k `"$($PSBoundParameters[$k].Replace('_',' '))`" " } Else { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " } }
-                "Int32" { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
-                "Boolean" { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
-                "Version" { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
-            }
-        }
-        If ($null -ne $scriptArguments) {
-            $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`" $scriptArguments" -PassThru -Wait -NoNewWindow
-        }
-        Else {
-            $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`"" -PassThru -Wait -NoNewWindow
-        }
-    }
-    Catch {
-        Throw "Failed to start 64-bit PowerShell"
-    }
-    Exit $RunScript.ExitCode
-}
-
-#endregion Restart Script in 64-bit powershell if necessary
 
 #region Functions
 
@@ -236,23 +205,6 @@ New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContin
 New-EventLog -LogName $EventLog -Source $LaunchScriptEventSource -ErrorAction SilentlyContinue
 Write-Log -EntryType Information -EventId 1 -Message "Executing '$Script:FullName'."
 #endregion
-
-#region Install AVD Client
-If ($installAVDClient) {
-    Write-Log -EntryType Information -EventID 5 -Message "Running Script to install or update Visual C++ Redistributables."
-    & (Join-Path -Path $PSScriptRoot -ChildPath 'Install-VisualC++Redistributables.ps1')
-    Write-Log -EntryType Information -EventId 6 -Message "Running Script to install or update AVD Client."
-    & (Join-Path -Path $PSScriptRoot -ChildPath 'Install-AVDClient.ps1')
-}
-#endregion
-
-#region Portal Update
-Write-Log -EntryType Information -EventID 7 -Message "Updated Local Launch Page"
-$SourceDir = Join-Path -Path $PSScriptRoot -ChildPath 'Portal2'
-Copy-Item -Path (Join-Path -Path $SourceDir -ChildPath 'index.html') -Destination $DirPortal -Force
-$imagesDir = Join-Path -Path $SourceDir -ChildPath 'images'
-Copy-Item -Path (Join-Path -Path $imagesDir -ChildPath 'avd.png') -Destination (Join-Path -Path $DirPortal -ChildPath 'images') -Force
-#endregion Portal Update
 
 #region AVDClient Directory
 
