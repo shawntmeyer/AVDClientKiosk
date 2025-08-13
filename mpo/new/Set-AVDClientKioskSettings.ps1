@@ -358,8 +358,8 @@ ForEach ($Package in $ProvisioningPackages) {
 
 # Apply Non-Admin GPO settings
 
-$null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowDisplaySettings.txt" '2>&1'
-Write-Log -EntryType Information -EventId 62 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+$null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-RestrictSettings.txt" '2>&1'
+Write-Log -EntryType Information -EventId 62 -Message "Restricted Settings App and Control Panel to allow only Display and Sound Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-edge.txt" '2>&1'
 Write-Log -EntryType Information -EventId 63 -Message "Configured Microsoft Edge to restrict URLs to only those for VDI.`nlgpo.exe Exit Code: [$LastExitCode]"
 
