@@ -5,23 +5,48 @@ Param
 )
 
 #region Initialization
-[string]$SoftwareVendor = 'Microsoft'
-[string]$SoftwareDisplayName = 'Visual C++ Redistributables'
-[string]$SoftwareName = $SoftwareDisplayName.Replace(' ','')
-[uri]$SoftwareDownloadUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-[string]$InstallArguments = "/install /quiet /norestart"
 
-# Logging Configuration
+$SoftwareName = 'Remote Desktop'
+$Url = "https://go.microsoft.com/fwlink/?linkid=2068602"
+$MSIArguments = "/qn ALLUSERS=1"
+$MSIPath = Join-Path -Path $env:Temp -ChildPath 'RemoteDesktop.msi'
+$Script:FullName = $MyInvocation.MyCommand.Path
+$Script:File = $MyInvocation.MyCommand.Name
+$Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
+$Script:Args = $null
+
+If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
+    Try {
+
+        foreach ($k in $MyInvocation.BoundParameters.keys) {
+            switch ($MyInvocation.BoundParameters[$k].GetType().Name) {
+                "SwitchParameter" { if ($MyInvocation.BoundParameters[$k].IsPresent) { $Script:Args += "-$k " } }
+                "String" { $Script:Args += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
+                "Int32" { $Script:Args += "-$k $($MyInvocation.BoundParameters[$k]) " }
+                "Boolean" { $Script:Args += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
+            }
+        }
+        If ($Script:Args) {
+            Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:FullName)`" $($Script:Args)" -Wait -NoNewWindow
+        }
+        Else {
+            Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:FullName)`"" -Wait -NoNewWindow
+        }
+    }
+    Catch {
+        Throw "Failed to start 64-bit PowerShell"
+    }
+    Exit
+}
+
 [String]$Script:LogDir = "$($env:SystemRoot)\Logs\Software"
-[string]$Script:LogName = $SoftwareVendor + "_" + $SoftwareName + "_" + $DeploymentType + ".log"
 If (-not(Test-Path -Path $Script:LogDir)) {
     New-Item -Path $Script:LogDir -ItemType Dir -Force
 }
 
-#endregion
+#endregion Initialization
 
 #region Supporting Functions
-
 Function Get-InstalledApplication {
     <#
     .SYNOPSIS
@@ -48,19 +73,19 @@ Function Get-InstalledApplication {
     #>
     [CmdletBinding()]
     Param (
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [string[]]$Name,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$Exact = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$WildCard = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$RegEx = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [string]$ProductCode,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeUpdatesAndHotfixes
     )
 
@@ -68,7 +93,7 @@ Function Get-InstalledApplication {
         ## Get the name of this function and write header
         [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
         Write-Verbose "Starting ${CmdletName} with the following parameters: $PSBoundParameters"
-        [string[]]$regKeyApplications = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+        [string[]]$regKeyApplications = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
     }
     Process {
         If ($name) {
@@ -88,7 +113,7 @@ Function Get-InstalledApplication {
                         [psobject]$regKeyApplicationProps = Get-ItemProperty -LiteralPath $UninstallKeyApp.PSPath -ErrorAction 'Stop'
                         If ($regKeyApplicationProps.DisplayName) { [psobject[]]$regKeyApplication += $regKeyApplicationProps }
                     }
-                    Catch{
+                    Catch {
                         Write-Warning "${CmdletName}: Unable to enumerate properties from registry key path [$($UninstallKeyApp.PSPath)]."
                         Continue
                     }
@@ -115,9 +140,9 @@ Function Get-InstalledApplication {
                 }
 
                 ## Remove any control characters which may interfere with logging and creating file path names from these variables
-                $appDisplayName = $regKeyApp.DisplayName -replace '[^\u001F-\u007F]',''
-                $appDisplayVersion = $regKeyApp.DisplayVersion -replace '[^\u001F-\u007F]',''
-                $appPublisher = $regKeyApp.Publisher -replace '[^\u001F-\u007F]',''
+                $appDisplayName = $regKeyApp.DisplayName -replace '[^\u001F-\u007F]', ''
+                $appDisplayVersion = $regKeyApp.DisplayVersion -replace '[^\u001F-\u007F]', ''
+                $appPublisher = $regKeyApp.Publisher -replace '[^\u001F-\u007F]', ''
 
 
                 ## Determine if application is a 64-bit application
@@ -128,15 +153,15 @@ Function Get-InstalledApplication {
                     If ($regKeyApp.PSChildName -match [regex]::Escape($productCode)) {
                         Write-Verbose "${CmdletName}:Found installed application [$appDisplayName] version [$appDisplayVersion] matching product code [$productCode]."
                         $installedApplication += New-Object -TypeName 'PSObject' -Property @{
-                            UninstallSubkey = $regKeyApp.PSChildName
-                            ProductCode = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
-                            DisplayName = $appDisplayName
-                            DisplayVersion = $appDisplayVersion
-                            UninstallString = $regKeyApp.UninstallString
-                            InstallSource = $regKeyApp.InstallSource
-                            InstallLocation = $regKeyApp.InstallLocation
-                            InstallDate = $regKeyApp.InstallDate
-                            Publisher = $appPublisher
+                            UninstallSubkey    = $regKeyApp.PSChildName
+                            ProductCode        = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
+                            DisplayName        = $appDisplayName
+                            DisplayVersion     = $appDisplayVersion
+                            UninstallString    = $regKeyApp.UninstallString
+                            InstallSource      = $regKeyApp.InstallSource
+                            InstallLocation    = $regKeyApp.InstallLocation
+                            InstallDate        = $regKeyApp.InstallDate
+                            Publisher          = $appPublisher
                             Is64BitApplication = $Is64BitApp
                         }
                     }
@@ -175,15 +200,15 @@ Function Get-InstalledApplication {
 
                         If ($applicationMatched) {
                             $installedApplication += New-Object -TypeName 'PSObject' -Property @{
-                                UninstallSubkey = $regKeyApp.PSChildName
-                                ProductCode = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
-                                DisplayName = $appDisplayName
-                                DisplayVersion = $appDisplayVersion
-                                UninstallString = $regKeyApp.UninstallString
-                                InstallSource = $regKeyApp.InstallSource
-                                InstallLocation = $regKeyApp.InstallLocation
-                                InstallDate = $regKeyApp.InstallDate
-                                Publisher = $appPublisher
+                                UninstallSubkey    = $regKeyApp.PSChildName
+                                ProductCode        = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
+                                DisplayName        = $appDisplayName
+                                DisplayVersion     = $appDisplayVersion
+                                UninstallString    = $regKeyApp.UninstallString
+                                InstallSource      = $regKeyApp.InstallSource
+                                InstallLocation    = $regKeyApp.InstallLocation
+                                InstallDate        = $regKeyApp.InstallDate
+                                Publisher          = $appPublisher
                                 Is64BitApplication = $Is64BitApp
                             }
                         }
@@ -200,7 +225,8 @@ Function Get-InstalledApplication {
             ## Write to log the number of entries skipped due to them being considered updates
             If ($UpdatesSkippedCounter -eq 1) {
                 Write-Verbose "${CmdletName}: Skipped 1 entry while searching, because it was considered a Microsoft update."
-            } else {
+            }
+            else {
                 Write-Verbose "${CmdletName}: Skipped $UpdatesSkippedCounter entries while searching, because they were considered Microsoft updates."
             }
         }
@@ -217,105 +243,105 @@ Function Get-InstalledApplication {
 }
 
 Function Remove-MSIApplications {
-<#
-.SYNOPSIS
-    Removes all MSI applications matching the specified application name.
-.DESCRIPTION
-    Removes all MSI applications matching the specified application name.
-    Enumerates the registry for installed applications matching the specified application name and uninstalls that application using the product code, provided the uninstall string matches "msiexec".
-.PARAMETER Name
-    The name of the application to uninstall. Performs a contains match on the application display name by default.
-.PARAMETER Exact
-    Specifies that the named application must be matched using the exact name.
-.PARAMETER WildCard
-    Specifies that the named application must be matched using a wildcard search.
-.PARAMETER Parameters
-    Overrides the default parameters specified in the XML configuration file. Uninstall default is: "REBOOT=ReallySuppress /QN".
-.PARAMETER AddParameters
-    Adds to the default parameters specified in the XML configuration file. Uninstall default is: "REBOOT=ReallySuppress /QN".
-.PARAMETER FilterApplication
-    Two-dimensional array that contains one or more (property, value, match-type) sets that should be used to filter the list of results returned by Get-InstalledApplication to only those that should be uninstalled.
-    Properties that can be filtered upon: ProductCode, DisplayName, DisplayVersion, UninstallString, InstallSource, InstallLocation, InstallDate, Publisher, Is64BitApplication
-.PARAMETER ExcludeFromUninstall
-    Two-dimensional array that contains one or more (property, value, match-type) sets that should be excluded from uninstall if found.
-    Properties that can be excluded: ProductCode, DisplayName, DisplayVersion, UninstallString, InstallSource, InstallLocation, InstallDate, Publisher, Is64BitApplication
-.PARAMETER IncludeUpdatesAndHotfixes
-    Include matches against updates and hotfixes in results.
-.PARAMETER LoggingOptions
-    Overrides the default logging options specified in the XML configuration file. Default options are: "/L*v".
-.PARAMETER LogName
-    Overrides the default log file name. The default log file name is generated from the MSI file name. If LogName does not end in .log, it will be automatically appended.
-    For uninstallations, by default the product code is resolved to the DisplayName and version of the application.
-.PARAMETER PassThru
-    Returns ExitCode, STDOut, and STDErr output from the process.
-.PARAMETER ContinueOnError
-    Continue if an error occured while trying to start the processes. Default: $true.
-.EXAMPLE
-    Remove-MSIApplications -Name 'Adobe Flash'
-    Removes all versions of software that match the name "Adobe Flash"
-.EXAMPLE
-    Remove-MSIApplications -Name 'Adobe'
-    Removes all versions of software that match the name "Adobe"
-.EXAMPLE
-    Remove-MSIApplications -Name 'Java 8 Update' -FilterApplication ('Is64BitApplication', $false, 'Exact'),('Publisher', 'Oracle Corporation', 'Exact')
-    Removes all versions of software that match the name "Java 8 Update" where the software is 32-bits and the publisher is "Oracle Corporation".
-.EXAMPLE
-    Remove-MSIApplications -Name 'Java 8 Update' -FilterApplication (,('Publisher', 'Oracle Corporation', 'Exact')) -ExcludeFromUninstall (,('DisplayName', 'Java 8 Update 45', 'Contains'))
-    Removes all versions of software that match the name "Java 8 Update" and also have "Oracle Corporation" as the Publisher; however, it does not uninstall "Java 8 Update 45" of the software.
-    NOTE: if only specifying a single row in the two-dimensional arrays, the array must have the extra parentheses and leading comma as in this example.
-.EXAMPLE
-    Remove-MSIApplications -Name 'Java 8 Update' -ExcludeFromUninstall (,('DisplayName', 'Java 8 Update 45', 'Contains'))
-    Removes all versions of software that match the name "Java 8 Update"; however, it does not uninstall "Java 8 Update 45" of the software.
-    NOTE: if only specifying a single row in the two-dimensional array, the array must have the extra parentheses and leading comma as in this example.
-.EXAMPLE
-    Remove-MSIApplications -Name 'Java 8 Update' -ExcludeFromUninstall
-            ('Is64BitApplication', $true, 'Exact'),
-            ('DisplayName', 'Java 8 Update 45', 'Exact'),
-            ('DisplayName', 'Java 8 Update 4*', 'WildCard'),
-            ('DisplayName', 'Java \d Update \d{3}', 'RegEx'),
-            ('DisplayName', 'Java 8 Update', 'Contains')
-    Removes all versions of software that match the name "Java 8 Update"; however, it does not uninstall 64-bit versions of the software, Update 45 of the software, or any Update that starts with 4.
-.NOTES
-    More reading on how to create arrays if having trouble with -FilterApplication or -ExcludeFromUninstall parameter: http://blogs.msdn.com/b/powershell/archive/2007/01/23/array-literals-in-powershell.aspx
-#>
+    <#
+    .SYNOPSIS
+        Removes all MSI applications matching the specified application name.
+    .DESCRIPTION
+        Removes all MSI applications matching the specified application name.
+        Enumerates the registry for installed applications matching the specified application name and uninstalls that application using the product code, provided the uninstall string matches "msiexec".
+    .PARAMETER Name
+        The name of the application to uninstall. Performs a contains match on the application display name by default.
+    .PARAMETER Exact
+        Specifies that the named application must be matched using the exact name.
+    .PARAMETER WildCard
+        Specifies that the named application must be matched using a wildcard search.
+    .PARAMETER Parameters
+        Overrides the default parameters specified in the XML configuration file. Uninstall default is: "REBOOT=ReallySuppress /QN".
+    .PARAMETER AddParameters
+        Adds to the default parameters specified in the XML configuration file. Uninstall default is: "REBOOT=ReallySuppress /QN".
+    .PARAMETER FilterApplication
+        Two-dimensional array that contains one or more (property, value, match-type) sets that should be used to filter the list of results returned by Get-InstalledApplication to only those that should be uninstalled.
+        Properties that can be filtered upon: ProductCode, DisplayName, DisplayVersion, UninstallString, InstallSource, InstallLocation, InstallDate, Publisher, Is64BitApplication
+    .PARAMETER ExcludeFromUninstall
+        Two-dimensional array that contains one or more (property, value, match-type) sets that should be excluded from uninstall if found.
+        Properties that can be excluded: ProductCode, DisplayName, DisplayVersion, UninstallString, InstallSource, InstallLocation, InstallDate, Publisher, Is64BitApplication
+    .PARAMETER IncludeUpdatesAndHotfixes
+        Include matches against updates and hotfixes in results.
+    .PARAMETER LoggingOptions
+        Overrides the default logging options specified in the XML configuration file. Default options are: "/L*v".
+    .PARAMETER LogName
+        Overrides the default log file name. The default log file name is generated from the MSI file name. If LogName does not end in .log, it will be automatically appended.
+        For uninstallations, by default the product code is resolved to the DisplayName and version of the application.
+    .PARAMETER PassThru
+        Returns ExitCode, STDOut, and STDErr output from the process.
+    .PARAMETER ContinueOnError
+        Continue if an error occured while trying to start the processes. Default: $true.
+    .EXAMPLE
+        Remove-MSIApplications -Name 'Adobe Flash'
+        Removes all versions of software that match the name "Adobe Flash"
+    .EXAMPLE
+        Remove-MSIApplications -Name 'Adobe'
+        Removes all versions of software that match the name "Adobe"
+    .EXAMPLE
+        Remove-MSIApplications -Name 'Java 8 Update' -FilterApplication ('Is64BitApplication', $false, 'Exact'),('Publisher', 'Oracle Corporation', 'Exact')
+        Removes all versions of software that match the name "Java 8 Update" where the software is 32-bits and the publisher is "Oracle Corporation".
+    .EXAMPLE
+        Remove-MSIApplications -Name 'Java 8 Update' -FilterApplication (,('Publisher', 'Oracle Corporation', 'Exact')) -ExcludeFromUninstall (,('DisplayName', 'Java 8 Update 45', 'Contains'))
+        Removes all versions of software that match the name "Java 8 Update" and also have "Oracle Corporation" as the Publisher; however, it does not uninstall "Java 8 Update 45" of the software.
+        NOTE: if only specifying a single row in the two-dimensional arrays, the array must have the extra parentheses and leading comma as in this example.
+    .EXAMPLE
+        Remove-MSIApplications -Name 'Java 8 Update' -ExcludeFromUninstall (,('DisplayName', 'Java 8 Update 45', 'Contains'))
+        Removes all versions of software that match the name "Java 8 Update"; however, it does not uninstall "Java 8 Update 45" of the software.
+        NOTE: if only specifying a single row in the two-dimensional array, the array must have the extra parentheses and leading comma as in this example.
+    .EXAMPLE
+        Remove-MSIApplications -Name 'Java 8 Update' -ExcludeFromUninstall
+                ('Is64BitApplication', $true, 'Exact'),
+                ('DisplayName', 'Java 8 Update 45', 'Exact'),
+                ('DisplayName', 'Java 8 Update 4*', 'WildCard'),
+                ('DisplayName', 'Java \d Update \d{3}', 'RegEx'),
+                ('DisplayName', 'Java 8 Update', 'Contains')
+        Removes all versions of software that match the name "Java 8 Update"; however, it does not uninstall 64-bit versions of the software, Update 45 of the software, or any Update that starts with 4.
+    .NOTES
+        More reading on how to create arrays if having trouble with -FilterApplication or -ExcludeFromUninstall parameter: http://blogs.msdn.com/b/powershell/archive/2007/01/23/array-literals-in-powershell.aspx
+    #>
     [CmdletBinding()]
     Param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [ValidateNotNullorEmpty()]
         [string]$Name,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$Exact = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$WildCard = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [Alias('Arguments')]
         [ValidateNotNullorEmpty()]
         [string]$Parameters,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [string]$AddParameters,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [array]$FilterApplication = @(@()),
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [array]$ExcludeFromUninstall = @(@()),
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeUpdatesAndHotfixes = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [string]$LoggingOptions,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [Alias('LogName')]
         [string]$private:LogName,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [switch]$PassThru = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [boolean]$ContinueOnError = $true
     )
-
+    
     Begin {
         ## Get the name of this function and write header
         [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
@@ -327,11 +353,11 @@ Function Remove-MSIApplications {
         If ($Exact) { $GetInstalledApplicationSplat.Add( 'Exact', $Exact) }
         ElseIf ($WildCard) { $GetInstalledApplicationSplat.Add( 'WildCard', $WildCard) }
         If ($IncludeUpdatesAndHotfixes) { $GetInstalledApplicationSplat.Add( 'IncludeUpdatesAndHotfixes', $IncludeUpdatesAndHotfixes) }
-
+    
         [psobject[]]$installedApplications = Get-InstalledApplication @GetInstalledApplicationSplat
-
+    
         Write-Verbose "${CmdLetName}: Found [$($installedApplications.Count)] application(s) that matched the specified criteria [$Name]."
-
+    
         ## Filter the results from Get-InstalledApplication
         [Collections.ArrayList]$removeMSIApplications = New-Object -TypeName 'System.Collections.ArrayList'
         If (($null -ne $installedApplications) -and ($installedApplications.Count)) {
@@ -340,7 +366,7 @@ Function Remove-MSIApplications {
                     Write-Warning "${CmdletName}: Skipping removal of application [$($installedApplication.DisplayName)] because unable to discover MSI ProductCode from application's registry Uninstall subkey [$($installedApplication.UninstallSubkey)]."
                     Continue
                 }
-
+    
                 #  Filter the results from Get-InstalledApplication to only those that should be uninstalled
                 If (($null -ne $FilterApplication) -and ($FilterApplication.Count)) {
                     Write-Verbose "${CmdletName}: Filter the results to only those that should be uninstalled as specified in parameter [-FilterApplication]."
@@ -375,7 +401,7 @@ Function Remove-MSIApplications {
                 Else {
                     [boolean]$addAppToRemoveList = $true
                 }
-
+    
                 #  Filter the results from Get-InstalledApplication to remove those that should never be uninstalled
                 If (($null -ne $ExcludeFromUninstall) -and ($ExcludeFromUninstall.Count)) {
                     ForEach ($Exclude in $ExcludeFromUninstall) {
@@ -405,18 +431,18 @@ Function Remove-MSIApplications {
                         }
                     }
                 }
-
+    
                 If ($addAppToRemoveList) {
                     Write-Verbose "${CmdletName}: Adding application to list for removal: [$($installedApplication.DisplayName) $($installedApplication.Version)]." 
                     $removeMSIApplications.Add($installedApplication)
                 }
             }
         }
-
+    
         ## Build the hashtable with the options that will be passed to Execute-MSI using splatting
-        [hashtable]$ExecuteMSISplat =  @{
-            Action = 'Uninstall'
-            Path = ''
+        [hashtable]$ExecuteMSISplat = @{
+            Action          = 'Uninstall'
+            Path            = ''
             ContinueOnError = $ContinueOnError
         }
         If ($Parameters) { $ExecuteMSISplat.Add( 'Parameters', $Parameters) }
@@ -425,7 +451,7 @@ Function Remove-MSIApplications {
         If ($LogName) { $ExecuteMSISplat.Add( 'LogName', $LogName) }
         If ($PassThru) { $ExecuteMSISplat.Add( 'PassThru', $PassThru) }
         If ($IncludeUpdatesAndHotfixes) { $ExecuteMSISplat.Add( 'IncludeUpdatesAndHotfixes', $IncludeUpdatesAndHotfixes) }
-
+    
         If (($null -ne $removeMSIApplications) -and ($removeMSIApplications.Count)) {
             ForEach ($removeMSIApplication in $removeMSIApplications) {
                 Write-Verbose "${CmdletName}: Remove application [$($removeMSIApplication.DisplayName) $($removeMSIApplication.Version)]." 
@@ -451,32 +477,33 @@ Function Remove-MSIApplications {
 #endregion
 
 ## MAIN
-Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+
 If ($DeploymentType -ne 'UnInstall') {
-    Write-Output "Retrieving latest $SoftwareDisplayName from Internet."
-    $Installer = Join-Path -Path $env:TEMP -ChildPath "vc_redist.x64.exe"
+    [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+    Write-Output "Retrieving latest $SoftwareName version from Internet."
     $ProgressPreference = 'SilentlyContinue'
-    Invoke-WebRequest -Uri $SoftwareDownloadUrl -OutFile $Installer -UseBasicParsing
-    Write-Output "Starting '$SoftwareDisplayName' installation and configuration."     
-    Write-Output "Installing '$SoftwareDisplayName' via cmdline:"
-    Write-Output "     '$Installer $InstallArguments'"
-    $Install = Start-Process -FilePath $Installer -ArgumentList $InstallArguments -Wait -PassThru
-    If ($($Install.ExitCode) -eq 0) {
-        Write-Output "'$SoftwareDisplayName' installed successfully."
-    }
-    Elseif ($($Install.ExitCode) -eq 3010){
-        Write-Output "The Installer exit code is $($Install.ExitCode). A reboot is required."
+    Invoke-WebRequest -Uri $Url -OutFile $MSIPath -UseBasicParsing        
+    Write-Output "Installing '$SoftwareName' via cmdline:"
+    Write-Output "     'msiexec.exe /i `"$MSIPath`" $MSIArguments'"
+    $Installer = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$MSIPath`" $MSIArguments" -Wait -PassThru
+    If ($($Installer.ExitCode) -eq 0) {
+        Write-Output "'$SoftwareName' installed successfully."
+        Remove-Item -Path $MSIPath -Force -ErrorAction SilentlyContinue
     }
     Else {
-        Write-Error "The Installer exit code is $($Install.ExitCode)"
+        Write-Error "The Installer exit code is $($Installer.ExitCode)"
     }
-    Write-Output "Completed '$SoftwareDisplayName' Installation."
-    Remove-Item -Path $Installer -Force -ErrorAction SilentlyContinue
+    Write-Output "Completed '$SoftwareName' Installation."
+
+    $null = cmd /c REG.exe ADD HKLM\SOFTWARE\Microsoft\MSRDC\Policies /v AutomaticUpdates /d 0 /t REG_DWORD /f '2>&1'
 }
 # Uninstall
 Else {
-    Write-Output "Removing $SoftwareDisplayName"
-    Remove-MSIApplications -Name $SoftwareDisplayName -verbose
+    [string]$Script:LogName = "UnInstall-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+    Write-Output "Removing $SoftwareName"
+    Remove-MSIApplications -Name $SoftwareName -verbose
 }
 
 Stop-Transcript

@@ -6,8 +6,10 @@
         <AllowedApps>
           <App AppUserModelId="windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel" />
           <App AppUserModelId="Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App" />
-          <App DesktopAppPath="%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" /> 
+          <App AppUserModelId="MicrosoftCorporationII.Windows365_8wekyb3d8bbwe!Windows365" />
+          <App DesktopAppPath="%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" />
           <App DesktopAppPath="%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge_proxy.exe" />
+          <App DesktopAppPath="%ProgramFiles(x86)%\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" />
           <App DesktopAppPath="%ProgramFiles%\Remote Desktop\msrdcw.exe" />
           <App DesktopAppPath="%ProgramFiles%\Remote Desktop\msrdc.exe" />
           <App DesktopAppPath="%ProgramFiles%\Amazon Web Services, Inc\Amazon Workspaces\createdump.exe" />
@@ -66,12 +68,13 @@
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\NPSPrompt.exe" />
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfService.exe" />
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServicePlugin.exe" />
-          <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServiceUninstaller.exe" />
-        </AllowedApps>
+          <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServiceUninstaller.exe" />          
+         </AllowedApps>
       </AllAppsList>
       <v5:StartPins>
         <![CDATA[{
-          "pinnedList":[            
+          "pinnedList":[
+            {"packagedAppId":"MicrosoftCorporationII.Windows365_8wekyb3d8bbwe!Windows365"},            
             {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Remote Desktop.lnk"},
             {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Amazon Workspaces\\Amazon Workspaces.lnk"},
             {
