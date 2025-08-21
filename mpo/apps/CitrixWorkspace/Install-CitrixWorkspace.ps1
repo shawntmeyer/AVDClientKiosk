@@ -12,19 +12,18 @@ $Script:Args = $null
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
 
-        foreach($k in $MyInvocation.BoundParameters.keys)
-        {
-            switch($MyInvocation.BoundParameters[$k].GetType().Name)
-            {
-                "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $Script:Args += "-$k " } }
-                "String"          { $Script:Args += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
-                "Int32"           { $Script:Args += "-$k $($MyInvocation.BoundParameters[$k]) " }
-                "Boolean"         { $Script:Args += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
+        foreach ($k in $MyInvocation.BoundParameters.keys) {
+            switch ($MyInvocation.BoundParameters[$k].GetType().Name) {
+                "SwitchParameter" { if ($MyInvocation.BoundParameters[$k].IsPresent) { $Script:Args += "-$k " } }
+                "String" { $Script:Args += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
+                "Int32" { $Script:Args += "-$k $($MyInvocation.BoundParameters[$k]) " }
+                "Boolean" { $Script:Args += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
             }
         }
         If ($Script:Args) {
             Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:FullName)`" $($Script:Args)" -Wait -NoNewWindow
-        } Else {
+        }
+        Else {
             Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:FullName)`"" -Wait -NoNewWindow
         }
     }
@@ -63,40 +62,89 @@ function Remove-RegistryValue {
     }
 }
 
-[string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ','') + ".log"
-Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
-Write-Output "Starting Citrix Workspace App Installation."
-$InstallerPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.exe').FullName
-Write-Output "Found Installer: '$InstallerPath'."
-$Installer = Start-Process -FilePath $InstallerPath -ArgumentList `
-    "/silent", `
-    "ADDLOCAL=ReceiverInside,ICA_Client,BCR_Client,USB,DesktopViewer,AM,SSON,WebHelper", `
-    "AutoUpdateCheck=disabled", `
-    "EnableCEIP=False", `
-    "startAppProtection" `
-    -PassThru
-$ParentPID = $Installer.Id
-Write-Output "Process ID: $ParentPID"
-# Wait for the installation to complete
-$Installer.WaitForExit()
-# Check for child MSI processes (with timeout)
-$maxWait = 30 # seconds
-$waited = 0
-$foundChildProcesses = $false
+function Wait-ForChildProcesses {
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$ParentProcessId,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ProcessName = "msiexec.exe",
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxWaitSeconds = 30,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$CheckIntervalSeconds = 5,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$WaitMessage = "Waiting for child processes to complete..."
+    )
+    
+    Write-Output "Monitoring child processes for parent PID: $ParentProcessId"
+    
+    # Check for child processes (with timeout)
+    $waited = 0
+    $foundChildProcesses = $false
 
-# Monitor the installation process
-do {
-    $ChildMsis = Get-CimInstance -ClassName Win32_Process | Where-Object {$_.ParentProcessId -eq $ParentPID -and $_.Name -eq "msiexec.exe"}
-    If ($ChildMsis.Count -gt 0) {
-        Write-Output "Waiting for Citrix Workspace App installation to complete..."
-        Start-Sleep -Seconds 5
-    } Elseif (!$foundChildProcesses -and $waited -lt $maxWait){
-        Start-Sleep -Seconds 1
-        $waited++
+    do {
+        $ChildProcesses = Get-CimInstance -ClassName Win32_Process | Where-Object { 
+            $_.ParentProcessId -eq $ParentProcessId -and $_.Name -eq $ProcessName 
+        }
+        
+        if ($ChildProcesses.Count -gt 0) {
+            $foundChildProcesses = $true
+            Write-Output $WaitMessage
+            Start-Sleep -Seconds $CheckIntervalSeconds
+        }
+        elseif (!$foundChildProcesses -and $waited -lt $MaxWaitSeconds) {
+            # Keep checking for a bit in case child processes start later
+            Start-Sleep -Seconds 1
+            $waited++
+        }
+    } while ($ChildProcesses.Count -gt 0 -or (!$foundChildProcesses -and $waited -lt $MaxWaitSeconds))
+    
+    if ($foundChildProcesses) {
+        Write-Output "All child processes have completed."
+    } else {
+        Write-Output "No child processes were found within the timeout period."
     }
-} while ($ChildMsis.Count -gt 0 -or(!$foundChildProcesses -and $waited -lt $maxWait))
-Write-Output "Citrix Workspace App installation completed."
-Write-Output "Removing Citrix Workspace App from startup."
-Remove-RegistryValue -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run" -Name "ConnectionCenter"
-Write-Output "Installation Complete."
+}
+
+If ($DeploymentType -ne 'Uninstall') {
+    [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+    Write-Output "Starting Citrix Workspace App Installation."
+    $InstallerPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.exe').FullName
+    Write-Output "Found Installer: '$InstallerPath'."
+    $Installer = Start-Process -FilePath $InstallerPath -ArgumentList `
+        "/silent", `
+        "ADDLOCAL=ReceiverInside,ICA_Client,BCR_Client,USB,DesktopViewer,AM,SSON,WebHelper", `
+        "AutoUpdateCheck=disabled", `
+        "EnableCEIP=False", `
+        "startAppProtection" `
+        -PassThru
+    $ParentPID = $Installer.Id
+    Write-Output "Process ID: $ParentPID"
+    # Wait for the installation to complete
+    $Installer.WaitForExit()
+    Wait-ForChildProcesses -ParentProcessId $ParentPID -ProcessName "msiexec.exe" -MaxWaitSeconds 30 -CheckIntervalSeconds 5 -WaitMessage "Waiting for Citrix Workspace App installation to complete..."
+    Write-Output "Citrix Workspace App installation completed."
+    Write-Output "Removing Citrix Workspace App from startup."
+    Remove-RegistryValue -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run" -Name "ConnectionCenter"
+    Write-Output "Installation Complete."
+}
+Else {
+    [string]$Script:LogName = "Unistall-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+    Write-Output "Starting Citrix Workspace App Installation."
+    $InstallerPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.exe').FullName
+    Write-Output "Found Installer: '$InstallerPath'."
+    $Uninstaller = Start-Process -FilePath $InstallerPath -ArgumentList "/silent /uninstall" -PassThru
+    $ParentPID = $Uinstaller.Id
+    Write-Output "Process ID: $ParentPID"
+    # Wait for the installation to complete
+    $Uninstaller.WaitForExit()
+    Wait-ForChildProcesses -ParentProcessId $ParentPID -ProcessName "msiexec.exe" -MaxWaitSeconds 30 -CheckIntervalSeconds 5 -WaitMessage "Waiting for Citrix Workspace App uninstall to complete..."
+    Write-Output "Citrix Workspace App uninstall completed."
+}
 Stop-Transcript
