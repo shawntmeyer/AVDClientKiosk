@@ -8,24 +8,26 @@ $ProgressPreference = 'SilentlyContinue'
 $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:File = $MyInvocation.MyCommand.Name
 $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
-$Script:Args = $null
+[array]$Script:Args = @()
+$SoftwareName = 'Amazon Workspaces'
+$RegistrationCode = 'SLiad+EUXQ58'
+$Url = 'https://d2td7dqidlhjx7.cloudfront.net/prod/global/windows/Amazon+WorkSpaces.msi'
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
 
-        foreach($k in $MyInvocation.BoundParameters.keys)
-        {
-            switch($MyInvocation.BoundParameters[$k].GetType().Name)
-            {
-                "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $Script:Args += "-$k " } }
-                "String"          { $Script:Args += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
-                "Int32"           { $Script:Args += "-$k $($MyInvocation.BoundParameters[$k]) " }
-                "Boolean"         { $Script:Args += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
+        foreach ($k in $MyInvocation.BoundParameters.keys) {
+            switch ($MyInvocation.BoundParameters[$k].GetType().Name) {
+                "SwitchParameter" { if ($MyInvocation.BoundParameters[$k].IsPresent) { $Script:Args += "-$k " } }
+                "String" { $Script:Args += "-$k `"$($MyInvocation.BoundParameters[$k])`" " }
+                "Int32" { $Script:Args += "-$k $($MyInvocation.BoundParameters[$k]) " }
+                "Boolean" { $Script:Args += "-$k `$$($MyInvocation.BoundParameters[$k]) " }
             }
         }
         If ($Script:Args) {
             Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:FullName)`" $($Script:Args)" -Wait -NoNewWindow
-        } Else {
+        }
+        Else {
             Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$($Script:FullName)`"" -Wait -NoNewWindow
         }
     }
@@ -35,17 +37,7 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Exit
 }
 
-$SoftwareName = 'Amazon Workspaces'
-$MSIPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.msi').FullName
-$MSIProperties = 'ALLUSERS=1'
-
-[String]$Script:LogDir = "$($env:SystemRoot)\Logs\Software"
-If (-not(Test-Path -Path $Script:LogDir)) {
-    New-Item -Path $Script:LogDir -ItemType Dir -Force
-}
-
-#endregion Initialization
-
+#endregion initialization
 
 #region Supporting Functions
 
@@ -75,19 +67,19 @@ Function Get-InstalledApplication {
     #>
     [CmdletBinding()]
     Param (
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [string[]]$Name,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$Exact = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$WildCard = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$RegEx = $false,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullorEmpty()]
         [string]$ProductCode,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]$IncludeUpdatesAndHotfixes
     )
 
@@ -95,7 +87,7 @@ Function Get-InstalledApplication {
         ## Get the name of this function and write header
         [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
         Write-Verbose "Starting ${CmdletName} with the following parameters: $PSBoundParameters"
-        [string[]]$regKeyApplications = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall','Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+        [string[]]$regKeyApplications = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
     }
     Process {
         If ($name) {
@@ -115,7 +107,7 @@ Function Get-InstalledApplication {
                         [psobject]$regKeyApplicationProps = Get-ItemProperty -LiteralPath $UninstallKeyApp.PSPath -ErrorAction 'Stop'
                         If ($regKeyApplicationProps.DisplayName) { [psobject[]]$regKeyApplication += $regKeyApplicationProps }
                     }
-                    Catch{
+                    Catch {
                         Write-Warning "${CmdletName}: Unable to enumerate properties from registry key path [$($UninstallKeyApp.PSPath)]."
                         Continue
                     }
@@ -142,9 +134,9 @@ Function Get-InstalledApplication {
                 }
 
                 ## Remove any control characters which may interfere with logging and creating file path names from these variables
-                $appDisplayName = $regKeyApp.DisplayName -replace '[^\u001F-\u007F]',''
-                $appDisplayVersion = $regKeyApp.DisplayVersion -replace '[^\u001F-\u007F]',''
-                $appPublisher = $regKeyApp.Publisher -replace '[^\u001F-\u007F]',''
+                $appDisplayName = $regKeyApp.DisplayName -replace '[^\u001F-\u007F]', ''
+                $appDisplayVersion = $regKeyApp.DisplayVersion -replace '[^\u001F-\u007F]', ''
+                $appPublisher = $regKeyApp.Publisher -replace '[^\u001F-\u007F]', ''
 
 
                 ## Determine if application is a 64-bit application
@@ -155,15 +147,15 @@ Function Get-InstalledApplication {
                     If ($regKeyApp.PSChildName -match [regex]::Escape($productCode)) {
                         Write-Verbose "${CmdletName}:Found installed application [$appDisplayName] version [$appDisplayVersion] matching product code [$productCode]."
                         $installedApplication += New-Object -TypeName 'PSObject' -Property @{
-                            UninstallSubkey = $regKeyApp.PSChildName
-                            ProductCode = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
-                            DisplayName = $appDisplayName
-                            DisplayVersion = $appDisplayVersion
-                            UninstallString = $regKeyApp.UninstallString
-                            InstallSource = $regKeyApp.InstallSource
-                            InstallLocation = $regKeyApp.InstallLocation
-                            InstallDate = $regKeyApp.InstallDate
-                            Publisher = $appPublisher
+                            UninstallSubkey    = $regKeyApp.PSChildName
+                            ProductCode        = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
+                            DisplayName        = $appDisplayName
+                            DisplayVersion     = $appDisplayVersion
+                            UninstallString    = $regKeyApp.UninstallString
+                            InstallSource      = $regKeyApp.InstallSource
+                            InstallLocation    = $regKeyApp.InstallLocation
+                            InstallDate        = $regKeyApp.InstallDate
+                            Publisher          = $appPublisher
                             Is64BitApplication = $Is64BitApp
                         }
                     }
@@ -202,15 +194,15 @@ Function Get-InstalledApplication {
 
                         If ($applicationMatched) {
                             $installedApplication += New-Object -TypeName 'PSObject' -Property @{
-                                UninstallSubkey = $regKeyApp.PSChildName
-                                ProductCode = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
-                                DisplayName = $appDisplayName
-                                DisplayVersion = $appDisplayVersion
-                                UninstallString = $regKeyApp.UninstallString
-                                InstallSource = $regKeyApp.InstallSource
-                                InstallLocation = $regKeyApp.InstallLocation
-                                InstallDate = $regKeyApp.InstallDate
-                                Publisher = $appPublisher
+                                UninstallSubkey    = $regKeyApp.PSChildName
+                                ProductCode        = If ($regKeyApp.PSChildName -match $MSIProductCodeRegExPattern) { $regKeyApp.PSChildName } Else { [string]::Empty }
+                                DisplayName        = $appDisplayName
+                                DisplayVersion     = $appDisplayVersion
+                                UninstallString    = $regKeyApp.UninstallString
+                                InstallSource      = $regKeyApp.InstallSource
+                                InstallLocation    = $regKeyApp.InstallLocation
+                                InstallDate        = $regKeyApp.InstallDate
+                                Publisher          = $appPublisher
                                 Is64BitApplication = $Is64BitApp
                             }
                         }
@@ -227,7 +219,8 @@ Function Get-InstalledApplication {
             ## Write to log the number of entries skipped due to them being considered updates
             If ($UpdatesSkippedCounter -eq 1) {
                 Write-Verbose "${CmdletName}: Skipped 1 entry while searching, because it was considered a Microsoft update."
-            } else {
+            }
+            else {
                 Write-Verbose "${CmdletName}: Skipped $UpdatesSkippedCounter entries while searching, because they were considered Microsoft updates."
             }
         }
@@ -237,6 +230,86 @@ Function Get-InstalledApplication {
         }
 
         Write-Output -InputObject $installedApplication
+    }
+    End {
+        Write-Verbose "Ending ${CmdletName}"
+    }
+}
+
+Function Get-InternetFile {
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [uri]$Url,
+        [Parameter(Mandatory = $true, Position = 1)]
+        [string]$OutputDirectory,
+        [Parameter(Mandatory = $false, Position = 2)]
+        [string]$OutputFileName
+    )
+
+    Begin {
+        ## Get the name of this function and write header
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+        Write-Verbose "Starting ${CmdletName} with the following parameters: $PSBoundParameters"
+        $ProgressPreference = 'SilentlyContinue'
+    }
+    Process {
+
+        $start_time = Get-Date
+
+        If (!$OutputFileName) {
+            Write-Verbose "${CmdletName}: No Output File Name specified. Trying to get file name from URL."
+            If ((split-path -path $Url -leaf).Contains('.')) {
+
+                $OutputFileName = split-path -path $url -leaf
+                Write-Verbose "${CmdletName}: Url contains file name - '$OutputFileName'."
+            }
+            Else {
+                Write-Verbose "${CmdletName}: Url does not contain file name. Trying 'Location' Response Header."
+                $request = [System.Net.WebRequest]::Create($url)
+                $request.AllowAutoRedirect = $false
+                $response = $request.GetResponse()
+                $Location = $response.GetResponseHeader("Location")
+                If ((split-path $Location -leaf) -like '*.*') {
+                    $OutputFileName = [System.IO.Path]::GetFileName($Location)
+                    Write-Verbose "${CmdletName}: File Name from 'Location' Response Header is '$OutputFileName'."
+                }
+                Else {
+                    Write-Verbose "${CmdletName}: No 'Location' Response Header returned. Trying 'Content-Disposition' Response Header."
+                    $result = Invoke-WebRequest -Method GET -Uri $Url -UseBasicParsing
+                    $contentDisposition = $result.Headers.'Content-Disposition'
+                    If ($contentDisposition) {
+                        $OutputFileName = $contentDisposition.Split("=")[1].Replace("`"", "")
+                        Write-Verbose "${CmdletName}: File Name from 'Content-Disposition' Response Header is '$OutputFileName'."
+                    }
+                }
+            }
+        }
+
+        If ($OutputFileName) { 
+            $wc = New-Object System.Net.WebClient
+            $OutputFile = Join-Path $OutputDirectory $OutputFileName
+            Write-Verbose "${CmdletName}: Downloading file at '$url' to '$OutputFile'."
+            Try {
+                $wc.DownloadFile($url, $OutputFile)
+                $time = (Get-Date).Subtract($start_time).Seconds
+                
+                Write-Verbose "${CmdletName}: Time taken: '$time' seconds."
+                if (Test-Path -Path $outputfile) {
+                    $totalSize = (Get-Item $outputfile).Length / 1MB
+                    Write-Verbose "${CmdletName}: Download was successful. Final file size: '$totalsize' mb"
+                    Return $OutputFile
+                }
+            }
+            Catch {
+                Write-Error "${CmdletName}: Error downloading file. Please check url."
+                Return $Null
+            }
+        }
+        Else {
+            Write-Error "${CmdletName}: No OutputFileName specified. Unable to download file."
+            Return $Null
+        }
     }
     End {
         Write-Verbose "Ending ${CmdletName}"
@@ -261,35 +334,88 @@ Function Set-RegistryValue {
         If ($Value -ne $CurrentValue) {
             Set-ItemProperty -Path $Path -Name $Name -Value $Value -Force | Out-Null
         }
-    } Else {
+    }
+    Else {
         New-ItemProperty -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value -Force | Out-Null
     }
 }
 
-#endregion
+Function Remove-RegistryKey {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+    Write-Verbose "[Remove-RegistryKey]: Removing Registry Key: $Path"
+    if (Test-Path -Path $Path) {
+        Remove-Item -Path $Path -Recurse -Force
+        Write-Verbose "[Remove-RegistryKey]: Successfully removed $Path"
+    }
+    else {
+        Write-Verbose "[Remove-RegistryKey]: Path $Path does not exist."
+    }
+}
+#endregion Supporting Functions
 
 ## MAIN
 
 If ($DeploymentType -ne 'UnInstall') {
-    [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ','') + ".log"
-    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
-    Write-Output "Installing '$SoftwareName' via cmdline:"
-    Write-Output "     'msiexec.exe /i `"$MSIPath`" /qn $MSIProperties'"
-    $Installer = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$MSIPath`" /qn $MSIProperties" -Wait -PassThru
-    If ($($Installer.ExitCode) -eq 0) {
-        Write-Output "'$SoftwareName' installed successfully."
+    [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path (Join-Path -Path "$env:WinDir\Logs" -ChildPath $Script:LogName) -Force
+    $Application = Get-InstalledApplication -Name $SoftwareName
+    If ($Application -and $Application.ProductCode -ne '') {
+        $ProductCode = $Application.ProductCode
+        Write-Output "Removing $SoftwareName with Product Code $ProductCode"
+        $uninstall = Start-Process -FilePath 'msixexec.exe' -ArgumentList "/X $($Application.ProductCode) /qn" -Wait -PassThru
+        If ($Uninstall.ExitCode -eq '0' -or $Uninstall.ExitCode -eq '3010') {
+            Write-Output "Uninstalled successfully"
+        }
+        Else {
+            Write-Warning "$ProductCode uninstall exit code $($uninstall.ExitCode)"
+        }
+    }
+    $MSIPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.msi').FullName
+    If (-not $MSIPath) {
+        $TempDir = Join-Path -Path $env:Temp -ChildPath ($SoftwareName -Replace ' ', '')
+        New-Item -Path $TempDir -ItemType Directory -Force | Out-Null
+        $MSIPath = Get-InternetFile -Url $Url -OutputDirectory $TempDir -OutputFileName 'Amazon+Workspaces.msi'
+    }
+    If ($MSIPath) {    
+        $MSIProperties = 'ALLUSERS=1'
+        Write-Output "Installing '$SoftwareName' via cmdline:"
+        Write-Output "     'msiexec.exe /i `"$MSIPath`" /qn $MSIProperties'"
+        $Installer = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$MSIPath`" /qn $MSIProperties" -Wait -PassThru
+        If ($($Installer.ExitCode) -eq 0) {
+            Write-Output "'$SoftwareName' installed successfully."
+        }
+        Else {
+            Write-Error "The Installer exit code is $($Installer.ExitCode)"
+        }
+        Write-Output "Completed '$SoftwareName' Installation."
+        Write-Output "Adding Registration Code argument to desktop shortcut."
+        $Shell = New-Object -ComObject WScript.Shell
+        $ShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\Amazon Workspaces.lnk"
+        $Shortcut = $Shell.CreateShortcut($ShortcutPath)
+        $Shortcut.Arguments = "--uri `"//@$RegistrationCode`""
+        $Shortcut.Save()
+
+        Write-Output "Disabling Client update notifications."
+        Set-RegistryValue -Path 'HKLM:\SOFTWARE\WOW6432Node\Amazon\Amazon WorkSpaces Client' -PropertyType 'STRING' -Name 'clientUpgradeDisabled' -Value 1
+        Write-Output "Configuring the evo URL Protocol"
+        New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo' -Value 'URL:Launch Amazon Workspaces' -Force | Out-Null
+        Set-RegistryValue -Path 'Registry::HKEY_CLASSES_ROOT\evo' -Name 'URL Protocol' -PropertyType 'String' -Value ''
+        New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo\shell\open\command' -Value "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" --uri `"//@$RegistrationCode`"" -Force | Out-Null
+        If ($TempDir) { Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue }
     }
     Else {
-        Write-Error "The Installer exit code is $($Installer.ExitCode)"
+        Write-Error 'Amazon Workspaces installer not found'
+        Exit 1
     }
-    Write-Output "Completed '$SoftwareName' Installation."
-
-    Set-RegistryValue -Path 'HKLM:\SOFTWARE\WOW6432Node\Amazon\Amazon WorkSpaces Client' -PropertyType 'STRING' -Name 'clientUpgradeDisabled' -Value 1
 }
 # Uninstall
 Else {
-    [string]$Script:LogName = "UnInstall-" + ($SoftwareName -Replace ' ','') + ".log"
-    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+    [string]$Script:LogName = "UnInstall-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path (Join-Path -Path "$env:WinDir\Logs" -ChildPath $Script:LogName) -Force
     Write-Output "Removing $SoftwareName"
     $Application = Get-InstalledApplication -Name $SoftwareName
     If ($Application -and $Application.ProductCode -ne '') {
@@ -298,10 +424,13 @@ Else {
         $uninstall = Start-Process -FilePath 'msixexec.exe' -ArgumentList "/X $($Application.ProductCode) /qn" -Wait -PassThru
         If ($Uninstall.ExitCode -eq '0' -or $Uninstall.ExitCode -eq '3010') {
             Write-Output "Uninstalled successfully"
-        } Else {
+        }
+        Else {
             Write-Warning "$ProductCode uninstall exit code $($uninstall.ExitCode)"
         }
     }
+    Remove-RegistryKey -Path 'Registry::HKEY_CLASSES_ROOT\evo'
+    Write-Output "Completed '$SoftwareName' Uninstallation."
 }
 
 Stop-Transcript

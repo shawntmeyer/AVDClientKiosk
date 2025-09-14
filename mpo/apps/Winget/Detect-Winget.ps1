@@ -1,0 +1,1 @@
+Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -match 'Microsoft.DesktopAppInstaller'}

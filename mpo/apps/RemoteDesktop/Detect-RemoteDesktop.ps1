@@ -1,20 +1,20 @@
-[version]$TargetVersion = '1.2.6424.0'
-# Get registry entry for Remote Desktop client
-$registryEntry = Get-ChildItem Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object {$_.GetValue('DisplayName') -eq 'Remote Desktop'}
+$SoftwareName = 'Remote Desktop'
+[version]$TargetVersion = '1.2.6513.0'
+$RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object {$_.GetValue('DisplayName') -eq $SoftwareName}
 
 If (([string]$registryEntry)) {
 
     [version]$version = $registryEntry.GetValue('DisplayVersion')
     if ($version -ge $TargetVersion) {
-        Write-Host "Microsoft Remote Desktop client is installed"
+        Write-Host "$SoftwareName is installed"
         Write-Host "Version: $version"
         exit 0
 
     } else {
-        Write-Host "Microsoft Remote Desktop client version is lower than expected. Expected: $TargetVersion, Found: $version"
+        Write-Host "$SoftwareName version is lower than expected. Expected: $TargetVersion, Found: $version"
         exit 1
     }
 } else {
-    Write-Host "Microsoft Remote Desktop client isn't installed"
+    Write-Host "$SoftwareName isn't installed"
     exit 1
 }
