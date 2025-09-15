@@ -1,14 +1,13 @@
 <# 
 .SYNOPSIS
-    This script copies a PowerShell script to the system that is used to launch the Remote Desktop client (MSRDCW).
+    This script copies a vbs script to the system that is used to launch the Remote Desktop client (MSRDCW).
 
 .DESCRIPTION 
     This script completes a series of configuration tasks based on the parameters chosen. These tasks can include:
 
     * Create a AVDClientLauncher directory at the root of the system drive.
     * Set ACLs on the AVDClientLauncher directory to prevent Non-Administrators from changing files.
-    * Copy the Launch-AVDClient.ps1 and Launch-AVDClient.vbs scripts to the AVDClientLauncher directory.
-    * Dynamically update the parameters of the Launch-AVDClient.ps1 script.
+    * Copy the Launch-AVDClient.vbs scripts to the AVDClientLauncher directory.
     * Create a custom Remote Desktop Client shortcut in the Start Menu if the CreateStartMenuShortcut switch parameter is used.
     * Disable Workplace Join to stop the stay signed in prompt in the AVD Client.
     * Write the version of the script to the registry to be used for application detection in Configuration Manager or Intune.
@@ -42,10 +41,7 @@
 #>
 [CmdletBinding()]
 param (
-    [version]$Version = '1.0.0',
-
-    [ValidateSet('AzureCloud', 'AzureUSGovernment')]
-    [string]$EnvironmentAVD='AzureUSGovernment',
+    [version]$Version = '3.0.0',
 
     [switch]$InstallAVDClient,
 
@@ -58,17 +54,6 @@ $Script:FullName = $MyInvocation.MyCommand.Path
 $EventLog = 'AVD Client Launcher'
 $EventSource = 'Configuration Script'
 $LaunchScriptEventSource = 'Launch Script'
-# Set AVD feed subscription Url.
-If ($EnvironmentAVD -eq 'AzureUSGovernment') {
-    $SubscribeUrl = 'https://rdweb.wvd.azure.us'
-}
-Elseif ($EnvironmentAVD -eq 'AzureCloud') {
-    $SubscribeUrl = 'https://client.wvd.microsoft.com'
-}
-Else {
-    $SubscribeUrl = $null
-}
-
 #endregion Set Variables
 
 #region Functions
@@ -209,9 +194,10 @@ Write-Log -EntryType Information -EventId 1 -Message "Executing '$Script:FullNam
 #region AVDClient Directory
 
 Write-Log -EntryType Information -EventID 10 -Message "Creating Directory - '$DirAVDClientLauncher'."
-If (-not (Test-Path $DirAVDClientLauncher)) {
-    New-Item -Path $DirAVDClientLauncher -ItemType Directory -Force | Out-Null
+If (Test-Path $DirAVDClientLauncher) {
+    Remove-Item -Path $DirAVDClientLauncher -Recurse -Force -ErrorAction SilentlyContinue
 }
+New-Item -Path $DirAVDClientLauncher -ItemType Directory -Force | Out-Null
 
 # Setting ACLs on the AVD Client Launcher directory to prevent Non-Administrators from changing files. Defense in Depth.
 Write-Log -EntryType Information -EventId 11 -Message "Configuring $DirAVDClientLauncher Directory ACLs"
@@ -226,17 +212,7 @@ Update-ACLInheritance -Path $DirAVDClientLauncher -DisableInheritance $true -Pre
 
 # Copy Client Launch Scripts.
 Write-Log -EventID 15 -Message "Copying Launch AVD Client Scripts from '$PSScriptRoot' to '$DirAVDClientLauncher'"
-Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Launch-AVDClient.ps1') -Destination $DirAVDClientLauncher -Force
 Copy-Item -Path (Join-Path -Path $PSSCriptRoot -ChildPath 'Launch-AVDClient.vbs') -Destination $DirAVDClientLauncher -Force
-# dynamically update parameters of launch script.
-$FileToUpdate = "$DirAVDClientLauncher\Launch-AVDClient.ps1"
-$Content = Get-Content -Path $FileToUpdate
-$Content = $Content.Replace('[string]$EventLog', -Join ('[string]$EventLog', ' = "', $EventLog, '"'))
-$Content = $Content.Replace('[string]$EventSource', -Join ('[string]$EventSource', ' = "', $LaunchScriptEventSource, '"'))
-If ($SubscribeUrl) {
-    $Content = $Content.Replace('[string]$SubscribeUrl', -Join ('[string]$SubscribeUrl', ' = "', $SubscribeUrl, '"'))
-}
-$Content | Set-Content -Path $FileToUpdate
 
 #region Registry Edits
 

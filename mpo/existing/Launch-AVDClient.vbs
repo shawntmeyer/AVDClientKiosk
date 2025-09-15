@@ -4,8 +4,28 @@ Option Explicit
 Dim subscribeUrl, shell, fso, wmiService, currentDate, logFolder, logPath, logFile
 
 ' Parse command line arguments
+
 If WScript.Arguments.Count > 0 Then
-    SubscribeUrl = WScript.Arguments(0)
+    ' Extract the last part after the "ms-avdclientlauncher:" prefix (if present)
+    Dim rawArg, prefix, lastPart
+    rawArg = Trim(WScript.Arguments(0))
+    prefix = "ms-avdclientlauncher:"
+    If LCase(Left(rawArg, Len(prefix))) = LCase(prefix) Then
+        lastPart = Mid(rawArg, Len(prefix) + 1)
+    Else
+        lastPart = rawArg
+    End If
+
+    SubscribeUrl = lastPart
+    If SubscribeUrl <> "" Then
+        If LCase(Left(SubscribeUrl, 3)) = "gov" Then
+            SubscribeUrl = "https://rdweb.wvd.azure.us"
+        ElseIf LCase(Left(SubscribeUrl, 4)) = "comm" Then
+            SubscribeUrl = "https://rdweb.wvd.microsoft.com"
+        Else
+            SubscribeUrl = ""
+        End If
+    End If
 Else
     SubscribeUrl = ""
 End If
@@ -128,7 +148,6 @@ For Each file In oFolder.Files
     If LCase(fso.GetExtensionName(file.Name)) = "log" Then
         If Left(file.Name, 17) = "Launch-AVDClient-" Then
             fileDate = file.DateLastModified
-            WScript.Echo fileDate
             If DateDiff("d", fileDate, Now) > 7 Then
                 On Error Resume Next
                 file.Delete True
