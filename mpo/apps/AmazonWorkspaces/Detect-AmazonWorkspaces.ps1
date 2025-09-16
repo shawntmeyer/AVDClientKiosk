@@ -13,7 +13,8 @@ Function Get-EvoURLProtocolValue {
             $regProps = Get-ItemProperty -Path $regPath -ErrorAction Stop
             if ($regProps.PSObject.Properties.Name -contains '(default)') {
                 $defaultValue = $regProps.'(default)'
-            } Elseif ($regProps.PSObject.Properties.Name -contains '') {
+            }
+            Elseif ($regProps.PSObject.Properties.Name -contains '') {
                 $defaultValue = $regProps.''
             }
         }
@@ -28,25 +29,31 @@ Function Get-EvoURLProtocolValue {
 }
 
 If (Get-EvoURLProtocolValue -eq $URLProtocolValue) {
-    If (([string]$registryEntry)) {
-
-        [version]$version = $registryEntry.GetValue('DisplayVersion')
-        if ($version -ge $TargetVersion) {
-            Write-Host "$SoftwareName is installed"
-            Write-Host "Version: $version"
-            exit 0
-
-        } else {
-            Write-Host "$SoftwareName version is lower than expected. Expected: $TargetVersion, Found: $version"
-            exit 1
+    If (Test-Path -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\EVO.lnk") {
+        If (([string]$registryEntry)) {
+            [version]$version = $registryEntry.GetValue('DisplayVersion')
+            if ($version -ge $TargetVersion) {
+                Write-Host "[$SoftwareName] version [$version] is installed"
+                exit 0
+            }
+            else {
+                Write-Host "$SoftwareName version is lower than expected. Expected: $TargetVersion, Found: $version"
+                exit 1
+            }
         }
-    } else {
-        Write-Host "$SoftwareName isn't installed"
-        exit 1
+        else {
+            Write-Host "$SoftwareName isn't installed"
+            exit 2
+        }
     }
-} Else {
+    Else {
+        Write-Host "Custom Start Menu Shortcut is missing."
+        exit 3
+    }
+}
+Else {
     Write-Host "Evo Protocol handler is not properly configured."
-    exit 2
+    exit 4
 }
 
 

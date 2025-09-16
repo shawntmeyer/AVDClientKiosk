@@ -392,11 +392,17 @@ If ($DeploymentType -ne 'UnInstall') {
             Write-Error "The Installer exit code is $($Installer.ExitCode)"
         }
         Write-Output "Completed '$SoftwareName' Installation."
-        Write-Output "Adding Registration Code argument to desktop shortcut."
+        Write-Output "Adding a custom Start Menu shortcut with EVO registration code argument and icon."
         $Shell = New-Object -ComObject WScript.Shell
-        $ShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\Amazon Workspaces.lnk"
-        $Shortcut = $Shell.CreateShortcut($ShortcutPath)
+        $iconSourceFile = Join-Path -Path $PSScriptRoot -ChildPath 'evo.ico'
+        $iconDestFile = Join-Path -Path "$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces" -ChildPath 'evo.ico'
+        Copy-Item -Path $iconSourceFile -Destination $iconDestFile -Force
+        $ExistingShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\Amazon Workspaces.lnk"
+        $NewShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\EVO.lnk"
+        Copy-Item -Path $ExistingShortcutPath -Destination $NewShortcutPath -Force
+        $Shortcut = $Shell.CreateShortcut($NewShortcutPath)
         $Shortcut.Arguments = "--uri `"//@$RegistrationCode`""
+        $Shortcut.IconLocation = $iconDestFile
         $Shortcut.Save()
 
         Write-Output "Disabling Client update notifications."
@@ -428,6 +434,9 @@ Else {
         Else {
             Write-Warning "$ProductCode uninstall exit code $($uninstall.ExitCode)"
         }
+    }
+    If (Test-Path -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces") {
+        Remove-Item -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces" -Recurse -Force -ErrorAction SilentlyContinue
     }
     Remove-RegistryKey -Path 'Registry::HKEY_CLASSES_ROOT\evo'
     Write-Output "Completed '$SoftwareName' Uninstallation."
