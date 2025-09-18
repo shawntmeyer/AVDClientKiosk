@@ -1,6 +1,8 @@
 $SoftwareName = 'Amazon Workspaces'
 [version]$TargetVersion = '5.29.2.0000'
-$URLProtocolValue = "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" --uri `"//@SLiad+EUXQ58`""
+$RegistrationCode = 'SLiad+EUXQ58'
+$LaunchArg = "--uri `"//@$RegistrationCode`""
+$URLProtocolValue = "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" $LaunchArg"
 $RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object { $_.GetValue('DisplayName') -match $SoftwareName }
 
 Function Get-EvoURLProtocolValue {

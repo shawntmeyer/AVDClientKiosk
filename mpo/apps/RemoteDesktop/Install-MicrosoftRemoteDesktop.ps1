@@ -334,6 +334,7 @@ If ($DeploymentType -ne 'UnInstall') {
         Write-Error "The Installer exit code is $($Installer.ExitCode)"
     }
     Write-Output "Completed '$SoftwareName' Installation."
+    Copy-Item -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Remote Desktop.lnk" -Destination "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\AVD.lnk" -Force
     $null = cmd /c REG.exe ADD HKLM\SOFTWARE\Microsoft\MSRDC\Policies /v AutomaticUpdates /d 0 /t REG_DWORD /f '2>&1'
 }
 # Uninstall

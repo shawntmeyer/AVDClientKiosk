@@ -45,17 +45,22 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 If ($DeploymentType -ne "Uninstall") {
     [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
     Start-Transcript -Path (Join-Path -Path "$env:WinDir\Logs" -ChildPath $Script:LogName) -Force
-    $AppPath = (Get-ChildItem -Path $PSScriptRoot -filter *.msix).FullName
-    If (-not (Test-Path -Path $AppPath)) {
+    $CurrentVersion = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "MicrosoftCorporationII.Windows365" }
+    If ($CurrentVersion) {
+        Write-Output "Removing existing version of $SoftwareName"
+        $CurrentVersion | Remove-AppxProvisionedPackage -Online
+    }
+    $MSIXPath = (Get-ChildItem -Path $PSScriptRoot -filter *.msix).FullName
+    If (-not ($MSIXPath)) {
         Write-Output "Windows App MSIX package not found in $PSScriptRoot"
         Write-Output "Attempting to download from '$Url'"
         $tempDir = Join-Path -Path $env:Temp -ChildPath "$($Script:Name)"
         New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
-        $AppPath = Join-Path -Path $env:Temp -ChildPath 'WindowsApp.msix'
+        $MSIXPath = Join-Path -Path $env:Temp -ChildPath 'WindowsApp.msix'
         $ProgressPreference = 'SilentlyContinue'
-        Invoke-WebRequest -Uri $Url -OutFile $AppPath -UseBasicParsing
-        If (Test-Path -Path $AppPath) {
-            Write-Output "Windows App MSIX package downloaded to: $AppPath"
+        Invoke-WebRequest -Uri $Url -OutFile $MSIXPath -UseBasicParsing
+        If (Test-Path -Path $MSIXPath) {
+            Write-Output "Windows App MSIX package downloaded to: $MSIXPath"
         }
         else {
             Write-Error "Windows App MSIX package not found"
@@ -69,7 +74,7 @@ If ($DeploymentType -ne "Uninstall") {
     $DependenciesPath = (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath "Dependencies") -filter *.appx).FullName
 
     # Provision the app with dependencies
-    Add-AppxProvisionedPackage -Online -PackagePath $AppPath -DependencyPackagePath $DependenciesPath -SkipLicense
+    Add-AppxProvisionedPackage -Online -PackagePath $MSIXPath -DependencyPackagePath $DependenciesPath -SkipLicense
     if ($tempDir -and (Test-Path -Path $tempDir)) {
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }

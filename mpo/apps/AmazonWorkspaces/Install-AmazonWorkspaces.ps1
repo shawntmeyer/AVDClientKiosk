@@ -12,6 +12,7 @@ $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
 $SoftwareName = 'Amazon Workspaces'
 $RegistrationCode = 'SLiad+EUXQ58'
 $Url = 'https://d2td7dqidlhjx7.cloudfront.net/prod/global/windows/Amazon+WorkSpaces.msi'
+$LaunchArg = "--uri `"//@$RegistrationCode`""
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
@@ -366,7 +367,7 @@ If ($DeploymentType -ne 'UnInstall') {
     If ($Application -and $Application.ProductCode -ne '') {
         $ProductCode = $Application.ProductCode
         Write-Output "Removing $SoftwareName with Product Code $ProductCode"
-        $uninstall = Start-Process -FilePath 'msixexec.exe' -ArgumentList "/X $($Application.ProductCode) /qn" -Wait -PassThru
+        $uninstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/X $($Application.ProductCode) /qn" -Wait -PassThru
         If ($Uninstall.ExitCode -eq '0' -or $Uninstall.ExitCode -eq '3010') {
             Write-Output "Uninstalled successfully"
         }
@@ -396,13 +397,14 @@ If ($DeploymentType -ne 'UnInstall') {
         $Shell = New-Object -ComObject WScript.Shell
         $iconSourceFile = Join-Path -Path $PSScriptRoot -ChildPath 'evo.ico'
         $iconDestFile = Join-Path -Path "$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces" -ChildPath 'evo.ico'
+        $iconLocation = '%ProgramFiles%\Amazon Web Services, Inc\Amazon Workspaces\evo.ico'
         Copy-Item -Path $iconSourceFile -Destination $iconDestFile -Force
         $ExistingShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\Amazon Workspaces.lnk"
         $NewShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\EVO.lnk"
         Copy-Item -Path $ExistingShortcutPath -Destination $NewShortcutPath -Force
         $Shortcut = $Shell.CreateShortcut($NewShortcutPath)
-        $Shortcut.Arguments = "--uri `"//@$RegistrationCode`""
-        $Shortcut.IconLocation = $iconDestFile
+        $Shortcut.Arguments = $LaunchArg
+        $Shortcut.IconLocation = $iconLocation
         $Shortcut.Save()
 
         Write-Output "Disabling Client update notifications."
@@ -410,7 +412,7 @@ If ($DeploymentType -ne 'UnInstall') {
         Write-Output "Configuring the evo URL Protocol"
         New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo' -Value 'URL:Launch Amazon Workspaces' -Force | Out-Null
         Set-RegistryValue -Path 'Registry::HKEY_CLASSES_ROOT\evo' -Name 'URL Protocol' -PropertyType 'String' -Value ''
-        New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo\shell\open\command' -Value "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" --uri `"//@$RegistrationCode`"" -Force | Out-Null
+        New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo\shell\open\command' -Value "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" $LaunchArg" -Force | Out-Null
         If ($TempDir) { Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue }
     }
     Else {
