@@ -73,7 +73,7 @@
       <v5:StartPins>
         <![CDATA[{
           "pinnedList":[                        
-            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Remote Desktop.lnk"},
+            {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\AVD.lnk"},
             {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Amazon Workspaces\\EVO.lnk"},
             {
               "secondaryTile": {
