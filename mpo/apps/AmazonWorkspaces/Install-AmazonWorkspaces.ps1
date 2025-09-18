@@ -11,8 +11,8 @@ $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
 [array]$Script:Args = @()
 $SoftwareName = 'Amazon Workspaces'
 $RegistrationCode = 'SLiad+EUXQ58'
-$Url = 'https://d2td7dqidlhjx7.cloudfront.net/prod/global/windows/Amazon+WorkSpaces.msi'
 $LaunchArg = "--uri `"//@$RegistrationCode`""
+$Url = 'https://d2td7dqidlhjx7.cloudfront.net/prod/global/windows/Amazon+WorkSpaces.msi'
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
@@ -37,7 +37,6 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     }
     Exit
 }
-
 #endregion initialization
 
 #region Supporting Functions
