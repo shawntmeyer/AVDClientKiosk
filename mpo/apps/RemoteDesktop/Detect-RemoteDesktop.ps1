@@ -6,15 +6,14 @@ If (([string]$registryEntry)) {
 
     [version]$version = $registryEntry.GetValue('DisplayVersion')
     if ($version -ge $TargetVersion) {
-        Write-Host "$SoftwareName is installed"
-        Write-Host "Version: $version"
+        Write-Host "[$SoftwareName] version [$($Version.toString())] is installed"
         exit 0
 
     } else {
-        Write-Host "$SoftwareName version is lower than expected. Expected: $TargetVersion, Found: $version"
+        Write-Host "[$SoftwareName] version is lower than expected. Expected: $($TargetVersion), Found: $($version)"
         exit 1
     }
 } else {
-    Write-Host "$SoftwareName isn't installed"
+    Write-Host "[$SoftwareName] isn't installed"
     exit 1
 }

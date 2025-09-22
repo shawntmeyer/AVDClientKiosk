@@ -67,7 +67,10 @@
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\NPSPrompt.exe" />
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfService.exe" />
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServicePlugin.exe" />
-          <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServiceUninstaller.exe" />     
+          <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServiceUninstaller.exe" />
+          <App DesktopAppPath="%WinDir%\system32\cmd.exe" />
+          <App DesktopAppPath="$WinDir%\System32\WindowsPowerShell\v1.0\Powershell.exe" />
+          <App DesktopAppPath="$WinDir%\System32\Notepad.exe" />    
          </AllowedApps>
       </AllAppsList>
       <v5:StartPins>
