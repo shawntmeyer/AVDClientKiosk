@@ -1,19 +1,20 @@
 $SoftwareName = 'Remote Desktop'
 [version]$TargetVersion = '1.2.6513.0'
-$RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object {$_.GetValue('DisplayName') -eq $SoftwareName}
+$RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object { $_.GetValue('DisplayName') -eq $SoftwareName }
+$ErrorActionPreference = 'Stop'
 
-If (([string]$registryEntry)) {
-
+If ($null -ne [string]$registryEntry) {
     [version]$version = $registryEntry.GetValue('DisplayVersion')
     if ($version -ge $TargetVersion) {
-        Write-Host "[$SoftwareName] version [$($Version.toString())] is installed"
-        exit 0
-
-    } else {
-        Write-Host "[$SoftwareName] version is lower than expected. Expected: $($TargetVersion), Found: $($version)"
-        exit 1
+        if (Test-Path -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\AVD.lnk") {
+            Write-Host "[$SoftwareName] version [$Version] is installed and custom desktop shortcut found."
+        }
+        Else {
+            Throw "[$SoftwareName] version [$($Version.toString())] is installed, but the custom desktop shortcut is not found."
+        }
+    } Else {
+        Throw "[$SoftwareName] version is lower than expected. Expected: $($TargetVersion), Found: $($version)"
     }
-} else {
-    Write-Host "[$SoftwareName] isn't installed"
-    exit 1
+} Else {
+    Throw "[$SoftwareName] is not installed."
 }
