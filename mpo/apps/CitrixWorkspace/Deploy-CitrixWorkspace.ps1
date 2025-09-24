@@ -8,6 +8,7 @@ $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:File = $MyInvocation.MyCommand.Name
 $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
 [array]$Script:Args = @()
+$Script:LogDir = Join-Path -Path "$Env:SystemRoot\Logs" -ChildPath 'Software'
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
@@ -193,9 +194,15 @@ function Wait-ForChildProcesses {
     }
 }
 
+#endregion Supporting Functions
+
+If (-not (Test-Path -Path $Script:LogDir)) {
+    New-Item -Path $Script:LogDir -ItemType Directory -Force | Out-Null
+}
+
 If ($DeploymentType -ne 'Uninstall') {
     [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
-    Start-Transcript -Path (Join-Path -Path "$Env:SystemRoot\Logs" -ChildPath $Script:LogName) -Force
+    Start-Transcript -Path (Join-Path -Path $Script:LogDir -ChildPath $Script:LogName) -Force
     Write-Output "Starting $SoftwareName Installation."
     $InstallerPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.exe').FullName
     If (-not $InstallerPath) {
@@ -229,7 +236,7 @@ If ($DeploymentType -ne 'Uninstall') {
 }
 Else {
     [string]$Script:LogName = "Unistall-" + ($SoftwareName -Replace ' ', '') + ".log"
-    Start-Transcript -Path (Join-Path -Path "$Env:SystemRoot\Logs" -ChildPath $Script:LogName) -Force
+    Start-Transcript -Path (Join-Path -Path $Script:LogDir -ChildPath $Script:LogName) -Force
     Write-Output "Starting $SoftwareName Installation."
     $InstallerPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.exe').FullName
     Write-Output "Found Installer: '$InstallerPath'."

@@ -4,48 +4,70 @@ $RegistrationCode = 'SLiad+EUXQ58'
 $LaunchArg = "--uri `"workspaces://@$RegistrationCode`""
 $URLProtocolValue = "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" $LaunchArg"
 
-$ErrorActionPreference = 'Stop'
-
+# Starting Tests
+$ProtocolHandler = $False
 $regPath = 'Registry::HKEY_CLASSES_ROOT\evo\shell\open\command'
 $defaultValue = $null
 If (Test-Path $regPath) {
-    try {
-        $regProps = Get-ItemProperty -Path $regPath -ErrorAction Stop
-        if ($regProps.PSObject.Properties.Name -contains '(default)') {
-            $defaultValue = $regProps.'(default)'
-        }
-        Elseif ($regProps.PSObject.Properties.Name -contains '') {
-            $defaultValue = $regProps.''
-        }
-        If ($null -ne $defaultValue) {
-            if ($defaultValue -ne $URLProtocolValue) {
-                Throw "URL Protocol entry is [$DefaultValue], should be [$URLProtocolValue]."
-            }
+    $regProps = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue
+    if ($regProps.PSObject.Properties.Name -contains '(default)') {
+        $defaultValue = $regProps.'(default)'
+    }
+    Elseif ($regProps.PSObject.Properties.Name -contains '') {
+        $defaultValue = $regProps.''
+    }
+    If ($null -ne $defaultValue) {
+        if ($defaultValue -eq $URLProtocolValue) {
+            $ProtocolHandler = $True
         }
     }
-    catch {
-        Throw "Error Accessing registry path: $_"
+}
+
+$Shortcut = $false
+If (Test-Path -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\EVO.lnk") {
+    $Shortcut = $True
+}
+
+$Installed = $False
+$RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object { $_.GetValue('DisplayName') -match $SoftwareName }
+If ($null -ne [string]$registryEntry) {
+    [version]$version = $registryEntry.GetValue('DisplayVersion')
+    if ($version -ge $TargetVersion) {
+        $Installed = $True
     }
+}
+
+If ($Installed -and $ProtocolHandler -and $Shortcut) {
+    Write-Output "$SoftwareName is installed, version $version"
+    Exit 0
+}
+Elseif ($Installed -and $ProtocolHandler -and -not $Shortcut) {
+    Write-Output "$SoftwareName is installed, protocol handler is configured, but shortcut is missing"
+    Exit 1
+}
+Elseif ($Installed -and -not $ProtocolHandler -and $Shortcut) {
+    Write-Output "$SoftwareName is installed, shortcut exists, but protocol handler is not configured"
+    Exit 1
+}
+Elseif ($Installed -and -not $ProtocolHandler -and -not $Shortcut) {
+    Write-Output "$SoftwareName is installed, but both protocol handler and shortcut are missing"
+    Exit 1
+}
+Elseif (-not $Installed -and $ProtocolHandler -and $Shortcut) {
+    Write-Output "$SoftwareName is not installed, but protocol handler and shortcut exist"
+    Exit 1
+}
+Elseif (-not $Installed -and $ProtocolHandler -and -not $Shortcut) {
+    Write-Output "$SoftwareName is not installed, protocol handler exists, but shortcut is missing"
+    Exit 1
+}
+Elseif (-not $Installed -and -not $ProtocolHandler -and $Shortcut) {
+    Write-Output "$SoftwareName is not installed, shortcut exists, but protocol handler is missing"
+    Exit 1
 }
 Else {
-    Throw "The registry path '$regPath' does not exist."
-}
-
-If (-Not(Test-Path -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\EVO.lnk")) {
-    Throw "Custom Start Menu shortcut not found."
-}
-
-$RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object { $_.GetValue('DisplayName') -match $SoftwareName }
-If (-not([string]$registryEntry)) {
-    Throw "$SoftwareName is not installed."
-}
-
-[version]$version = $registryEntry.GetValue('DisplayVersion')
-if (-not ($version) -or $version -lt $TargetVersion) {
-    Throw "$SoftwareName version is lower than expected. Expected: $TargetVersion, Found: $version"
-} Else {
-    Write-Host "[$SoftwareName] version [$version] is installed"
-    exit 0
+    Write-Output "$SoftwareName is not installed, protocol handler and shortcut are missing"
+    Exit 1
 }
 
 

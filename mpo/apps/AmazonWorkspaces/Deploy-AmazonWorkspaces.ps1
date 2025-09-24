@@ -4,15 +4,16 @@ Param
 )
 
 #region Initialization
-
-$SoftwareName = 'Remote Desktop'
-$downloadUrl = "https://go.microsoft.com/fwlink/?linkid=2068602"
-$MSIArguments = "/qn ALLUSERS=1"
-
+$ProgressPreference = 'SilentlyContinue'
 $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:File = $MyInvocation.MyCommand.Name
 $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
 [array]$Script:Args = @()
+$Script:LogDir = Join-Path -Path "$Env:SystemRoot\Logs" -ChildPath 'Software'
+$SoftwareName = 'Amazon Workspaces'
+$RegistrationCode = 'SLiad+EUXQ58'
+$LaunchArg = "--uri `"workspaces://@$RegistrationCode`""
+$Url = 'https://d2td7dqidlhjx7.cloudfront.net/prod/global/windows/Amazon+WorkSpaces.msi'
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
@@ -37,87 +38,9 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     }
     Exit
 }
+#endregion initialization
 
 #region Supporting Functions
-Function Get-InternetFile {
-    [CmdletBinding()]
-    Param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [uri]$Url,
-        [Parameter(Mandatory = $true, Position = 1)]
-        [string]$OutputDirectory,
-        [Parameter(Mandatory = $false, Position = 2)]
-        [string]$OutputFileName
-    )
-
-    Begin {
-        ## Get the name of this function and write header
-        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
-        Write-Verbose "Starting ${CmdletName} with the following parameters: $PSBoundParameters"
-        $ProgressPreference = 'SilentlyContinue'
-    }
-    Process {
-
-        $start_time = Get-Date
-
-        If (!$OutputFileName) {
-            Write-Verbose "${CmdletName}: No Output File Name specified. Trying to get file name from URL."
-            If ((split-path -path $Url -leaf).Contains('.')) {
-
-                $OutputFileName = split-path -path $url -leaf
-                Write-Verbose "${CmdletName}: Url contains file name - '$OutputFileName'."
-            }
-            Else {
-                Write-Verbose "${CmdletName}: Url does not contain file name. Trying 'Location' Response Header."
-                $request = [System.Net.WebRequest]::Create($url)
-                $request.AllowAutoRedirect = $false
-                $response = $request.GetResponse()
-                $Location = $response.GetResponseHeader("Location")
-                If ((split-path $Location -leaf) -like '*.*') {
-                    $OutputFileName = [System.IO.Path]::GetFileName($Location)
-                    Write-Verbose "${CmdletName}: File Name from 'Location' Response Header is '$OutputFileName'."
-                }
-                Else {
-                    Write-Verbose "${CmdletName}: No 'Location' Response Header returned. Trying 'Content-Disposition' Response Header."
-                    $result = Invoke-WebRequest -Method GET -Uri $Url -UseBasicParsing
-                    $contentDisposition = $result.Headers.'Content-Disposition'
-                    If ($contentDisposition) {
-                        $OutputFileName = $contentDisposition.Split("=")[1].Replace("`"", "")
-                        Write-Verbose "${CmdletName}: File Name from 'Content-Disposition' Response Header is '$OutputFileName'."
-                    }
-                }
-            }
-        }
-
-        If ($OutputFileName) { 
-            $wc = New-Object System.Net.WebClient
-            $OutputFile = Join-Path $OutputDirectory $OutputFileName
-            Write-Verbose "${CmdletName}: Downloading file at '$url' to '$OutputFile'."
-            Try {
-                $wc.DownloadFile($url, $OutputFile)
-                $time = (Get-Date).Subtract($start_time).Seconds
-                
-                Write-Verbose "${CmdletName}: Time taken: '$time' seconds."
-                if (Test-Path -Path $outputfile) {
-                    $totalSize = (Get-Item $outputfile).Length / 1MB
-                    Write-Verbose "${CmdletName}: Download was successful. Final file size: '$totalsize' mb"
-                    Return $OutputFile
-                }
-            }
-            Catch {
-                Write-Error "${CmdletName}: Error downloading file. Please check url."
-                Return $Null
-            }
-        }
-        Else {
-            Write-Error "${CmdletName}: No OutputFileName specified. Unable to download file."
-            Return $Null
-        }
-    }
-    End {
-        Write-Verbose "Ending ${CmdletName}"
-    }
-}
 
 Function Get-InstalledApplication {
     <#
@@ -314,33 +237,194 @@ Function Get-InstalledApplication {
     }
 }
 
-#endregion
+Function Get-InternetFile {
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [uri]$Url,
+        [Parameter(Mandatory = $true, Position = 1)]
+        [string]$OutputDirectory,
+        [Parameter(Mandatory = $false, Position = 2)]
+        [string]$OutputFileName
+    )
 
-## MAIN
+    Begin {
+        ## Get the name of this function and write header
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+        Write-Verbose "Starting ${CmdletName} with the following parameters: $PSBoundParameters"
+        $ProgressPreference = 'SilentlyContinue'
+    }
+    Process {
 
-If ($DeploymentType -ne 'UnInstall') {
-    [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
-    Start-Transcript -Path (Join-Path -Path "$env:WinDir\Logs" -ChildPath $Script:LogName) -Force
-    Write-Output "Retrieving latest $SoftwareName version from Internet."
-    $pathMSI = Get-InternetFile -url $downloadUrl -OutputDirectory $env:Temp       
-    Write-Output "Installing '$SoftwareName' via cmdline:"
-    Write-Output "     'msiexec.exe /i `"$pathMSI`" $MSIArguments'"
-    $Installer = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$pathMSI`" $MSIArguments" -Wait -PassThru
-    If ($($Installer.ExitCode) -eq 0) {
-        Write-Output "'$SoftwareName' installed successfully."
-        Remove-Item -Path $pathMSI -Force -ErrorAction SilentlyContinue
+        $start_time = Get-Date
+
+        If (!$OutputFileName) {
+            Write-Verbose "${CmdletName}: No Output File Name specified. Trying to get file name from URL."
+            If ((split-path -path $Url -leaf).Contains('.')) {
+
+                $OutputFileName = split-path -path $url -leaf
+                Write-Verbose "${CmdletName}: Url contains file name - '$OutputFileName'."
+            }
+            Else {
+                Write-Verbose "${CmdletName}: Url does not contain file name. Trying 'Location' Response Header."
+                $request = [System.Net.WebRequest]::Create($url)
+                $request.AllowAutoRedirect = $false
+                $response = $request.GetResponse()
+                $Location = $response.GetResponseHeader("Location")
+                If ((split-path $Location -leaf) -like '*.*') {
+                    $OutputFileName = [System.IO.Path]::GetFileName($Location)
+                    Write-Verbose "${CmdletName}: File Name from 'Location' Response Header is '$OutputFileName'."
+                }
+                Else {
+                    Write-Verbose "${CmdletName}: No 'Location' Response Header returned. Trying 'Content-Disposition' Response Header."
+                    $result = Invoke-WebRequest -Method GET -Uri $Url -UseBasicParsing
+                    $contentDisposition = $result.Headers.'Content-Disposition'
+                    If ($contentDisposition) {
+                        $OutputFileName = $contentDisposition.Split("=")[1].Replace("`"", "")
+                        Write-Verbose "${CmdletName}: File Name from 'Content-Disposition' Response Header is '$OutputFileName'."
+                    }
+                }
+            }
+        }
+
+        If ($OutputFileName) { 
+            $wc = New-Object System.Net.WebClient
+            $OutputFile = Join-Path $OutputDirectory $OutputFileName
+            Write-Verbose "${CmdletName}: Downloading file at '$url' to '$OutputFile'."
+            Try {
+                $wc.DownloadFile($url, $OutputFile)
+                $time = (Get-Date).Subtract($start_time).Seconds
+                
+                Write-Verbose "${CmdletName}: Time taken: '$time' seconds."
+                if (Test-Path -Path $outputfile) {
+                    $totalSize = (Get-Item $outputfile).Length / 1MB
+                    Write-Verbose "${CmdletName}: Download was successful. Final file size: '$totalsize' mb"
+                    Return $OutputFile
+                }
+            }
+            Catch {
+                Write-Error "${CmdletName}: Error downloading file. Please check url."
+                Return $Null
+            }
+        }
+        Else {
+            Write-Error "${CmdletName}: No OutputFileName specified. Unable to download file."
+            Return $Null
+        }
+    }
+    End {
+        Write-Verbose "Ending ${CmdletName}"
+    }
+}
+
+Function Set-RegistryValue {
+    [CmdletBinding()]
+    param (
+        [string]$Name,
+        [string]$Path,
+        [string]$PropertyType,
+        [string]$Value
+    )
+    Write-Verbose "[Set-RegistryValue]: Setting Registry Value: $Name"
+    If (!(Test-Path -Path $Path)) {
+        New-Item -Path $Path -Force | Out-Null
+    }
+    $RemoteValue = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+    If ($RemoteValue) {
+        $CurrentValue = Get-ItemPropertyValue -Path $Path -Name $Name
+        If ($Value -ne $CurrentValue) {
+            Set-ItemProperty -Path $Path -Name $Name -Value $Value -Force | Out-Null
+        }
     }
     Else {
-        Write-Error "The Installer exit code is $($Installer.ExitCode)"
+        New-ItemProperty -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value -Force | Out-Null
     }
-    Write-Output "Completed '$SoftwareName' Installation."
-    Copy-Item -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Remote Desktop.lnk" -Destination "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\AVD.lnk" -Force
-    $null = cmd /c REG.exe ADD HKLM\SOFTWARE\Microsoft\MSRDC\Policies /v AutomaticUpdates /d 0 /t REG_DWORD /f '2>&1'
+}
+
+Function Remove-RegistryKey {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+    Write-Verbose "[Remove-RegistryKey]: Removing Registry Key: $Path"
+    if (Test-Path -Path $Path) {
+        Remove-Item -Path $Path -Recurse -Force
+        Write-Verbose "[Remove-RegistryKey]: Successfully removed $Path"
+    }
+    else {
+        Write-Verbose "[Remove-RegistryKey]: Path $Path does not exist."
+    }
+}
+#endregion Supporting Functions
+
+## MAIN
+If (-not (Test-Path -Path $Script:LogDir)) {
+    New-Item -Path $Script:LogDir -ItemType Directory -Force | Out-Null
+}
+If ($DeploymentType -ne 'UnInstall') {
+    [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
+    Start-Transcript -Path (Join-Path -Path $Script:LogDir -ChildPath $Script:LogName) -Force
+    $Application = Get-InstalledApplication -Name $SoftwareName
+    If ($Application -and $Application.ProductCode -ne '') {
+        $ProductCode = $Application.ProductCode
+        Write-Output "Removing $SoftwareName with Product Code $ProductCode"
+        $uninstall = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/X $($Application.ProductCode) /qn" -Wait -PassThru
+        If ($Uninstall.ExitCode -eq '0' -or $Uninstall.ExitCode -eq '3010') {
+            Write-Output "Uninstalled successfully"
+        }
+        Else {
+            Write-Warning "$ProductCode uninstall exit code $($uninstall.ExitCode)"
+        }
+    }
+    $MSIPath = (Get-ChildItem -Path $PSScriptRoot -Filter '*.msi').FullName
+    If (-not $MSIPath) {
+        $TempDir = Join-Path -Path $env:Temp -ChildPath ($SoftwareName -Replace ' ', '')
+        New-Item -Path $TempDir -ItemType Directory -Force | Out-Null
+        $MSIPath = Get-InternetFile -Url $Url -OutputDirectory $TempDir -OutputFileName 'Amazon+Workspaces.msi'
+    }
+    If ($MSIPath) {    
+        $MSIProperties = 'ALLUSERS=1'
+        Write-Output "Installing '$SoftwareName' via cmdline:"
+        Write-Output "     'msiexec.exe /i `"$MSIPath`" /qn $MSIProperties'"
+        $Installer = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$MSIPath`" /qn $MSIProperties" -Wait -PassThru
+        If ($($Installer.ExitCode) -eq 0) {
+            Write-Output "'$SoftwareName' installed successfully."
+        }
+        Else {
+            Write-Error "The Installer exit code is $($Installer.ExitCode)"
+        }
+        Write-Output "Completed '$SoftwareName' Installation."
+        Write-Output "Adding a custom Start Menu shortcut with EVO registration code argument and icon."
+        $Shell = New-Object -ComObject WScript.Shell
+        $iconSourceFile = Join-Path -Path $PSScriptRoot -ChildPath 'evo.ico'
+        $iconDestFile = Join-Path -Path "$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces" -ChildPath 'evo.ico'
+        Copy-Item -Path $iconSourceFile -Destination $iconDestFile -Force
+        $ExistingShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\Amazon Workspaces.lnk"
+        $NewShortcutPath = "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces\EVO.lnk"
+        Copy-Item -Path $ExistingShortcutPath -Destination $NewShortcutPath -Force
+        $Shortcut = $Shell.CreateShortcut($NewShortcutPath)
+        $Shortcut.Arguments = $LaunchArg
+        $Shortcut.IconLocation = "$iconDestFile,0"
+        $Shortcut.Save()
+
+        Write-Output "Disabling Client update notifications."
+        Set-RegistryValue -Path 'HKLM:\SOFTWARE\WOW6432Node\Amazon\Amazon WorkSpaces Client' -PropertyType 'STRING' -Name 'clientUpgradeDisabled' -Value 1
+        Write-Output "Configuring the evo URL Protocol"
+        New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo' -Value 'URL:Launch Amazon Workspaces' -Force | Out-Null
+        Set-RegistryValue -Path 'Registry::HKEY_CLASSES_ROOT\evo' -Name 'URL Protocol' -PropertyType 'String' -Value ''
+        New-Item -Path 'Registry::HKEY_CLASSES_ROOT\evo\shell\open\command' -Value "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" $LaunchArg" -Force | Out-Null
+        If ($TempDir) { Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+    Else {
+        Write-Error 'Amazon Workspaces installer not found'
+        Exit 1
+    }
 }
 # Uninstall
 Else {
     [string]$Script:LogName = "UnInstall-" + ($SoftwareName -Replace ' ', '') + ".log"
-    Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
+    Start-Transcript -Path (Join-Path -Path $Script:LogDir -ChildPath $Script:LogName) -Force
     Write-Output "Removing $SoftwareName"
     $Application = Get-InstalledApplication -Name $SoftwareName
     If ($Application -and $Application.ProductCode -ne '') {
@@ -349,9 +433,16 @@ Else {
         $uninstall = Start-Process -FilePath 'msixexec.exe' -ArgumentList "/X $($Application.ProductCode) /qn" -Wait -PassThru
         If ($Uninstall.ExitCode -eq '0' -or $Uninstall.ExitCode -eq '3010') {
             Write-Output "Uninstalled successfully"
-        } Else {
+        }
+        Else {
             Write-Warning "$ProductCode uninstall exit code $($uninstall.ExitCode)"
         }
     }
+    If (Test-Path -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces") {
+        Remove-Item -Path "$env:AllUsersProfile\Microsoft\Windows\Start Menu\Programs\Amazon WorkSpaces" -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    Remove-RegistryKey -Path 'Registry::HKEY_CLASSES_ROOT\evo'
+    Write-Output "Completed '$SoftwareName' Uninstallation."
 }
+
 Stop-Transcript

@@ -12,11 +12,8 @@ $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:File = $MyInvocation.MyCommand.Name
 $Script:Name = [System.IO.Path]::GetFileNameWithoutExtension($Script:File)
 $Script:Args = $null
+$Script:LogDir = Join-Path -Path "$Env:SystemRoot\Logs" -ChildPath 'Software'
 
-[String]$Script:LogDir = "$($env:SystemRoot)\Logs\Software"
-If (-not(Test-Path -Path $Script:LogDir)) {
-    New-Item -Path $Script:LogDir -ItemType Dir -Force | Out-Null
-}
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
@@ -42,9 +39,13 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Exit
 }
 
+If (-not (Test-Path -Path $Script:LogDir)) {
+    New-Item -Path $Script:LogDir -ItemType Directory -Force | Out-Null
+}
+
 If ($DeploymentType -ne "Uninstall") {
     [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ', '') + ".log"
-    Start-Transcript -Path (Join-Path -Path "$env:WinDir\Logs" -ChildPath $Script:LogName) -Force
+    Start-Transcript -Path (Join-Path -Path $Script:LogDir -ChildPath $Script:LogName) -Force
     $CurrentVersion = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "MicrosoftCorporationII.Windows365" }
     If ($CurrentVersion) {
         Write-Output "Removing existing version of $SoftwareName"
@@ -81,7 +82,7 @@ If ($DeploymentType -ne "Uninstall") {
 }
 Else {
     [string]$Script:LogName = "Uninstall" + ($SoftwareName -Replace ' ', '') + ".log"
-    Start-Transcript -Path (Join-Path -Path "$env:WinDir\Logs" -ChildPath $Script:LogName) -Force
+    Start-Transcript -Path (Join-Path -Path $Script:LogDir -ChildPath $Script:LogName) -Force
     Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "MicrosoftCorporationII.Windows365" } | Remove-AppxProvisionedPackage -Online
 }
 
