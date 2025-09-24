@@ -14,4 +14,5 @@ If ($InstalledVersion) {
 }
 Else {
     Write-Output "Windows App is not installed."
+    Exit 1
 }
