@@ -17,7 +17,7 @@ Option Explicit
 
 Function InitializeProxyConfig
 
-	PTRadio3.click
+	PTRadio3.checked = true
 	ServerAddress.disabled = true
 	ScriptUrl.disabled = false
 	ScriptUrl.value = "http://op_autopac.corp.nsa.gov/autopac/internet.pac"
@@ -28,7 +28,7 @@ Function ValidateProxyConfig
 
 	ValidateProxyConfig = False
 
-	If PKRadio1.checked then
+	If PTRadio1.checked then
 
 		ServerAddress.disabled = true
 		ScriptUrl.disabled = true
@@ -43,8 +43,7 @@ Function ValidateProxyConfig
 
 		ValidateProxyConfig = True
 
-
-	ElseIf PKRadio2.checked then
+	ElseIf PTRadio2.checked then
 
 		ServerAddress.disabled = false
 		ScriptUrl.disabled = true
@@ -65,6 +64,7 @@ Function ValidateProxyConfig
 			InvalidServerAddress.style.display = "none"
 			ProxyServerAddress.value = GetProxyAddress(ServerAddress.value)
 			ProxyScriptUrl.value = ""
+
 			ValidateProxyConfig = True
 		End if
 
@@ -100,7 +100,8 @@ Function GetProxyAddress(proxyAddress)
 	Dim regex, isMatch
 	Set regex = New RegExp
 
-	regex.Pattern = "^(?:(?:http|https|socks5)://)?(?:\w+:\w+@)?(?:\d{1,3}(?:\.\d{1,3}){3}|(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d{2,5})$"
+	regex.Pattern = "^(https?:\/\/)?([a-zA-Z0-9.-]+|\d{1,3}(\.\d{1,3}){3})(:\d{1,5})?$"
+
 	regex.IgnoreCase = True
 	regex.Global = False
 
