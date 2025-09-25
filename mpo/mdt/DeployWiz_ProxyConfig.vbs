@@ -17,24 +17,20 @@ Option Explicit
 
 Function InitializeProxyConfig
 
-	If oProperties("ProxyServerAddress") = "" and oProperties("ProxyScriptUrl") = "" then
-		PTRadio1.checked = true
-		ServerAddress.disabled = true
-		ScriptUrl.disabled = true
-	ElseIf oProperties("ProxyServerAddress") <> "" then
+	If oEnvironment.Item("ProxyServerAddress") <> "" then
 		PTRadio2.checked = true
 		ServerAddress.disabled = false
-		ServerAddress.value = oProperties("ProxyServerAddress")
+		ServerAddress.value = oEnvironment.Item("ProxyServerAddress")
 		ScriptUrl.disabled = true
-	Else
+	ElseIf oEnvironment.Item("ProxyScriptUrl") <> "" then
 		PTRadio3.checked = true
 		ServerAddress.disabled = true
 		ScriptUrl.disabled = false
-		ScriptUrl.value = oProperties("ProxyScriptUrl")
-	End if
-
-	If UCase(oEnvironment.Item("SkipComputerName")) = "YES" then
-		OSDComputerName.disabled = true
+		ScriptUrl.value = oEnvironment.Item("ProxyScriptUrl")
+	Else
+		PTRadio1.checked = true
+		ServerAddress.disabled = true
+		ScriptUrl.disabled = true
 	End if
 
 End Function
