@@ -1,0 +1,449 @@
+<?xml version="1.0"?>
+<sequence version="3.00" name="Standard Client Task Sequence" description="A complete task sequence for deploying a client operating system">
+  <globalVarList>
+    <variable name="OSGUID" property="OSGUID">{4800486b-fdd8-400a-8405-e72b5863f940}</variable>
+    <variable name="DestinationDisk" property="DestinationDisk">0</variable>
+    <variable name="DestinationPartition" property="DestinationPartition">1</variable>
+    <variable name="DestinationOSVariable" property="DestinationOSVariable">OSDisk</variable>
+    <variable name="DestinationOSRefresh" property="DestinationOSRefresh"></variable>
+    <variable name="DestinationOSDriveLetter" property="DestinationOSDriveLetter"></variable>
+    <variable name="DestinationOSInstallType" property="DestinationOSInstallType">ByVariable</variable>
+    <variable name="OSGUID" property="OSGUID">{4800486b-fdd8-400a-8405-e72b5863f940}</variable>
+  </globalVarList>
+  <group name="Initialization" disable="false" continueOnError="false" description="Initialize the TS environment" expand="true">
+    <step type="BDD_Gather" name="Gather local only" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <defaultVarList>
+        <variable name="GatherLocalOnly" property="GatherLocalOnly">true</variable>
+        <variable name="RulesFile" property="RulesFile"></variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\ZTIGather.wsf"</action>
+    </step>
+  </group>
+  <group name="Validation" disable="false" continueOnError="false" description="Test" expand="true">
+    <condition>
+      <operator type="or">
+        <expression type="SMS_TaskSequence_VariableConditionExpression">
+          <variable name="Variable">PHASE</variable>
+          <variable name="Operator">equals</variable>
+          <variable name="Value">VALIDATION</variable>
+        </expression>
+      </operator>
+    </condition>
+    <step type="BDD_Validate" name="Validate" successCodeList="0 3010" description="" startIn="" disable="false" continueOnError="false">
+      <defaultVarList>
+        <variable name="ImageSize" property="ImageSize">0</variable>
+        <variable name="ImageProcessorSpeed" property="ImageProcessorSpeed">800</variable>
+        <variable name="ImageMemory" property="ImageMemory">768</variable>
+        <variable name="VerifyOS" property="VerifyOS">CLIENT</variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\ZTIValidate.wsf"</action>
+    </step>
+    <step name="Check BIOS" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTIBIOSCheck.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step name="Next Phase" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTINextPhase.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+  </group>
+  <group name="State Capture" description="" disable="false" continueOnError="false" expand="true">
+    <condition>
+      <expression type="SMS_TaskSequence_VariableConditionExpression">
+        <variable name="Variable">PHASE</variable>
+        <variable name="Operator">equals</variable>
+        <variable name="Value">STATECAPTURE</variable>
+      </expression>
+    </condition>
+    <step name="Capture Network Settings" description="" runIn="WinPEandFullOS" successCodeList="0 3010" disable="false" continueOnError="false">
+      <action>cscript.exe "%ScriptRoot%\ZTINicConfig.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step name="Next Phase" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTINextPhase.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+  </group>
+  <group name="Preinstall" disable="false" continueOnError="false" description="" expand="true">
+    <condition>
+      <expression type="SMS_TaskSequence_VariableConditionExpression">
+        <variable name="Variable">PHASE</variable>
+        <variable name="Operator">equals</variable>
+        <variable name="Value">PREINSTALL</variable>
+      </expression>
+    </condition>
+    <step type="BDD_Gather" name="Gather local only" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <defaultVarList>
+        <variable name="GatherLocalOnly" property="GatherLocalOnly">true</variable>
+        <variable name="RulesFile" property="RulesFile"></variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\ZTIGather.wsf"</action>
+    </step>
+    <step type="BDD_Validate" name="Validate" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <defaultVarList>
+        <variable name="ImageSize" property="ImageSize">0</variable>
+        <variable name="ImageProcessorSpeed" property="ImageProcessorSpeed">800</variable>
+        <variable name="ImageMemory" property="ImageMemory">768</variable>
+        <variable name="VerifyOS" property="VerifyOS">CLIENT</variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\ZTIValidate.wsf"</action>
+    </step>
+    <step type="SMS_TaskSequence_PartitionDiskAction" name="Format and Partition Disk (UEFI)" description="" runIn="WinPE" successCodeList="0" disable="false" continueOnError="false">
+      <condition>
+        <expression type="SMS_TaskSequence_VariableConditionExpression">
+          <variable name="Operator">equals</variable>
+          <variable name="Value">True</variable>
+          <variable name="Variable">IsUEFI</variable>
+        </expression>
+      </condition>
+      <defaultVarList>
+        <variable name="OSDDiskIndex" property="DiskIndex">0</variable>
+        <variable name="OSDDiskPartitions1Type" property="OSDDiskPartitions1Type">Recovery</variable>
+        <variable name="DONotCreateExtraPartition" property="DONotCreateExtraPartition"></variable>
+        <variable name="OSDPartitions0Type" property="Partitions0Type">EFI</variable>
+        <variable name="OSDPartitions0FileSystem" property="Partitions0FileSystem">FAT32</variable>
+        <variable name="OSDPartitions0Bootable" property="Partitions0Bootable">True</variable>
+        <variable name="OSDPartitions0QuickFormat" property="Partitions0QuickFormat">True</variable>
+        <variable name="OSDPartitions0VolumeName" property="Partitions0VolumeName">Boot</variable>
+        <variable name="OSDPartitions0Size" property="Partitions0Size">200</variable>
+        <variable name="OSDPartitions0SizeUnits" property="Partitions0SizeUnits">MB</variable>
+        <variable name="OSDPartitions0VolumeLetterVariable" property="Partitions0VolumeLetterVariable"></variable>
+        <variable name="OSDPartitions1Type" property="Partitions1Type">MSR</variable>
+        <variable name="OSDPartitions1FileSystem" property="Partitions1FileSystem">NTFS</variable>
+        <variable name="OSDPartitions1Bootable" property="Partitions1Bootable">False</variable>
+        <variable name="OSDPartitions1QuickFormat" property="Partitions1QuickFormat">True</variable>
+        <variable name="OSDPartitions1VolumeName" property="Partitions1VolumeName"></variable>
+        <variable name="OSDPartitions1Size" property="Partitions1Size">16</variable>
+        <variable name="OSDPartitions1SizeUnits" property="Partitions1SizeUnits">MB</variable>
+        <variable name="OSDPartitions1VolumeLetterVariable" property="Partitions1VolumeLetterVariable"></variable>
+        <variable name="OSDPartitions2Type" property="Partitions2Type">Primary</variable>
+        <variable name="OSDPartitions2FileSystem" property="Partitions2FileSystem">NTFS</variable>
+        <variable name="OSDPartitions2Bootable" property="Partitions2Bootable">False</variable>
+        <variable name="OSDPartitions2QuickFormat" property="Partitions2QuickFormat">True</variable>
+        <variable name="OSDPartitions2VolumeName" property="Partitions2VolumeName">Windows</variable>
+        <variable name="OSDPartitions2Size" property="Partitions2Size">100</variable>
+        <variable name="OSDPartitions2SizeUnits" property="Partitions2SizeUnits">%</variable>
+        <variable name="OSDPartitions2VolumeLetterVariable" property="Partitions2VolumeLetterVariable">OSDisk</variable>
+        <variable name="OSDPartitions" property="Partitions">3</variable>
+        <variable name="OSDPartitionStyle" property="PartitionStyle">GPT</variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\ZTIDiskpart.wsf"</action>
+    </step>
+    <step type="SMS_TaskSequence_RunCommandLineAction" name="Create Recovery Partition" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+      <defaultVarList>
+        <variable name="PackageID" property="PackageID"></variable>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+      <action>cmd /c diskpart /s %SCRIPTROOT%\Custom\diskpart.txt</action>
+    </step>
+    <step name="Copy scripts" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\LTICopyScripts.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step name="Configure" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTIConfigure.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step type="BDD_InjectDrivers" name="Inject Drivers" description="" disable="false" continueOnError="false" runIn="WinPEandFullOS" successCodeList="0 3010">
+      <defaultVarList>
+        <variable name="DriverSelectionProfile" property="DriverSelectionProfile">All Drivers</variable>
+        <variable name="DriverInjectionMode" property="DriverInjectionMode">AUTO</variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\ZTIDrivers.wsf"</action>
+    </step>
+    <step type="BDD_InstallUpdatesOffline" name="Apply Patches" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTIPatches.wsf"</action>
+      <defaultVarList>
+        <variable name="PackageSelectionProfile" property="PackageSelectionProfile">All Packages</variable>
+      </defaultVarList>
+    </step>
+    <step name="Next Phase" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTINextPhase.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+  </group>
+  <group name="Install" disable="false" continueOnError="false" description="" expand="true">
+    <condition>
+      <expression type="SMS_TaskSequence_VariableConditionExpression">
+        <variable name="Variable">PHASE</variable>
+        <variable name="Operator">equals</variable>
+        <variable name="Value">INSTALL</variable>
+      </expression>
+    </condition>
+    <step type="BDD_InstallOS" name="Install Operating System" description="" disable="false" continueOnError="false" runIn="WinPEandFullOS" successCodeList="0 3010">
+      <defaultVarList>
+        <variable name="OSGUID" property="OSGUID">{4800486b-fdd8-400a-8405-e72b5863f940}</variable>
+        <variable name="DestinationDisk" property="DestinationDisk">0</variable>
+        <variable name="DestinationPartition" property="DestinationPartition">1</variable>
+        <variable name="DestinationOSDriveLetter" property="DestinationOSDriveLetter"></variable>
+        <variable name="DestinationOSVariable" property="DestinationOSVariable">OSDisk</variable>
+        <variable name="DestinationOSRefresh" property="DestinationOSRefresh"></variable>
+        <variable name="DestinationOSInstallType" property="DestinationOSInstallType">ByVariable</variable>
+      </defaultVarList>
+      <action>cscript.exe "%SCRIPTROOT%\LTIApply.wsf"</action>
+    </step>
+    <step name="Next Phase" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTINextPhase.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+  </group>
+  <group name="Postinstall" disable="false" continueOnError="false" description="" expand="true">
+    <condition>
+      <expression type="SMS_TaskSequence_VariableConditionExpression">
+        <variable name="Variable">PHASE</variable>
+        <variable name="Operator">equals</variable>
+        <variable name="Value">POSTINSTALL</variable>
+      </expression>
+    </condition>
+    <step type="SMS_TaskSequence_RunCommandLineAction" name="Copy Provisioning Packages" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+      <defaultVarList>
+        <variable name="PackageID" property="PackageID"></variable>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+      <action>cmd /c xcopy /HIERY %DeployRoot%\Scripts\Custom\ProvisioningPackages\UMI5 %OSDisk%\Windows\Temp\ProvisioningPackages</action>
+    </step>
+    <step type="SMS_TaskSequence_RunCommandLineAction" name="Copy SetupComplete.cmd" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+      <defaultVarList>
+        <variable name="PackageID" property="PackageID"></variable>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+      <action>cmd /c xcopy /IERY %DeployRoot%\Scripts\Custom\Setup %OSDisk%\Windows\Setup</action>
+    </step>
+    <step name="Copy Scripts" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\LTICopyScripts.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step name="Configure" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTIConfigure.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step name="Inject Drivers" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTIdrivers.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step type="BDD_InstallUpdatesOffline" name="Apply Patches" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTIPatches.wsf"</action>
+      <defaultVarList>
+        <variable name="PackageSelectionProfile" property="PackageSelectionProfile">All Packages</variable>
+      </defaultVarList>
+    </step>
+    <step name="Next Phase" disable="false" continueOnError="false" successCodeList="0 3010" description="" startIn="">
+      <action>cscript.exe "%SCRIPTROOT%\ZTINextPhase.wsf"</action>
+      <defaultVarList>
+        <variable name="RunAsUser" property="RunAsUser">false</variable>
+        <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+        <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+        <variable name="LoadProfile" property="LoadProfile">false</variable>
+      </defaultVarList>
+    </step>
+    <step type="SMS_TaskSequence_RebootAction" name="Restart computer" description="" disable="false" continueOnError="false" runIn="WinPEandFullOS" successCodeList="0 3010">
+      <defaultVarList>
+        <variable name="Message" property="Message"></variable>
+        <variable name="MessageTimeout" property="MessageTimeout">60</variable>
+        <variable name="Target" property="Target"></variable>
+      </defaultVarList>
+      <action>smsboot.exe /target:WinPE</action>
+    </step>
+    <group expand="true" name="Proxy Configuration" description="" disable="false" continueOnError="false">
+      <action />
+      <condition>
+        <operator type="or">
+          <expression type="SMS_TaskSequence_VariableConditionExpression">
+            <variable name="Variable">ProxyServerAddress</variable>
+            <variable name="Operator">exists</variable>
+            <variable name="Value"></variable>
+          </expression>
+          <expression type="SMS_TaskSequence_VariableConditionExpression">
+            <variable name="Variable">ProxyScriptUrl</variable>
+            <variable name="Operator">exists</variable>
+            <variable name="Value"></variable>
+          </expression>
+        </operator>
+      </condition>
+      <group expand="true" name="Proxy Server Address" description="" disable="false" continueOnError="false">
+        <action />
+        <condition>
+          <expression type="SMS_TaskSequence_VariableConditionExpression">
+            <variable name="Variable">ProxyServerAddress</variable>
+            <variable name="Operator">exists</variable>
+            <variable name="Value"></variable>
+          </expression>
+        </condition>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Load Offline HKLM\Software Hive" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg load HKLM\OfflineSoftware %OSDISK%\Windows\System32\Config\SOFTWARE</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Set ProxySettingsPerUser" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg add "HKLM\OfflineSoftware\Policies\Microsoft\CurrentVersion\Internet Settings" /v ProxySettingsPerUser /t REG_DWORD /d 0 /f</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Set Proxy Server" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg add "HKLM\OfflineSoftware\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /t Reg_SZ /d "%ProxyServerAddress%" /f</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Unload Offline HKLM\Software" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>Reg Unload HKLM\OfflineSoftware</action>
+        </step>
+      </group>
+      <group expand="true" name="Proxy Script Url" description="" disable="false" continueOnError="false">
+        <action />
+        <condition>
+          <expression type="SMS_TaskSequence_VariableConditionExpression">
+            <variable name="Variable">ProxyScriptUrl</variable>
+            <variable name="Operator">exists</variable>
+            <variable name="Value"></variable>
+          </expression>
+        </condition>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Load Offline Default User Hive" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg load HKU\OfflineDefault %OSDISK%\Users\Default\ntuser.dat</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Add AutoConfigUrl to default user hive" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg add "HKU\OfflineDefault\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoConfigURL /t REG_SZ /d %ProxyScriptUrl% /f</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Unload Default User Hive" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg unload HKU\OfflineDefault</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Load the offline .Default Hive" description="Service hive" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg load HKU\OfflineDefault %OSDISK%\Windows\System32\Config\DEFAULT</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Add AutoConfigUrl to .default Hive" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg add "HKU\OfflineDefault\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoConfigURL /t REG_SZ /d "%ProxyScriptUrl%" /f</action>
+        </step>
+        <step type="SMS_TaskSequence_RunCommandLineAction" name="Unload Services Hive" description="" disable="false" continueOnError="false" startIn="" successCodeList="0 3010" runIn="WinPEandFullOS">
+          <defaultVarList>
+            <variable name="PackageID" property="PackageID"></variable>
+            <variable name="RunAsUser" property="RunAsUser">false</variable>
+            <variable name="SMSTSRunCommandLineUserName" property="SMSTSRunCommandLineUserName"></variable>
+            <variable name="SMSTSRunCommandLineUserPassword" property="SMSTSRunCommandLineUserPassword"></variable>
+            <variable name="LoadProfile" property="LoadProfile">false</variable>
+          </defaultVarList>
+          <action>reg unload HKU\OfflineDefault</action>
+        </step>
+      </group>
+    </group>
+  </group>
+</sequence>
