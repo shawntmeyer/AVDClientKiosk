@@ -17,10 +17,25 @@ Option Explicit
 
 Function InitializeProxyConfig
 
-	PTRadio3.checked = true
-	ServerAddress.disabled = true
-	ScriptUrl.disabled = false
-	ScriptUrl.value = "http://op_autopac.corp.nsa.gov/autopac/internet.pac"
+	If oProperties("ProxyServerAddress") = "" and oProperties("ProxyScriptUrl") = "" then
+		PTRadio1.checked = true
+		ServerAddress.disabled = true
+		ScriptUrl.disabled = true
+	ElseIf oProperties("ProxyServerAddress") <> "" then
+		PTRadio2.checked = true
+		ServerAddress.disabled = false
+		ServerAddress.value = oProperties("ProxyServerAddress")
+		ScriptUrl.disabled = true
+	Else
+		PTRadio3.checked = true
+		ServerAddress.disabled = true
+		ScriptUrl.disabled = false
+		ScriptUrl.value = oProperties("ProxyScriptUrl")
+	End if
+
+	If UCase(oEnvironment.Item("SkipComputerName")) = "YES" then
+		OSDComputerName.disabled = true
+	End if
 
 End Function
 
