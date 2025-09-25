@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+
+' // ***************************************************************************
+' // 
+' // Copyright (c) Microsoft Corporation.  All rights reserved.
+' // 
+' // Microsoft Deployment Toolkit Solution Accelerator
+' //
+' // File:      DeployWiz_Definition_ENU.wsf
+' // 
+' // Version:   6.3.8456.1000
+' // 
+' // Purpose:   Main Client Deployment Wizard Defintion File
+' // 
+' // CustomizedBy: Shawn Meyer, Principal CSA
+' // ***************************************************************************
+
+-->
+
+<Wizard>
+	<Global>
+		<CustomScript>DeployWiz_ProxyConfig.vbs</CustomScript>
+	</Global>
+
+	<Pane id="ProxyConfiguration" title="Proxy Configuration">
+		<Body>
+		<![CDATA[
+		<table>
+			<tr id="Direct_Radio_tr">
+				<td>
+					<input type=radio name="SelectType" id="PTRadio1" checked language=vbscript onclick=ValidateProxyConfig AccessKey=D>
+				</td>
+				<td>
+					<Label class="Larger" for=PTRadio1 language=vbscript><u class=larger>D</u>IRECT (No Proxy)</Label>
+				</td>
+			</tr>
+			<tr id="Direct_Text_tr">
+				<td></td>
+				<td>
+					<div>The system has direct access to the Internet.</div>
+				</td>
+			</tr>
+
+			<tr>
+				<td colspan=2>&nbsp;</td>
+			</tr>
+
+			<tr id="ServerAddress_Radio_tr">
+				<td>
+					<input type=radio name="SelectType" id="PTRadio2" language=vbscript onclick=ValidateProxyConfig AccessKey=P>
+				</td>
+				<td>
+					<Label class="Larger" for=PTRadio2 language=vbscript><u class=larger>Use a P</u>roxy server</Label>
+				</td>
+			</tr>
+			<tr id="ServerAddress_Text_tr">
+				<td></td>
+				<td>
+					<div>Enter the proxy server address below.</div>
+					<br>
+					<div>Proxy Server Address: <label class=ErrMsg id=BlankServerAddress>* Required (MISSING)</label><label class=ErrMsg id=InvalidServerAddress>* Invalid server address</label></div>
+					<input type=text id="ServerAddress" size=50 disabled language=vbscript onpropertychange=ValidateProxyConfig onblur=AssignProxyConfig>
+				</td>
+			</tr>
+
+			<tr>
+				<td colspan=2>&nbsp;</td>
+			</tr>
+
+			<tr id="AutoConfig_Radio_tr">
+				<td>
+					<input type=radio name="SelectType" id="PTRadio3" language=vbscript onclick=ValidateProxyConfig AccessKey=S>
+				</td>
+				<td>
+					<Label class="Larger" for=PTRadio3 language=vbscript><u class=larger>Use S</u>etup script</Label>
+				</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td>
+					<div>Enter the URL for the proxy setup script below.</div>
+					<br>
+					<div>Setup Script address: <label class=ErrMsg id=BlankScriptUrl>* Required (MISSING)</label><label class=ErrMsg id=InvalidScriptUrl>* Invalid proxy script url</label></div>
+					<input type=text id="ScriptUrl" size=50 disabled language=vbscript onpropertychange=ValidateProxyConfig onblur=AssignProxyConfig>
+				</td>
+			</tr>
+		</table>
+		<input type=hidden id=aKey name=ProxyServerAddress>
+		<input type=hidden id=sKey name=ProxyScriptUrl>
+		]]>
+		</Body>
+		<Initialization><![CDATA[InitializeProxyConfig]]></Initialization>
+		<Validation><![CDATA[ValidateProxyConfig]]></Validation>
+	</Pane>
+
+</Wizard>
