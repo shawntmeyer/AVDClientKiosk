@@ -70,7 +70,7 @@
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServiceUninstaller.exe" />
           <App DesktopAppPath="%WinDir%\system32\cmd.exe" />
           <App DesktopAppPath="$WinDir%\System32\WindowsPowerShell\v1.0\Powershell.exe" />
-          <App DesktopAppPath="$WinDir%\System32\Notepad.exe" />    
+          <App DesktopAppPath="crossdeviceresume.exe" />    
          </AllowedApps>
       </AllAppsList>
       <v5:StartPins>
@@ -93,7 +93,7 @@
             {
               "secondaryTile": {
                   "tileId": "MSEdge._pin_dkkendmjenihpgeblfjlmbeaah",
-                  "arguments": " --app=https://mdweb2.uncl.ncsc.mil/ --launch-tile",
+                  "arguments": " --app=https://ea-vdi.corp.nsa.gov/citrix/desktopweb --launch-tile",
                   "displayName": "CORP VDI",
                   "packagedAppId": "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App",
                   "smallIconPath": "ms-appdata:///local/Pins/MSEdge._pin_dkkendmjenihpgeblfjlmbeaah/SmallLogo.png",
