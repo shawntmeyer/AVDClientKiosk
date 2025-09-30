@@ -70,6 +70,7 @@
           <App DesktopAppPath="%ProgramFiles(x86)%\Citrix\ICA Client\SelfServicePlugin\SelfServiceUninstaller.exe" />
           <App DesktopAppPath="%WinDir%\system32\cmd.exe" />
           <App DesktopAppPath="$WinDir%\System32\WindowsPowerShell\v1.0\Powershell.exe" />
+          <App DesktopAppPath="notepad.exe"
           <App DesktopAppPath="crossdeviceresume.exe" />    
          </AllowedApps>
       </AllAppsList>
