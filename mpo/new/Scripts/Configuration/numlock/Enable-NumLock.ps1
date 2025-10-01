@@ -21,7 +21,12 @@ function Ensure-RegistryPath {
 # --- Step 1: Modify HKU\.DEFAULT ---
 try {
     Ensure-RegistryPath -Path $DotDefaultRegPath
-    Set-ItemProperty -Path $DotDefaultRegPath -Name "InitialKeyboardIndicators" -Value "2" -Force
+    If (Get-ItemProperty -Path $DotDefaultRegPath -Name 'InitialKeyboardIndicators' -ErrorAction SilentlyContinue) {
+        Set-ItemProperty -Path $DotDefaultRegPath -Name "InitialKeyboardIndicators" -Value "2" -Force
+    }
+    Else {
+        New-ItemProperty -Path $DotDefaultRegPath -Name 'InitialKeyboardIndicators' -Value '2' -PropertyType String -Force | Out-Null
+    }
     Write-Output "Set InitialKeyboardIndicators to 2 in HKU\.DEFAULT"
 }
 catch {
@@ -34,7 +39,12 @@ if (Test-Path $DefaultUserHive) {
         reg load $MountKey $DefaultUserHive | Out-Null
         Write-Output "Loaded default user hive."
         Ensure-RegistryPath -Path $DefaultUserRegPath
-        Set-ItemProperty -Path $DefaultUserRegPath -Name "InitialKeyboardIndicators" -Value "2" -Force
+        If (-Not (Get-ItemProperty -Path $DefaultUserRegPath -Name 'InitialKeyboardIndicators' -ErrorAction SilentlyContinue)) {
+            New-ItemProperty -Path $DefaultUserRegPath -Name 'InitialKeyboardIndicators'-Value '2' -PropertyType String | Out-Null
+        }
+        Else {
+            Set-ItemProperty -Path $DefaultUserRegPath -Name "InitialKeyboardIndicators" -Value '2' -Force
+        }
         Write-Output "Set InitialKeyboardIndicators to 2 in Default User hive."
         reg unload $MountKey 2>$null | Out-Null
         if ($LASTEXITCODE -ne 0) {
