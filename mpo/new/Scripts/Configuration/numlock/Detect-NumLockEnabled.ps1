@@ -26,10 +26,9 @@ try {
     if (Test-Path $DefaultUserHive) {
         try {
             # Load the default user hive
-            reg load $MountKey $DefaultUserHive 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "Successfully loaded default user hive for detection"
-                
+            $regLoad = Start-Process -FilePath "reg.exe" -ArgumentList 'LOAD', $MountKey, $DefaultUserHive -NoNewWindow -Wait -PassThru
+            if ($regLoad.ExitCode -eq 0) {
+                Write-Host "Successfully loaded default user hive for detection"                
                 if (Test-Path $DefaultUserRegPath) {
                     $defaultUserValue = Get-ItemProperty -Path $DefaultUserRegPath -Name "InitialKeyboardIndicators" -ErrorAction SilentlyContinue
                     if ($defaultUserValue -and $defaultUserValue.InitialKeyboardIndicators -eq 2) {
@@ -39,20 +38,20 @@ try {
                 }
                 
                 # Unload the hive
-                reg unload $MountKey 2>$null | Out-Null
-                if ($LASTEXITCODE -ne 0) {
+                $regUnload = Start-Process -FilePath "reg.exe" -ArgumentList 'UNLOAD', $MountKey -NoNewWindow -Wait -PassThru
+                if ($regUnload.ExitCode -ne 0) {
                     # Retry unload with cleanup
                     [gc]::Collect()
                     [gc]::WaitForPendingFinalizers()
                     Start-Sleep -Seconds 1
-                    reg unload $MountKey 2>$null | Out-Null
+                    $regUnload = Start-Process -FilePath "reg.exe" -ArgumentList 'UNLOAD', $MountKey -NoNewWindow -Wait -PassThru
                 }
             }
         }
         catch {
             Write-Host "Error checking default user hive: $_"
             # Attempt to unload if something went wrong
-            reg unload $MountKey 2>$null | Out-Null
+            $regUnload = Start-Process -FilePath "reg.exe" -ArgumentList 'UNLOAD', $MountKey -NoNewWindow -Wait -PassThru
         }
     }
     
