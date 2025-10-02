@@ -60,10 +60,6 @@ try {
         Write-Host "NumLock configuration detected successfully - both HKU\.DEFAULT and Default User hive are configured"
         exit 0
     }
-    elseif ($DotDefaultConfigured -and -not (Test-Path $DefaultUserHive)) {
-        Write-Host "NumLock configuration detected successfully - HKU\.DEFAULT configured and no Default User hive present"
-        exit 0
-    }
     else {
         Write-Host "NumLock configuration not detected or incomplete"
         Write-Host "HKU\.DEFAULT configured: $DotDefaultConfigured"
