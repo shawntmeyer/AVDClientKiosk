@@ -8,18 +8,25 @@ $RegSubPath = "Control Panel\Keyboard"
 $DefaultUserRegPath = "$MountKey\$RegSubPath"
 $DotDefaultRegPath = "HKU\.DEFAULT\$RegSubPath"
 
+Function Convert-RegistryPath {
+    param([string]$shortPath)
+
+    $shortPath -replace '^HKU\\', 'Registry::HKEY_USERS\' `
+        -replace '^HKLM\\', 'Registry::HKEY_LOCAL_MACHINE\' `
+        -replace '^HKCU\\', 'Registry::HKEY_CURRENT_USER\'
+}
+
 # Initialize detection flags
 $DotDefaultConfigured = $false
 $DefaultUserConfigured = $false
 
 try {
     # Check HKU\.DEFAULT configuration
-    if (Test-Path $DotDefaultRegPath) {
-        $dotDefaultValue = Get-ItemProperty -Path $DotDefaultRegPath -Name "InitialKeyboardIndicators" -ErrorAction SilentlyContinue
-        if ($dotDefaultValue -and $dotDefaultValue.InitialKeyboardIndicators -eq 2) {
-            $DotDefaultConfigured = $true
-            Write-Host "HKU\.DEFAULT NumLock configuration is correct"
-        }
+
+    $dotDefaultValue = Get-ItemProperty -Path (Convert-RegistryPath -ShortPath $DotDefaultRegPath) -Name "InitialKeyboardIndicators" -ErrorAction SilentlyContinue
+    if ($dotDefaultValue -and $dotDefaultValue.InitialKeyboardIndicators -eq 2) {
+        $DotDefaultConfigured = $true
+        Write-Host "HKU\.DEFAULT NumLock configuration is correct"
     }
     
     # Check Default User hive configuration
@@ -27,14 +34,11 @@ try {
         try {
             # Load the default user hive
             $regLoad = Start-Process -FilePath "reg.exe" -ArgumentList 'LOAD', $MountKey, $DefaultUserHive -NoNewWindow -Wait -PassThru
-            if ($regLoad.ExitCode -eq 0) {
-                Write-Host "Successfully loaded default user hive for detection"                
-                if (Test-Path $DefaultUserRegPath) {
-                    $defaultUserValue = Get-ItemProperty -Path $DefaultUserRegPath -Name "InitialKeyboardIndicators" -ErrorAction SilentlyContinue
-                    if ($defaultUserValue -and $defaultUserValue.InitialKeyboardIndicators -eq 2) {
-                        $DefaultUserConfigured = $true
-                        Write-Host "Default User hive NumLock configuration is correct"
-                    }
+            if ($regLoad.ExitCode -eq 0) {      
+                $defaultUserValue = Get-ItemProperty -Path (Convert-RegistryPath -ShortPath $DefaultUserRegPath) -Name "InitialKeyboardIndicators" -ErrorAction SilentlyContinue
+                if ($defaultUserValue -and $defaultUserValue.InitialKeyboardIndicators -eq 2) {
+                    $DefaultUserConfigured = $true
+                    Write-Host "Default User hive NumLock configuration is correct"
                 }
                 
                 # Unload the hive

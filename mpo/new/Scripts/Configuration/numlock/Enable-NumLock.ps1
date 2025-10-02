@@ -5,67 +5,83 @@ $RegSubPath = "Control Panel\Keyboard"
 $DefaultUserRegPath = "$MountKey\$RegSubPath"
 $DotDefaultRegPath = "HKU\.DEFAULT\$RegSubPath"
 
-# Function to ensure registry path exists
-function Ensure-RegistryPath {
+function Convert-RegistryPath {
+    param([string]$shortPath)
+
+    $shortPath -replace '^HKU\\', 'Registry::HKEY_USERS\' `
+        -replace '^HKLM\\', 'Registry::HKEY_LOCAL_MACHINE\' `
+        -replace '^HKCU\\', 'Registry::HKEY_CURRENT_USER\'
+}
+
+Function Set-RegistryValue {
+    [CmdletBinding()]
     param (
-        [string]$Path
+        [Parameter()]
+        [string]
+        $Name,
+        [Parameter()]
+        [string]
+        $Path,
+        [Parameter()]
+        [string]$PropertyType,
+        [Parameter()]
+        $Value
     )
-    if (-not (Test-Path $Path)) {
-        $parent = Split-Path $Path
-        $leaf = Split-Path $Path -Leaf
-        New-Item -Path $parent -Name $leaf -Force | Out-Null
-        Write-Output "Created registry path: $Path"
+    $Path = Convert-RegistryPath -shortPath $Path
+    Write-Verbose "${CmdletName}: Setting Registry Value $Path\$Name"
+    # Create the registry Key(s) if necessary.
+    If (!(Test-Path -Path $Path)) {
+        Write-Verbose "${CmdletName}: Creating Registry Key: $Path"
+        New-Item -Path $Path -Force | Out-Null
     }
+    # Check for existing registry setting
+    $RemoteValue = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+    If ($RemoteValue) {
+        # Get current Value
+        $CurrentValue = Get-ItemPropertyValue -Path $Path -Name $Name
+        Write-Verbose "${CmdletName}: Current Value of $($Path)\$($Name) : $CurrentValue"
+        If ($Value -ne $CurrentValue) {
+            Write-Verbose "${CmdletName}: Setting Value of $($Path)\$($Name) : $Value"
+            Set-ItemProperty -Path $Path -Name $Name -Value $Value -Force | Out-Null
+        }
+        Else {
+            Write-Verbose "${CmdletName}: Value of $($Path)\$($Name) is already set to $Value"
+        }           
+    }
+    Else {
+        Write-Verbose "${CmdletName}: Setting Value of $($Path)\$($Name) : $Value"
+        New-ItemProperty -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value -Force | Out-Null
+    }
+    Start-Sleep -Milliseconds 500
 }
 
 # --- Step 1: Modify HKU\.DEFAULT ---
-try {
-    Ensure-RegistryPath -Path $DotDefaultRegPath
-    If (Get-ItemProperty -Path $DotDefaultRegPath -Name 'InitialKeyboardIndicators' -ErrorAction SilentlyContinue) {
-        Set-ItemProperty -Path $DotDefaultRegPath -Name "InitialKeyboardIndicators" -Value "2" -Force
-    }
-    Else {
-        New-ItemProperty -Path $DotDefaultRegPath -Name 'InitialKeyboardIndicators' -Value '2' -PropertyType String -Force | Out-Null
-    }
-    Write-Output "Set InitialKeyboardIndicators to 2 in HKU\.DEFAULT"
-}
-catch {
-    Write-Error "Failed to modify HKU\.DEFAULT: $_"
-}
+
+Set-RegistryValue -Name 'InitialKeyboardIndicators' -Path $DotDefaultRegPath -PropertyType String -Value '2'
 
 # --- Step 2: Modify Default User Hive ---
 if (Test-Path $DefaultUserHive) {
     try {
-        reg load $MountKey $DefaultUserHive | Out-Null
+        $regLoad = Start-Process -FilePath "reg.exe" -ArgumentList 'LOAD', $MountKey, $DefaultUserHive -NoNewWindow -Wait -PassThru
         Write-Output "Loaded default user hive."
-        Ensure-RegistryPath -Path $DefaultUserRegPath
-        If (-Not (Get-ItemProperty -Path $DefaultUserRegPath -Name 'InitialKeyboardIndicators' -ErrorAction SilentlyContinue)) {
-            New-ItemProperty -Path $DefaultUserRegPath -Name 'InitialKeyboardIndicators'-Value '2' -PropertyType String | Out-Null
-        }
-        Else {
-            Set-ItemProperty -Path $DefaultUserRegPath -Name "InitialKeyboardIndicators" -Value '2' -Force
-        }
-        Write-Output "Set InitialKeyboardIndicators to 2 in Default User hive."
-        reg unload $MountKey 2>$null | Out-Null
-        if ($LASTEXITCODE -ne 0) {
+        Set-RegistryValue -Name 'InitialKeyboardIndicators' -Path $DefaultUserRegPath -PropertyType String -Value '2'
+        $regUnload = Start-Process -FilePath "reg.exe" -ArgumentList 'UNLOAD', $MountKey -NoNewWindow -Wait -PassThru
+        if ($regUnload.ExitCode -ne 0) {
             # Retry unload with cleanup
             [gc]::Collect()
             [gc]::WaitForPendingFinalizers()
             Start-Sleep -Seconds 1
-            reg unload $MountKey 2>$null | Out-Null
+            $regUnload = Start-Process -FilePath "reg.exe" -ArgumentList 'UNLOAD', $MountKey -NoNewWindow -Wait -PassThru
         }
     }
     catch {
         Write-Error "Failed to modify default user hive: $_"
         # Attempt to unload if something went wrong
-        reg unload $MountKey 2>$null | Out-Null
+        $regUnload = Start-Process -FilePath "reg.exe" -ArgumentList 'UNLOAD', $MountKey -NoNewWindow -Wait -PassThru
     }
 }
 else {
     Write-Error "Default user hive not found at $DefaultUserHive"
 }
-
-
-
 
 
