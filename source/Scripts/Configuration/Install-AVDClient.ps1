@@ -649,7 +649,7 @@ If ($DeploymentType -ne 'UnInstall') {
     [string]$Script:LogName = "Install-" + ($SoftwareName -Replace ' ','') + ".log"
     Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
     Write-Output "Retrieving latest $SoftwareName version from Internet."
-    $pathMSI = Get-InternetFile -url $downloadUrl -OutputDirectory "$env:SystemRoot\Temp"
+    $pathMSI = Get-InternetFile -url $downloadUrl -OutputDirectory "$env:SystemRoot\SystemTemp"
     [version]$AvailableVersion = (Get-MsiInfo -Path $pathMSI).ProductVersion
     
     Write-Output "Determining if '$softwareName' is installed and if so, what version."
