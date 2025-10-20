@@ -227,24 +227,17 @@ $EventSource = 'Configuration Script'
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11
-If ($OS.BuildNumber -lt 22000 -or $OS.Caption -match 'Windows 10') { $Windows10 = $true }
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
 $DirAppLocker = Join-Path -Path $Script:Dir -ChildPath "AppLocker"
 $FileAppLockerClear = Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml"
 $DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
-$DirStartMenu = Join-Path -Path $Script:Dir -ChildPath "StartMenu"
 $DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLauncherConfigs"
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-If ($Windows10) {
-    $FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win10.csv"
-}
-Else {
-    $FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win11.csv"
-}
+$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win11.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Configuration"
@@ -594,7 +587,7 @@ If ($CustomLaunchScript) {
     if ($UserDisconnectSignOutAction) { $Content = $Content.Replace('[string]$UserDisconnectSignOutAction', "[string]`$UserDisconnectSignOutAction = '$UserDisconnectSignOutAction'") }    
     $Content | Set-Content -Path $FileToUpdate
 }
-If ($Windows10 -or $AutoLogon) {
+If ($AutoLogon) {
     $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
     If (-not (Test-Path $SchedTasksScriptsDir)) {
         $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
@@ -615,18 +608,7 @@ If ($SharedPC) {
     Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
     $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*SharedPC*' }).FullName
 }
-If (-not $AVDClientShell -and $Windows10) {
-    # Installing provisioning packages. Currently only one is included to hide the pinned items on the left of the Start Menu.
-    # No GPO settings are available to do this.
-    Write-Log -EntryType Information -EventId 45 -Message "Adding Provisioning Package to remove pinned items from Start Menu"
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*PinnedFolders*' }).FullName
-    If (-not $ShowSettings) {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*Settings*' }).FullName
-    }
-    If ($AutoLogon) {
-        $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*Autologon*' }).FullName
-    }
-}
+
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
 ForEach ($Package in $ProvisioningPackages) {
     Copy-Item -Path $Package -Destination "$DirKiosk\ProvisioningPackages" -Force
@@ -677,62 +659,6 @@ If (-not ($AVDClientShell)) {
         $null = New-Item -Path $dirStartup -ItemType Directory -Force
     }
     Copy-Item -Path "$ShortcutPath" -Destination $dirStartup -Force   
-    
-    If ($Windows10) {
-        If ($AutoLogon) {
-            $TaskName = "(AVD Client) - Hide KioskUser0 Start Button Context Menu"
-            Write-Log -EntryType Information -EventId 49 -Message "Creating Scheduled Task: '$TaskName'."
-            $TaskScriptEventSource = 'Hide Start Button Context Menu'
-            $TaskDescription = "Hide Start Button Right Click Menu"
-            $TaskScriptName = 'Hide-StartButtonRightClickMenu.ps1'
-            $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
-            New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue   
-            $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn
-            $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName -TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`" -AutoLogonUser `"KioskUser0`""
-            $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-            $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
-            Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-            If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-                Write-Log -EntryType Information -EventId 50 -Message "Scheduled Task created successfully."
-            }
-            Else {
-                Write-Log -EntryType Error -EventId 51 -Message "Scheduled Task not created."
-                $ScriptExitCode = 1618
-            }
-        }
-        Else {
-            Write-Log -EntryType Information -EventId 52 -Message "Disabling the Start Button Right Click Menu for all users."
-            # Set Default profile to hide Start Menu Right click
-            $Groups = @(
-                "Group1",
-                "Group2",
-                "Group3"
-            )
-            $WinXRoot = "$env:SystemDrive\Users\Default\Appdata\local\Microsoft\Windows\WinX\{0}"
-            foreach ($grp in $Groups) { 
-                $HideDir = Get-ItemProperty -Path ($WinXRoot -f $grp )
-                $HideDir.Attributes = [System.IO.FileAttributes]::Hidden
-            }
-        }
-        Write-Log -EntryType Information -EventId 53 -Message "Copying Start Menu Layout file for Non Admins to '$DirKiosk' directory."
-        If ($ShowSettings) {
-            If ($CustomLaunchScript) {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings_AVDClient.xml"
-            }
-            Else {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModificationWithSettings.xml"
-            }
-        }
-        Else {
-            If ($CustomLaunchScript) {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModification_AVDClient.xml"
-            }
-            Else {
-                $StartMenuFile = "$DirStartMenu\Win10-LayoutModification.xml"
-            }
-        }
-        Copy-Item -Path $StartMenuFile -Destination "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" -Force
-    }
 }
     
 #endregion Start Menu
@@ -757,23 +683,9 @@ If ($AVDClientShell) {
     Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
-    If ($Windows10) {
-        $nonAdminsFile = 'nonadmins-ExplorerShell.txt'
-        $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-        Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-HideSettings.txt" '2>&1'
-        Write-Log -EntryType Information -EventId 61 -Message "Hid Settings App and Control Panel for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-        If (-not $WifiAdapter) {
-            $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-noWifi.txt" '2>&1'
-            Write-Log -EntryType Information -EventId 62 -Message "No Wi-Fi Adapter Present. Disabled TaskBar tray area via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"    
-        }
-    }
-    Else {
         $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
         $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
         Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-
-    }
     If ($ShowSettings) {
         $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
         Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -912,38 +824,9 @@ Else {
 
 #endregion Registry Edits
 
-#region Applocker Policy 
-
-Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Microsoft Edge, Internet Explorer, Notepad, Windows Search, and Wordpad for the Kiosk User."
-# If there is an existing applocker policy, back it up and store its XML for restore.
-# Else, copy a blank policy to the restore location.
-# Then apply the new AppLocker Policy
-If ($Windows10) {
-    $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "AVDClientKioskAppLockerPolicy.xml"
-}
-Else {
-    $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "MultiAppKioskAppLockerPolicy.xml"
-}
-[xml]$Policy = Get-ApplockerPolicy -Local -XML
-If ($Policy.AppLockerPolicy.RuleCollection) {
-    Get-ApplockerPolicy -Local -XML | out-file "$DirKiosk\ApplockerPolicy.xml" -force
-}
-Else {
-    Copy-Item "$FileAppLockerClear" -Destination "$DirKiosk\ApplockerPolicy.xml" -Force
-}
-Set-AppLockerPolicy -XmlPolicy "$FileAppLockerKiosk"
-Write-Log -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
-Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
-# Start the service if not already running
-If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
-    Start-Service -Name AppIDSvc
-}
-
-#endregion Applocker Policy
-
 #region Shell Launcher Configuration
 
-If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
+If ($AutoLogon -or $AVDClientShell) {
     Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
     . "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
     If ($AVDClientShell) {
@@ -959,11 +842,7 @@ If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
             $configFile = "msrdcw.xml"
             Write-Log -EntryType Information -EventId 114 -Message "Enabling Remote Desktop Client Shell Launcher Settings via WMI MDM bridge."
         }
-    }
-    If ($AutoLogon -and $Windows10) {
-        $configFile = "Explorer_AutoLogon.xml"
-        Write-Log -EntryType Information -EventID 114 -Message "Enabling Explorer Shell Launcher Settings with Autologon via the WMI MDM bridge."
-    }    
+    }      
     If ($configFile) {
         $sourceFile = Join-Path $DirShellLauncherSettings -ChildPath $configFile
         $destFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
@@ -977,7 +856,7 @@ If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
             Exit 1
         }
     }
-    ElseIf (-not $Windows10 -and -not $AVDClientShell) {
+    ElseIf (-not $AVDClientShell) {
         If ($AutoLogon) {
             If ($ShowSettings) {
                 Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
@@ -1026,40 +905,6 @@ If ($AutoLogon -or $AVDClientShell -or -not $Windows10) {
 }
 
 #endregion Assigned Access Launcher
-
-#region Keyboard Filter
-If ($Windows10) {
-
-    Write-Log -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
-    Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
-
-    # Configure Keyboard Filter after reboot
-    $TaskName = "(AVD Client) - Configure Keyboard Filter"
-    Write-Log -EntryType Information -EventId 118 -Message "Creating Scheduled Task: '$TaskName'."
-    $TaskScriptEventSource = 'Keyboard Filter Configuration'
-    $TaskDescription = "Configures the Keyboard Filter"
-    $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
-    $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
-    New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
-    $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
-    $TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
-    If ($ShowSettings) {
-        $TaskScriptArgs = "$TaskScriptArgs -ShowSettings"
-    }
-    $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
-    $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-    $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
-    Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
-    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
-    }
-    Else {
-        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
-        $ScriptExitCode = 1618
-    }
-}
-
-#endregion Keyboard Filter
 
 #region Prevent Microsoft AAD Broker Timeout
 
