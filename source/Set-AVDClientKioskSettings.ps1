@@ -133,6 +133,13 @@ param (
 
     [switch]$InstallAVDClient,
 
+    [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonExplorerShell')]
+    [ValidateSet('RemoteDesktopClient', 'WindowsApp')]
+    [string]$AVDClient,
+
     [Parameter(ParameterSetName = 'DirectLogonClientShell')]
     [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
     [switch]$SharedPC,
@@ -229,8 +236,7 @@ $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
-$DirAppLocker = Join-Path -Path $Script:Dir -ChildPath "AppLocker"
-$FileAppLockerClear = Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml"
+$DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
 $DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
 $DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLauncherConfigs"
@@ -537,9 +543,9 @@ If ($ApplySTIGs) {
 
 If ($installAVDClient) {
     Write-Log -EntryType Information -EventID 30 -Message "Running Script to install or update Visual C++ Redistributables."
-    & "$DirConfigurationScripts\Install-VisualC++Redistributables.ps1"
-    Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update AVD Client."
-    & "$DirConfigurationScripts\Install-AVDClient.ps1"
+    & "$DirApps\VisualC++Redistributables\Install-VisualC++Redistributables.ps1"
+    Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update the Remote Desktop Client."
+    & "$DirApps\RemoteDesktopClient\Install-RemoteDesktopClient.ps1"
 }
 
 #endregion Install AVD Client
