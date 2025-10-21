@@ -9,9 +9,9 @@
     * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11)
     * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11), both with autologon
 
-    These options are controlled by the combination of the two switch parameters - AVDClientShell and Autologon.
+    These options are controlled by the combination of the two switch parameters - SingleAppKiosk and Autologon.
     
-    When the AVDClientShell switch parameter is not used, then you can utilize the -ShowDisplaySettings switch parameter to allow access to the Display Settings page.
+    When the SingleAppKiosk switch parameter is not used, then you can utilize the -ShowDisplaySettings switch parameter to allow access to the Display Settings page.
     
     Additionally, you can choose to
 
@@ -29,8 +29,8 @@
     * Provisioning packages to enable SharedPC mode.
     * Multi-Local Group Policy configuration to limit interface elements.
     * Built-in application removal.
-    * Shell Launcher configuration for the AVDClientShell and Windows 10 Autologon scenarios
-    * Multi-App Kiosk configuration for Windows 11 when the AVDClientShell switch parameter is not used.
+    * Shell Launcher configuration for the SingleAppKiosk and Windows 10 Autologon scenarios
+    * Multi-App Kiosk configuration for Windows 11 when the SingleAppKiosk switch parameter is not used.
     * Remote Desktop client for Windows install (If selected)
     * STIG application (If selected)
     * Start layout modification for the custom explorer shell options
@@ -59,7 +59,7 @@ delta settings are applied to allow the system to communicate with Azure Active 
 This switch parameter determines If autologon is enabled through the Shell Launcher configuration. The Shell Launcher feature will automatically
 create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts.
 
-.PARAMETER AVDClientShell
+.PARAMETER SingleAppKiosk
 This switch parameter determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'.
 When the default 'explorer' shell is used additional local group policy settings and provisioning packages are applied to lock down the shell.
 
@@ -120,58 +120,39 @@ This version parameter allows tracking of the installed version using configurat
 param (
     [switch]$ApplySTIGs,
 
-    [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
-    [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
-    [switch]$AVDClientShell,
-
-    [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
-    [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [switch]$AutoLogon,
 
-    [ValidateSet('AzureChina', 'AzureCloud', 'AzureUSGovernment', 'AzureGovernmentSecret', 'AzureGovernmentTopSecret')]
-    [string]$EnvironmentAVD = 'AzureCloud',
+    [int]$IdleTimeoutInMinutes = 15,
 
-    [switch]$InstallAVDClient,
-
-    [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
-    [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
-    [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
-    [Parameter(Mandatory, ParameterSetName = 'DirectLogonExplorerShell')]
-    [ValidateSet('RemoteDesktopClient', 'WindowsApp')]
-    [string]$AVDClient,
-
-    [Parameter(ParameterSetName = 'DirectLogonClientShell')]
-    [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
-    [switch]$SharedPC,
-
-    [Parameter(ParameterSetName = 'AutologonExplorerShell')]
-    [Parameter(ParameterSetName = 'DirectLogonExplorerShell')]
-    [switch]$ShowSettings,
-
-    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
-    [string]$DeviceRemovalAction,
-
-    [ValidatePattern("^[0-9A-Fa-f]{4}$")]
-    [string]$DeviceVendorID,
-
-    [switch]$SmartCard,
-
-    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
+    [ValidateSet('Lock', 'ResetClient')]
     [string]$IdleTimeoutAction,
 
-    [int]$IdleTimeout = 900,
+    [switch]$InstallWindowsApp,
 
-    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
-    [string]$SystemDisconnectAction,
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
+    [switch]$SharedPC,
 
-    [ValidateSet('Lock', 'Logoff', 'ResetClient')]
-    [string]$UserDisconnectSignOutAction,
+    [Parameter(ParameterSetName = 'AutoLogonMultiAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
+    [switch]$ShowSettings,
 
-    [version]$Version = '7.0.0'
+    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [switch]$SingleAppKiosk,
+
+    [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
+    [ValidateSet('Lock', 'Logoff')]
+    [string]$SmartCardRemovalAction,
+
+    [version]$Version = '1.0.0'
 )
 
 #region Parameter Validation and Configuration
-$ActionParameters = @($DeviceRemovalAction, $IdleTimeoutAction, $SystemDisconnectAction, $UserDisconnectSignOutAction)
+$ActionParameters = @($SmartCardRemovalAction, $IdleTimeoutAction)
 If ($AutoLogon) {
     ForEach ($Action in $ActionParameters) {
         If ($null -ne $Action) {
@@ -188,12 +169,6 @@ Else {
                 Throw "You cannot specify a TriggerAction of ResetClient without AutoLogon"
             }
         }
-    }
-    If ($DeviceRemovalAction -and $SmartCard -eq $false -and ($null -eq $DeviceVendorID)) {
-        Throw 'You must specify either a DeviceVendorID or SmartCard when DeviceRemoval is a trigger.'
-    }
-    ElseIf ($DeviceRemovalAction -and $SmartCard -and ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '')) {
-        Throw 'You cannot specify both a SmartCard and DeviceVendorID when the Triggers contain "DeviceRemoval"'
     }
 }
 #endegion
@@ -237,40 +212,17 @@ $OS = Get-WmiObject -Class Win32_OperatingSystem
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
 $DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
-$DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
-$DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
-$DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLauncherConfigs"
+$DirAssignedAccess = Join-Path -Path $Script:Dir -ChildPath 'AssignedAccess'
+$DirMultiAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'MultiApp'
+$DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath 'ProvisioningPackages'
+$DirSingleAppKioskSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'SingleApp'
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win11.csv"
+$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-WindowsApp.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Configuration"
-$DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
-
-# Set AVD feed subscription Url.
-Switch ($EnvironmentAVD) {
-    'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn' }
-    'AzureCloud' { $SubscribeUrl = 'https://rdweb.wvd.azure.com' }
-    'AzureUSGovernment' { $SubscribeUrl = 'https://rdweb.wvd.azure.us' }
-    'AzureGovernmentSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>' }
-    'AzureGovernmentTopSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>' }
-}
-
-If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
-    $SecurityKey = $true
-}
-# Only create the custom launch shortcut when necessary. It is only necessary when:
-# 1. AutoLogon is enabled (Scenario 2) or
-# 2. SystemDisconnectAction or UserDisconnectSignOutAction is defined or
-# 3. IdleTimeoutAction is Logoff or
-# 4. DeviceRemovalAction is defined and a DeviceVendorId is defined or
-# 5. None of the available triggers and actions are defined (DeviceRemovalAction, IdleTimeoutAction, or SystemDisconnectAction or UserDisconnectSignOutAction). (Scenario 3)
-
-If ($AutoLogon -or $IdleTimeoutAction -eq 'Logoff' -or $SystemDisconnectAction -or $UserDisconnectSignOutAction -or ($DeviceRemovalAction -and $SecurityKey) -or (-not $AutoLogon -and ($null -eq $DeviceRemovalAction -and $null -eq $IdleTimeoutAction -and $null -eq $SystemDisconnectAction -and $null -eq $UserDisconnectSignOutAction))) {
-    $CustomLaunchScript = $true
-}
 
 # Detect Wifi Adapter in order to show Wifi Settings in system tray when necessary.
 $WifiAdapter = Get-NetAdapter | Where-Object { $_.Name -like '*Wi-Fi*' -or $_.Name -like '*Wifi*' -or $_.MediaType -like '*802.11*' }     
@@ -484,11 +436,6 @@ If (Get-PendingReboot) {
 # Copy lgpo to system32 for future use.
 Copy-Item -Path "$DirTools\lgpo.exe" -Destination "$env:SystemRoot\System32" -Force
 
-# Enable the Scheduled Task History by enabling the TaskScheduler operational log
-$TaskschdLog = Get-WinEvent -ListLog Microsoft-Windows-TaskScheduler/Operational
-$TaskschdLog.IsEnabled = $True
-$TaskschdLog.SaveChanges()
-
 #endregion Inistiialization
 
 #region Remove Previous Versions
@@ -501,7 +448,7 @@ Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in 
 
 #region Remove Apps
 
-# Remove Built-in Windows 10 Apps on non LTSC builds of Windows
+# Remove Built-in Windows 11 Apps on non LTSC builds of Windows
 If (-not $LTSC) {
     Write-Log -EntryType Information -EventId 25 -Message "Starting Remove Apps Script."
     & "$DirConfigurationScripts\Remove-BuiltinApps.ps1"
@@ -541,11 +488,11 @@ If ($ApplySTIGs) {
 
 #region Install AVD Client
 
-If ($installAVDClient) {
+If ($InstallWindowsApp) {
     Write-Log -EntryType Information -EventID 30 -Message "Running Script to install or update Visual C++ Redistributables."
     & "$DirApps\VisualC++Redistributables\Install-VisualC++Redistributables.ps1"
-    Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update the Remote Desktop Client."
-    & "$DirApps\RemoteDesktopClient\Install-RemoteDesktopClient.ps1"
+    Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update the Windows App."
+    & "$DirApps\WindowsApp\Install-WindowsApp.ps1"
 }
 
 #endregion Install AVD Client
@@ -569,50 +516,26 @@ Update-ACL -Path $DirKiosk -Identity 'BuiltIn\Users' -FileSystemRights 'ReadAndE
 Update-ACL -Path $DirKiosk -Identity 'System' -FileSystemRights 'FullControl' -Type 'Allow'
 Update-ACLInheritance -Path $DirKiosk -DisableInheritance $true -PreserveInheritedACEs $false
 
-# Copy Client Launch Scripts.
-If ($CustomLaunchScript) {
-    $LaunchScriptSource = 'Launch AVD Client'
-    New-EventLog -LogName $EventLog -Source $LaunchScriptSource -ErrorAction SilentlyContinue
-    Write-Log -EntryType Information -EventId 42 -Message "Copying Launch AVD Client Scripts from '$DirConfigurationScripts' to '$DirKiosk'"
-    Copy-Item -Path "$DirConfigurationScripts\Launch-AVDClient.ps1" -Destination $DirKiosk -Force
-    Copy-Item -Path "$DirConfigurationScripts\Launch-AVDClient.vbs" -Destination $DirKiosk -Force
-    # dynamically update parameters of launch script.
-    $FileToUpdate = Join-Path -Path $DirKiosk -ChildPath 'Launch-AVDClient.ps1'
-    $Content = Get-Content -Path $FileToUpdate
-    $Content = $Content.Replace('[string]$EventLog', "[string]`$EventLog = '$EventLog'") 
-    $Content = $Content.Replace('[string]$EventSource', "[string]`$EventSource = '$LaunchScriptSource'")
-    If ($AutoLogon) {
-        $Content = $Content.Replace('[string]$SubscribeUrl', "[string]`$SubscribeUrl = '$SubscribeUrl'")
-    }
-    If ($SecurityKey) { $Content = $Content.Replace('[string]$DeviceVendorID', "[string]`$DeviceVendorID = '$DeviceVendorID'") }
-    If ($SmartCard) { $Content = $Content.Replace('[bool]$SmartCard', '[bool]$SmartCard = $true') }
-    If ($IdleTimeout) { $Content = $Content.Replace('[int]$IdleTimeout', "[int]`$IdleTimeout = $IdleTimeout") }
-    If ($DeviceRemovalAction) { $Content = $Content.Replace('[string]$DeviceRemovalAction', "[string]`$DeviceRemovalAction = '$DeviceRemovalAction'") }
-    if ($IdleTimeoutAction) { $Content = $Content.Replace('[string]$IdleTimeoutAction', "[string]`$IdleTimeoutAction = '$IdleTimeoutAction'") }
-    If ($SystemDisconnectAction) { $Content = $Content.Replace('[string]$SystemDisconnectAction', "[string]`$SystemDisconnectAction = '$SystemDisconnectAction'") }
-    if ($UserDisconnectSignOutAction) { $Content = $Content.Replace('[string]$UserDisconnectSignOutAction', "[string]`$UserDisconnectSignOutAction = '$UserDisconnectSignOutAction'") }    
-    $Content | Set-Content -Path $FileToUpdate
-}
-If ($AutoLogon) {
-    $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
-    If (-not (Test-Path $SchedTasksScriptsDir)) {
-        $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
-    }
-    Write-Log -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
-    Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
-}
-If ($SystemDisconnectAction -or $UserDisconnectSignOutAction) {
-    $parentKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SYSTEM\CurrentControlSet\Services\EventLog", $true)
-    $null = $parentKey.CreateSubKey("Microsoft-Windows-TerminalServices-RDPClient/Operational")
-}
 #endregion KioskSettings Directory
 
 #region Provisioning Packages
 
 $ProvisioningPackages = @()
+
+Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable Windows Spotlight"
+$ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableWindowsSpotlight.ppkg'
+
+Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable first sign-in animation"
+$ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableFirstLogonAnimation.ppkg'
+
 If ($SharedPC) {
     Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
-    $ProvisioningPackages += (Get-ChildItem -Path $DirProvisioningPackages | Where-Object { $_.Name -like '*SharedPC*' }).FullName
+    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
+}
+
+If (!$SingleAppKiosk) {
+    Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
+    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
 
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
@@ -623,51 +546,6 @@ ForEach ($Package in $ProvisioningPackages) {
 }
 
 #endregion Provisioning Packages
-
-#region Start Menu
-
-If (-not ($AVDClientShell)) {
-    # Create custom Remote Desktop Client shortcut and configure custom start menu for Non-Admins
-    Write-Log -EntryType Information -EventId 47 -Message "Removing any existing shortcuts from the All Users (Public) Desktop and Default User Desktop."
-    Get-ChildItem -Path "$env:Public\Desktop" -Filter '*.lnk' | Remove-Item -Force
-    Get-ChildItem -Path "$env:SystemDrive\Users\Default\Desktop" -Filter '*.lnk' | Remove-Item -Force 
-    
-    [string]$StringVersion = $Version
-    $ObjShell = New-Object -ComObject WScript.Shell
-    $DirShortcut = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs"
-    $LinkRemoteDesktop = "Remote Desktop.lnk"
-    $PathLinkRD = Join-Path $DirShortcut -ChildPath $LinkRemoteDesktop
-        
-    If ($CustomLaunchScript) {
-        Write-Log -EntryType Information -EventId 48 -Message "Creating a custom AVD Shortcut in Start Menu."
-        $LinkAVD = "Azure Virtual Desktop.lnk"    
-        $ShortcutPath = Join-Path $DirShortcut -ChildPath $LinkAVD
-        $Shortcut = $ObjShell.CreateShortcut($ShortcutPath)
-        #Set values
-        $Shortcut.TargetPath = "wscript.exe"
-        $Shortcut.Arguments = "`"$env:SystemDrive\KioskSettings\Launch-AVDClient.vbs`""
-        $Shortcut.WindowStyle = 3
-        $Shortcut.WorkingDirectory = "$env:ProgramFiles\Remote Desktop"
-        $Shortcut.Description = "Launches Remote Desktop Client and logon prompt. Kiosk Configuration Version: $StringVersion"
-        $Shortcut.IconLocation = $ObjShell.CreateShortcut($PathLinkRD).IconLocation
-        $Shortcut.Save()
-    }
-    Else {
-        # Do not need special Remote Desktop Client shortcut if not using AutoLogon or a Device Other than SmartCards. Updating it to start maximized.
-        $ShortcutPath = $PathLinkRD
-        $Shortcut = $ObjShell.CreateShortcut($ShortcutPath)
-        $Shortcut.WindowStyle = 3
-        $Shortcut.Save()
-    }  
-    
-    $dirStartup = "$env:SystemDrive\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
-    If (-not (Test-Path -Path $dirStartup)) {
-        $null = New-Item -Path $dirStartup -ItemType Directory -Force
-    }
-    Copy-Item -Path "$ShortcutPath" -Destination $dirStartup -Force   
-}
-    
-#endregion Start Menu
 
 #region User Logos
 
@@ -683,33 +561,10 @@ Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Mic
 #region Local GPO Settings
 
 # Apply Non-Admin GPO settings
-If ($AVDClientShell) {
-    $nonAdminsFile = 'nonadmins-AVDClientShell.txt'
-    $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+If ($ShowSettings) {
+    $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
+    Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
-Else {
-        $nonAdminsFile = 'nonadmins-MultiAppKiosk.txt'
-        $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-        Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    If ($ShowSettings) {
-        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
-        Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    }
-}
-
-# Configure Feed URL for Autologon User
-If ($AutoLogon) {
-    $outfile = "$env:Temp\Users-AVDURL.txt"
-    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
-    (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
-    $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
-    Write-Log -EntryType Information -EventId 70 -Message "Configured Default Connection URL for autologon user via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-}
-
-# Disable Cortana, Search, Feeds, Logon Animations, and Edge Shortcuts. These are computer settings only.
-$null = cmd /c lgpo.exe /t "$DirGPO\Computer.txt" '2>&1'
-Write-Log -EntryType Information -EventId 75 -Message "Disabled Cortana search, feeds, login animations, and Edge desktop shortcuts via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 
 If ($AutoLogon) {
     # Disable Password requirement for screen saver lock and wake from sleep.
@@ -719,12 +574,12 @@ If ($AutoLogon) {
     Write-Log -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
-    If ($DeviceRemovalAction -and $SmartCard) {
-        If ($DeviceRemovalAction -eq 'Lock') {
+    If ($SmartCardRemovalAction) {
+        If ($SmartCardRemovalAction -eq 'Lock') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
             Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
-        ElseIf ($DeviceRemovalAction -eq 'Logoff') {
+        ElseIf ($SmartCardRemovalAction -eq 'Logoff') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
             Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
@@ -732,10 +587,11 @@ Else {
     If ($IdleTimeoutActon -eq 'Lock') {
         # Will lock the system via the inactivity timeout built-in policy which locks the screen after inactivity.
         $sourceFile = Join-Path -Path $DirGPO -ChildPath 'MachineInactivityTimeout.inf'
-        $outFile = Join-Path -Path $env:Temp -ChildPath 'MachineInactivityTimeout.inf'
-        (Get-Content -Path $SourceFile).Replace('900', $IdleTimeout) | Out-File $outFile
+        $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'MachineInactivityTimeout.inf'
+        (Get-Content -Path $SourceFile).Replace('900', ($IdleTimeoutInMinutes * 60)) | Out-File $outFile
         $null = cmd /c lgpo /s "$outFile" '2>&1'
-        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$IdleTimeout seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$($IdleTimeout * 60) seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -750,17 +606,38 @@ Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive 
 # Import registry keys file
 Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
 $RegKeys = Import-Csv -Path $FileRegKeys
-If (-not $AutoLogon) {
-    #Configure AutoSubscription URL for AVD Client
-    #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
+If ($AutoLogon) {
+    #Configure AutoLogoff for the Windows App
+    #https://learn.microsoft.com/en-us/windows-app/windowsautologoff
     $NewEntry = [PSCustomObject]@{
-        Key = 'HKCU\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
-        Value = 'AutoSubscription'
-        Type = 'REG_SZ'
-        Data = "$SubscribeUrl/api/arm/feeddiscovery"
-        Description = 'AVD Client Subscription URL'
+        Key         = 'HKLM\SOFTWARE\Microsoft\WindowsApp'
+        Value       = 'AutoLogoffEnable'
+        Type        = 'REG_DWORD'
+        Data        = 1
+        Description = 'Enable AutoLogoff for Windows App'
     }
     $RegKeys += $NewEntry
+
+    $NewEntry = [PSCustomObject]@{
+        Key         = 'HKLM\SOFTWARE\Microsoft\WindowsApp'
+        Value       = 'SkipFRE'
+        Type        = 'REG_DWORD'
+        Data        = 1
+        Description = 'Disable First Fun Experience in Windows App'
+    }
+    $RegKeys += $NewEntry
+
+    If ($IdleTimeoutAction -eq 'ResetClient') {
+        $NewEntry = [PSCustomObject]@{
+            Key         = 'HKLM\SOFTWARE\Microsoft\WindowsApp'
+            Value       = 'AutoLogoffTimeInterval'
+            Type        = 'REG_DWORD'
+            Data        = $IdleTimeoutInMinutes
+            Description = 'Set AutoLogoff Timeout for Windows App'
+        }
+        $RegKeys += $NewEntry
+    }
+
 }
 # create the reg key restore file if it doesn't exist, else load it to compare for appending new rows.
 Write-Log -EntryType Information -EventId 97 -Message "Creating a Registry key restore file for Kiosk Mode uninstall."
@@ -832,111 +709,52 @@ Else {
 
 #region Shell Launcher Configuration
 
-If ($AutoLogon -or $AVDClientShell) {
-    Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
-    . "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
-    If ($AVDClientShell) {
-        If ($AutoLogon) {
-            $configFile = "Launch-AVDClient_AutoLogon.xml"
-            Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings with Autologon via WMI MDM bridge."
-        }
-        ElseIf ($CustomLaunchScript) {
-            $configFile = "Launch-AVDClient.xml"
-            Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings for Security Keys via WMI MDM bridge."
-        }
-        Else {
-            $configFile = "msrdcw.xml"
-            Write-Log -EntryType Information -EventId 114 -Message "Enabling Remote Desktop Client Shell Launcher Settings via WMI MDM bridge."
-        }
-    }      
-    If ($configFile) {
-        $sourceFile = Join-Path $DirShellLauncherSettings -ChildPath $configFile
-        $destFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
-        Copy-Item -Path $sourceFile -Destination $destFile -Force
-        Set-ShellLauncherConfiguration -FilePath $destFile
-        If (Get-ShellLauncherConfiguration) {
-            Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
-        }
-        Else {
-            Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
-            Exit 1
-        }
-    }
-    ElseIf (-not $AVDClientShell) {
-        If ($AutoLogon) {
-            If ($ShowSettings) {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
-                $configFile = "AzureVirtualDesktop_Settings_Autologon.xml"
-            }
-            Else {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script and Autologon."
-                $configFile = "AzureVirtualDesktop_Autologon.xml"
-            }
-        }
-        Else {
-            If ($ShowSettings) {
-                If ($CustomLaunchScript) {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings."
-                    $configFile = "AzureVirtualDesktop_Settings.xml"
-                }
-                Else {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client and Settings."
-                    $configFile = "RemoteDesktop_Settings.xml"
-                }
-            }
-            Else {
-                If ($CustomLaunchScript) {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script."
-                    $configFile = "AzureVirtualDesktop.xml"
-                }
-                Else {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client."
-                    $configFile = "RemoteDesktop.xml"
-                }
-            }
-        }
-        Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
-        $sourceFile = Join-Path -Path $DirMultiAppSettings -ChildPath $configFile
-        $destFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
-        Copy-Item -Path $sourceFile -Destination $destFile -Force
-        Set-MultiAppKioskConfiguration -FilePath $destFile
-        If (Get-MultiAppKioskConfiguration) {
-            Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
-        }
-        Else {
-            Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
-            Exit 1        
-        }
-    }
-}
-
-#endregion Assigned Access Launcher
-
-#region Prevent Microsoft AAD Broker Timeout
-
-If ($AutoLogon) {
-    $TaskName = "(AVD Client) - Restart AAD Sign-in"
-    $TaskDescription = 'Restarts the AAD Sign-in process if there are no active connections to prevent a stale sign-in attempt.'
-    Write-Log -EntryType Information -EventId 135 -Message "Creating Scheduled Task: '$TaskName'."
-    $TaskScriptEventSource = 'AAD Sign-in Restart'
-    New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue
-    $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn -User KioskUser0
-    $TaskTrigger.Delay = 'PT30M'
-    $TaskTrigger.Repetition = (New-ScheduledTaskTrigger -Once -At "12:00 AM" -RepetitionInterval (New-TimeSpan -Minutes 30)).Repetition
-    $TaskAction = New-ScheduledTaskAction -Execute "wscript.exe" `
-        -Argument "$SchedTasksScriptsDir\Restart-AADSignIn.vbs"
-    # Set up scheduled task to run interactively (only when user is logged in)
-    $TaskPrincipal = New-ScheduledTaskPrincipal -UserId KioskUser0 -LogonType Interactive
-    $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -Compatibility Win8 -StartWhenAvailable
-    Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Description $TaskDescription -Principal $TaskPrincipal -Settings $TaskSettings -Trigger $TaskTrigger
-    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
+. "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
+If ($SingleAppKiosk) {
+    If ($AutoLogon) {
+        $configFile = Join-Path -Path $DirSingleAppKioskSettings -ChildPath "WindowsApp_AutoLogon.xml"
+        Write-Log -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App with Autologon via WMI MDM bridge."
     }
     Else {
-        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
-        $ScriptExitCode = 1618
+        $configFile = Join-Path -Path $DirSingleAppKioskSettings -ChildPath "WindowsApp.xml"
+        Write-Log -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App via WMI MDM bridge."
     }
 }
+Else {
+    If ($AutoLogon) {
+        If ($ShowSettings) {
+            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App with Settings and Autologon."
+            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings_Autologon.xml"
+        }
+        Else {
+            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App and Autologon."
+            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Autologon.xml"
+        }
+    }
+    Else {
+        If ($ShowSettings) {
+            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App and Settings."
+            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings.xml"
+        }
+        Else {
+            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App."
+            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
+        }
+    }
+    Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
+    $destFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
+    Copy-Item -Path $configFile -Destination $destFile -Force
+    Set-AssignedAccessConfiguration -FilePath $destFile
+    If (Get-AssignedAccessConfiguration) {
+        Write-Log -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
+        Exit 1        
+    }
+}
+#endregion Assigned Access Launcher
 
 #endregion Prevent Microsoft AAD Broker Timeout
 If ($ScriptExitCode -eq 1618) {

@@ -106,14 +106,14 @@ Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullNam
 # Removing Embedded Shells Configuration
 
 . "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
-If (Get-ShellLauncherConfiguration) {
+If (Get-AssignedAccessShellLauncher) {
     Write-Log -EventId 6 -EntryType Information -Message "Removing Shell Launcher settings via WMI Bridge."
-    Clear-ShellLauncherConfiguration
+    Clear-AssignedAccessShellLauncher
 }
 
-If (Get-MultiAppKioskConfiguration) {
+If (Get-AssignedAccessConfiguration) {
     Write-Log -EventId 6 -EntryType Information -Message "Removing Multi-App Kiosk Configuration via WMI Bridge."
-    Clear-MultiAppKioskConfiguration
+    Clear-AssignedAccessConfiguration
 }
 
 # Removing Non-Administrators Local GPO.

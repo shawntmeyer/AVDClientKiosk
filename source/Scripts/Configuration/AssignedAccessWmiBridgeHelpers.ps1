@@ -4,7 +4,7 @@ function Get-AssignedAccessCspBridgeWmi {
     return Get-CimInstance -Namespace $NameSpace -ClassName $Class
 }
 
-function Set-ShellLauncherConfiguration {
+function Set-AssignedAccessShellLauncher {
     param (
         [Parameter(Mandatory=$True)]
         [String] $FilePath
@@ -20,21 +20,21 @@ function Set-ShellLauncherConfiguration {
     (Get-AssignedAccessCspBridgeWmi).ShellLauncher
 }
 
-function Clear-ShellLauncherConfiguration {
+function Clear-AssignedAccessShellLauncher {
     $AssignedAccessCsp = Get-AssignedAccessCspBridgeWmi
     $AssignedAccessCsp.ShellLauncher = $NULL
     Set-CimInstance -CimInstance $AssignedAccessCsp
 }
 
-function Get-ShellLauncherConfiguration {
+function Get-AssignedAccessShellLauncher {
     (Get-AssignedAccessCspBridgeWmi).ShellLauncher
 }
 
-function Get-MultiAppKioskConfiguration {
+function Get-AssignedAccessConfiguration {
     (Get-AssignedAccessCspBridgeWmi).Configuration
 }
 
-function Set-MultiAppKioskConfiguration {
+function Set-AssignedAccessConfiguration {
     param (
         [Parameter(Mandatory=$True)]
         [string] $FilePath
@@ -48,7 +48,7 @@ function Set-MultiAppKioskConfiguration {
     (Get-AssignedAccessCspBridgeWmi).Configuration
 }
 
-function Clear-MultiAppKioskConfiguration {
+function Clear-AssignedAccessConfiguration {
     $AssignedAccessCsp = Get-AssignedAccessCspBridgeWmi
     $AssignedAccessCsp.Configuration = $NULL
     Set-CimInstance -CimInstance $AssignedAccessCsp
