@@ -1,13 +1,14 @@
 <# 
 .SYNOPSIS
-    This script copies a vbs script to the system that is used to launch the Remote Desktop client (MSRDCW).
+    This script copies a PowerShell script to the system that is used to launch the Remote Desktop client (MSRDCW).
 
 .DESCRIPTION 
     This script completes a series of configuration tasks based on the parameters chosen. These tasks can include:
 
     * Create a AVDClientLauncher directory at the root of the system drive.
     * Set ACLs on the AVDClientLauncher directory to prevent Non-Administrators from changing files.
-    * Copy the Launch-AVDClient.vbs scripts to the AVDClientLauncher directory.
+    * Copy the Launch-AVDClient.ps1 and Launch-AVDClient.vbs scripts to the AVDClientLauncher directory.
+    * Dynamically update the parameters of the Launch-AVDClient.ps1 script.
     * Create a custom Remote Desktop Client shortcut in the Start Menu if the CreateStartMenuShortcut switch parameter is used.
     * Disable Workplace Join to stop the stay signed in prompt in the AVD Client.
     * Write the version of the script to the registry to be used for application detection in Configuration Manager or Intune.
@@ -26,13 +27,6 @@
 .PARAMETER Version
     This version parameter allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager
     or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version.
-
-.PARAMETER EnvironmentAVD
-    This value determines the Azure environment to which you are connecting. It ultimately determines the Url of the Remote Desktop Feed which
-    varies by environment by setting the $SubscribeUrl variable and replacing placeholders in several files during installation. Leave this value blank
-    to allow connection to different Azure clouds from this client. In this case, the user will have to click the Subscribe button to start the logon process.
-    The list of Urls can be found at
-    https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace.
 
 .PARAMETER InstallAVDClient
     This switch parameter determines if the latest Visual C++ Redistributables and Remote Desktop client for Windows is automatically downloaded from the
@@ -54,6 +48,7 @@ $Script:FullName = $MyInvocation.MyCommand.Path
 $EventLog = 'AVD Client Launcher'
 $EventSource = 'Configuration Script'
 $LaunchScriptEventSource = 'Launch Script'
+
 #endregion Set Variables
 
 #region Functions
