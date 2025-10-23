@@ -71,12 +71,16 @@
           <App DesktopAppPath="%WinDir%\system32\cmd.exe" />
           <App DesktopAppPath="$WinDir%\System32\WindowsPowerShell\v1.0\Powershell.exe" />
           <App DesktopAppPath="notepad.exe" />
+          <App AppUserModelId="MicrosoftCorporationII.Windows365_8wekyb3d8bbwe!Windows365" />
+          <App DesktopAppPath="windows365.exe" />
+          <App DesktopAppPath="msedgewebview2.exe" />
           <App DesktopAppPath="crossdeviceresume.exe" />    
          </AllowedApps>
       </AllAppsList>
       <v5:StartPins>
         <![CDATA[{
-          "pinnedList":[                        
+          "pinnedList":[
+            {"packagedAppId":"MicrosoftCorporationII.Windows365_8wekyb3d8bbwe!Windows365"},                        
             {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\AVD.lnk"},
             {"desktopAppLink":"%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Amazon Workspaces\\EVO.lnk"},
             {
