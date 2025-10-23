@@ -204,7 +204,7 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:Dir = Split-Path $Script:FullName
 # Windows Event Log (.evtx)
-$EventLog = 'AVD Client Kiosk'
+$EventLog = 'Windows App Kiosk'
 $EventSource = 'Configuration Script'
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
@@ -223,9 +223,6 @@ $FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-WindowsApp.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Configuration"
-
-# Detect Wifi Adapter in order to show Wifi Settings in system tray when necessary.
-$WifiAdapter = Get-NetAdapter | Where-Object { $_.Name -like '*Wi-Fi*' -or $_.Name -like '*Wifi*' -or $_.MediaType -like '*802.11*' }     
     
 # Set default exit code to 0
 $ScriptExitCode = 0
@@ -334,7 +331,7 @@ Function Get-PendingReboot {
     }						
 }
 
-function Update-ACL {
+Function Update-ACL {
     [CmdletBinding()]
     [Alias()]
     [OutputType([int])]
@@ -489,8 +486,6 @@ If ($ApplySTIGs) {
 #region Install AVD Client
 
 If ($InstallWindowsApp) {
-    Write-Log -EntryType Information -EventID 30 -Message "Running Script to install or update Visual C++ Redistributables."
-    & "$DirApps\VisualC++Redistributables\Install-VisualC++Redistributables.ps1"
     Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update the Windows App."
     & "$DirApps\WindowsApp\Install-WindowsApp.ps1"
 }
@@ -548,14 +543,14 @@ ForEach ($Package in $ProvisioningPackages) {
 #endregion Provisioning Packages
 
 #region User Logos
-
-$null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
-Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
-Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
-Write-Log -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
-Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
-
+if ($AutoLogon) {
+    $null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
+    Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
+    Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
+    Write-Log -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
+    Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
+}
 #endregion User Logos
 
 #region Local GPO Settings
