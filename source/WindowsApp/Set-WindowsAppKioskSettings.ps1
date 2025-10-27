@@ -238,7 +238,7 @@ ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
 
 If ($InstallWindowsApp) {
     Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update the Windows App."
-    & "$DirApps\WindowsApp\Install-WindowsApp.ps1"
+    & "$DirApps\WindowsApp\Deploy-WindowsApp.ps1"
 }
 
 #endregion Install AVD Client
@@ -352,7 +352,7 @@ $RegKeys = @()
 $RegKeys += [PSCustomObject]@{
     Path         = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin'
     Name         = 'BlockAADWorkplaceJoin'
-    PropertyType = 'REG_DWORD'
+    PropertyType = 'DWord'
     Value        = 1
     Description  = "Disable 'Stay Signed in to all your apps' pop-up"
 }
@@ -362,7 +362,7 @@ If ($OneDrivePresent) {
     $RegKeys += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
         Name         = 'OneDriveSetup'
-        PropertyType = 'REG_SZ'
+        PropertyType = 'String'
         Value        = ''
         Description  = 'Remove OneDriveSetup from starting for each user.'
     }
@@ -374,7 +374,7 @@ if (($AutoLogon -and $AutoLogonConfig -ne 'Disabled') -or $SharedPC) {
     $RegKeys += [PSCustomObject]@{
         Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
         Name         = 'SkipFRE'
-        PropertyType = 'REG_DWORD'
+        PropertyType = 'DWord'
         Value        = 1
         Description  = 'Disable First Fun Experience in Windows App'
     }
@@ -397,7 +397,7 @@ If ($AutoLogon) {
             $RegKeys += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffOnSuccessfulConnect'
-                PropertyType = 'REG_DWORD'
+                PropertyType = 'DWord'
                 Value        = 1
                 Description  = 'Sign all users out of Windows App and reset app data when a successful connection to an Azure Virtual Desktop session host or Windows 365 Cloud PC is made.'
             }
@@ -406,7 +406,7 @@ If ($AutoLogon) {
             $RegKeys += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffTimeInterval'
-                PropertyType = 'REG_DWORD'
+                PropertyType = 'DWord'
                 Value        = $IdleTimeoutInMinutes
                 Description  = 'Sign all users out of Windows App and reset app data when the operating system is idle for the specified time interval in minutes or the user closes the app.'
             }     
