@@ -388,7 +388,7 @@ If ($AutoLogon) {
             $RegKeys += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffEnable'
-                PropertyType = 'REG_DWORD'
+                PropertyType = 'DWORD'
                 Value        = 1
                 Description  = 'Sign all users out of Windows App and reset app data when the user closes the app.'
             }
