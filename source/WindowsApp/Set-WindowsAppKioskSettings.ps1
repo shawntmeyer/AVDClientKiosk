@@ -44,32 +44,24 @@
     No PowerShell modules required.
 
 .LINK 
-    https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-windows?tabs=subscribe
-    https://learn.microsoft.com/en-us/azure/virtual-desktop/uri-scheme
-    https://learn.microsoft.com/en-us/windows/security/application-security/application-control/windows-defender-application-control/applocker/applocker-overview
-    https://learn.microsoft.com/en-us/windows/configuration/kiosk-shelllauncher
-    https://public.cyber.mil/stigs/gpo/
- 
-.PARAMETER ApplySTIGs
-This switch parameter determines If the latest DoD Security Technical Implementation Guide Group Policy Objects are automatically downloaded
-from https://public.cyber.mil/stigs/gpo and applied via the Local Group Policy Object (LGPO) tool to the system. If they are, then several
-delta settings are applied to allow the system to communicate with Azure Active Directory and complete autologon (If applicable).
+
 
 .PARAMETER AutoLogon
 This switch parameter determines If autologon is enabled through the Shell Launcher configuration. The Shell Launcher feature will automatically
 create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts.
 
+.PARAMETER AutoLogonConfig
+This string parameter determines the autologon configuration for the Windows App when the AutoLogon switch parameter is used. The possible values are:
+* Disabled - Disables automatic sign-out and app data reset for the Windows App. (Not RECOMMENDED for Kiosk scenarios)
+* ResetAppOnCloseOnly - Sign all users out of Windows App and reset app data when the user closes the app.
+* ResetAppAfterConnection - Sign all users out of Windows App and reset app data when a successful connection to an Azure Virtual Desktop session host or Windows 365 Cloud PC is made.
+* ResetAppOnCloseOrIdle - Sign all users out of Windows App and reset app data when the operating system is idle for the specified time interval in minutes or the user closes the app.
+
 .PARAMETER SingleAppKiosk
 This switch parameter determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'.
 When the default 'explorer' shell is used additional local group policy settings and provisioning packages are applied to lock down the shell.
 
-.PARAMETER EnvironmentAVD
-This value determines the Azure environment to which you are connecting. It ultimately determines the Url of the Remote Desktop Feed which
-varies by environment by setting the $SubscribeUrl variable and replacing placeholders in several files during installation.
-The list of Urls can be found at
-https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace.
-
-.PARAMETER InstallAVDClient
+.PARAMETER InstallWindowsApp
 This switch parameter determines If the latest Remote Desktop client for Windows is automatically downloaded from the Internet and installed
 on the system prior to configuration.
 
@@ -81,36 +73,12 @@ deleted on logoff.
 This switch parameter determines If the Settings App appears on the start menu. The settings app and control panel are restricted to the applets/pages specified in the nonadmins-ShowSettings.txt file. If this value is not set,
 then the Settings app and Control Panel are not displayed or accessible.
 
-.PARAMETER DeviceRemovalAction
-This string parameter determines what occurs when a FIDO Passkey device or SmartCard is removed from the system. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'. You must also use the SmartCard switch parameter or specify a 'DeviceVendorID'.
+.PARAMETER IdleTimeOutInMinutes
+This integer value determines the number of minutes in the that system will wait before performing the action specified in the IdleTimeoutAction parameter.
 
-.PARAMETER DeviceVendorID
-This string parameter defines the Vendor ID of the hardware authentication token that if removed will trigger the action defined in "DeviceRemovalAction".
-This value is only used when "DeviceRemovalAction" contains a value.
-
-.PARAMETER SmartCard
-This switch parameter determines if SmartCard removal will trigger the 'DeviceRemovalAction'. This value is only used when 'DeviceRemovalAction' contains a value.
-
-.PARAMETER IdleTimeoutAction
-This string parameter determines what occurs when the system is idle for a specified amount of time. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'.
-
-.PARAMETER IdleTimeOut
-This integer value determines the number of seconds in the that system will wait before performing the action specified in the IdleTimeoutAction parameter.
-
-.PARAMETER SystemDisconnectAction
-This string parameter determines what occurs when the remote desktop session connection is disconnected by the system. This could be due to an IdleTimeout on the session host in the SSO scenario or
-the user has initiated a connection to the session host from another client. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'.
-
-.PARAMETER UserDisconnectSignOutAction
-This string parameter determines what occurs when the user disconnects or signs out from the remote session. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogon is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogon is false, you can leave this empty or choose 'Lock' or 'Logoff'.
+.PARAMETER SmartCardRemovalAction   
+This string parameter determines what occurs when the smart card that was used to authenticate to the operating system is removed from the system. The possible values are 'Lock' or 'Logoff'.
+When AutoLogon is true, this parameter cannot be used.
 
 .PARAMETER Version
 This version parameter allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version.
@@ -118,20 +86,24 @@ This version parameter allows tracking of the installed version using configurat
 #>
 [CmdletBinding()]
 param (
-    [switch]$ApplySTIGs,
-
     [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
     [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [switch]$AutoLogon,
 
-    [int]$IdleTimeoutInMinutes = 15,
+    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
+    [ValidateSet('Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle')]
+    [string]$AutoLogonConfig,
 
-    [ValidateSet('Lock', 'ResetClient')]
-    [string]$IdleTimeoutAction,
+    [int]$IdleTimeoutInMinutes = 15,
 
     [switch]$InstallWindowsApp,
 
-    [Parameter(Mandatory, ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [switch]$LockScreenOnIdleTimeout,
+
+    [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
     [switch]$SharedPC,
 
@@ -150,28 +122,6 @@ param (
 
     [version]$Version = '1.0.0'
 )
-
-#region Parameter Validation and Configuration
-$ActionParameters = @($SmartCardRemovalAction, $IdleTimeoutAction)
-If ($AutoLogon) {
-    ForEach ($Action in $ActionParameters) {
-        If ($null -ne $Action) {
-            If ($Action -eq 'Lock' -or $Action -eq 'Logoff') {
-                Throw "You cannot specify a TriggerAction of Lock or Logoff with AutoLogon"
-            }
-        }
-    }
-}
-Else {
-    ForEach ($Action in $ActionParameters) {
-        If ($null -ne $Action) {
-            If ($Action -eq 'ResetClient') {
-                Throw "You cannot specify a TriggerAction of ResetClient without AutoLogon"
-            }
-        }
-    }
-}
-#endegion
 
 # Restart in 64-Bit PowerShell if not already running in 64-bit mode
 # primarily designed to support Microsoft Endpoint Manager application deployment
@@ -218,201 +168,18 @@ $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath 'ProvisioningP
 $DirSingleAppKioskSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'SingleApp'
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
-$DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-WindowsApp.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
-$DirConfigurationScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Configuration"
+$DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
     
 # Set default exit code to 0
 $ScriptExitCode = 0
 
-#region Functions
+#region Load Functions
 
-Function Get-PendingReboot {
-    <#
-    .SYNOPSIS
-        Gets the pending reboot status on a local or remote computer.
-
-    .DESCRIPTION
-        This function will query the registry on a local or remote computer and determine if the
-        system is pending a reboot, from Microsoft updates, Configuration Manager Client SDK, Pending Computer 
-        Rename, Domain Join or Pending File Rename Operations. For Windows 2008+ the function will query the 
-        CBS registry key as another factor in determining pending reboot state.  "PendingFileRenameOperations" 
-        and "Auto Update\RebootRequired" are observed as being consistant across Windows Server 2003 & 2008.
-        
-        CBServicing = Component Based Servicing (Windows 2008+)
-        WindowsUpdate = Windows Update / Auto Update (Windows 2003+)
-        CCMClientSDK = SCCM 2012 Clients only (DetermineIfRebootPending method) otherwise $null value
-        PendComputerRename = Detects either a computer rename or domain join operation (Windows 2003+)
-        PendFileRename = PendingFileRenameOperations (Windows 2003+)
-        PendFileRenVal = PendingFilerenameOperations registry value; used to filter if need be, some Anti-
-                        Virus leverage this key for def/dat removal, giving a false positive PendingReboot
-
-    .EXAMPLE
-        Get-PendingReboot
-        
-    .LINK
-
-    .NOTES
-    #>
-    Try {
-        ## Setting pending values to false to cut down on the number of else statements
-        $RebootPending = $false
-        $CompPendRen = $false
-        $PendFileRename = $false
-        $SCCM = $false
-
-        ## Setting CBSRebootPend to null since not all versions of Windows has this value
-        $CBSRebootPend = $null
-
-        ## Making registry connection to the local/remote computer
-        $HKLM = [UInt32] "0x80000002"
-        $WMI_Reg = [WMIClass] "\\.\root\default:StdRegProv"
-						
-        ## query the CBS Reg Key
-	    
-        $RegSubKeysCBS = $WMI_Reg.EnumKey($HKLM, "SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\")
-        $CBSRebootPend = $RegSubKeysCBS.sNames -contains "RebootPending"		
-	    							
-        ## Query WUAU from the registry
-        $RegWUAURebootReq = $WMI_Reg.EnumKey($HKLM, "SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\")
-        $WUAURebootReq = $RegWUAURebootReq.sNames -contains "RebootRequired"
-						
-        ## Query PendingFileRenameOperations from the registry
-        $RegSubKeySM = $WMI_Reg.GetMultiStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\Session Manager\", "PendingFileRenameOperations")
-        $RegValuePFRO = $RegSubKeySM.sValue
-
-        ## Query JoinDomain key from the registry - These keys are present if pending a reboot from a domain join operation
-        $Netlogon = $WMI_Reg.EnumKey($HKLM, "SYSTEM\CurrentControlSet\Services\Netlogon").sNames
-        $PendDomJoin = ($Netlogon -contains 'JoinDomain') -or ($Netlogon -contains 'AvoidSpnSet')
-
-        ## Query ComputerName and ActiveComputerName from the registry
-        $ActCompNm = $WMI_Reg.GetStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName\", "ComputerName")            
-        $CompNm = $WMI_Reg.GetStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName\", "ComputerName")
-
-        If (($ActCompNm -ne $CompNm) -or $PendDomJoin) {
-            $CompPendRen = $true
-        }
-						
-        ## If PendingFileRenameOperations has a value set $RegValuePFRO variable to $true
-        If ($RegValuePFRO) {
-            $PendFileRename = $true
-        }
-
-        ## Determine SCCM 2012 Client Reboot Pending Status
-        ## To avoid nested 'If' statements and unneeded WMI calls to determine If the CCM_ClientUtilities class exist, setting EA = 0
-        
-        ## Try CCMClientSDK
-        Try {
-            $CCMClientSDK = Invoke-WmiMethod -ComputerName LocalHost -Namespace 'ROOT\ccm\ClientSDK' -Class 'CCM_ClientUtilities' -Name DetermineIfRebootPending -ErrorAction 'Stop'
-        }
-        Catch {
-            $CCMClientSDK = $null
-        }
-
-        If ($CCMClientSDK) {
-            If ($CCMClientSDK.ReturnValue -ne 0) {
-                Write-Warning "Error: DetermineIfRebootPending returned error code $($CCMClientSDK.ReturnValue)"          
-            }
-            If ($CCMClientSDK.IsHardRebootPending -or $CCMClientSDK.RebootPending) {
-                $SCCM = $true
-            }
-        }
-        Else {
-            $SCCM = $False
-        }
-        If ($CompPendRen -or $CBSRebootPend -or $WUAURebootReq -or $SCCM -or $PendFileRename) { $RebootPending = $true }
-        Return $RebootPending
-
-    }
-    Catch {
-        Write-Warning "$_"				
-    }						
-}
-
-Function Update-ACL {
-    [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 0)]
-        $Path,
-        [Parameter(Mandatory = $true)]
-        $Identity,
-        [Parameter(Mandatory = $true)]
-        $FileSystemRights,
-        $InheritanceFlags = 'ContainerInherit,ObjectInherit',
-        $PropogationFlags = 'None',
-        [Parameter(Mandatory)]
-        [ValidateSet('Allow', 'Deny')]
-        $Type
-    )
-
-    If (Test-Path $Path) {
-        $NewAcl = Get-ACL -Path $Path
-        $FileSystemAccessRuleArgumentList = $Identity, $FileSystemRights, $InheritanceFlags, $PropogationFlags, $type
-        $FileSystemAccessRule = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $FileSystemAccessRuleArgumentList
-        $NewAcl.SetAccessRule($FileSystemAccessRule)
-        Set-Acl -Path "$Path" -AclObject $NewAcl
-    }
-}
-
-function Update-ACLInheritance {
-    [CmdletBinding()]
-    [Alias()]
-    [OutputType([int])]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            Position = 0)]
-        [string]$Path,
-        [Parameter(Mandatory = $false,
-            Position = 1)]
-        [bool]$DisableInheritance = $false,
-
-        [Parameter(Mandatory = $true,
-            Position = 2)]
-        [bool]$PreserveInheritedACEs = $true
-    )
-
-    If (Test-Path $Path) {
-        $NewACL = Get-Acl -Path $Path
-        $NewACL.SetAccessRuleProtection($DisableInheritance, $PreserveInheritedACEs)
-        Set-ACL -Path $Path -AclObject $NewACL
-    }
-
-}
-
-Function Write-Log {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [string]
-        $EventLog = $EventLog,
-        [Parameter()]
-        [string]
-        $EventSource = $EventSource,
-        [Parameter()]
-        [string]
-        [ValidateSet('Information', 'Warning', 'Error')]
-        $EntryType = 'Information',
-        [Parameter()]
-        [Int]
-        $EventID,
-        [Parameter()]
-        [string]
-        $Message
-    )
-    Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
-    Switch ($EntryType) {
-        'Information' { Write-Host $Message }
-        'Warning' { Write-Warning $Message }
-        'Error' { Write-Error $Message }
-    }
+$Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
+ForEach ($Function in $Functions) {
+    . "$($Function.FullName)"
 }
 
 #endregion Functions
@@ -439,7 +206,7 @@ Copy-Item -Path "$DirTools\lgpo.exe" -Destination "$env:SystemRoot\System32" -Fo
 
 # Run Removal Script first in the event that a previous version is installed or in the event of a failed installation.
 Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
-& "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
+& "$Script:Dir\Remove-KioskSettings.ps1"
 
 #endregion Previous Version Removal
 
@@ -448,40 +215,24 @@ Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in 
 # Remove Built-in Windows 11 Apps on non LTSC builds of Windows
 If (-not $LTSC) {
     Write-Log -EntryType Information -EventId 25 -Message "Starting Remove Apps Script."
-    & "$DirConfigurationScripts\Remove-BuiltinApps.ps1"
+    Remove-BuildInApps
 }
 # Remove OneDrive
 If (Test-Path -Path "$env:SystemRoot\Syswow64\onedrivesetup.exe") {
     Write-Log -EntryType Information -EventId 26 -Message "Removing Per-User installation of OneDrive."
     Start-Process -FilePath "$env:SystemRoot\Syswow64\onedrivesetup.exe" -ArgumentList "/uninstall" -Wait -ErrorAction SilentlyContinue
+    $OneDrivePresent = $true
 }
 ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
     Write-Log -EntryType Information -EventId 26 -Message "Removing Per-Machine Installation of OneDrive."
     $OneDriveSetup = Get-ChildItem -Path "$env:ProgramFiles\Microsoft OneDrive" -Filter 'onedrivesetup.exe' -Recurse
     If ($OneDriveSetup) {
         Start-Process -FilePath $OneDriveSetup[0].FullName -ArgumentList "/uninstall" -Wait -ErrorAction SilentlyContinue
+        $OneDrivePresent = $true
     }
 }
 
 #endregion Remove Apps
-
-#region STIGs
-
-If ($ApplySTIGs) {
-    Write-Log -EntryType Information -EventId 27 -Message "Running Script to apply the latest STIG group policy settings via LGPO for Windows 10, Internet Explorer, Microsoft Edge, Windows Firewall, and Defender AntiVirus."
-    & "$DirConfigurationScripts\Apply-LatestSTIGs.ps1"
-    If ($AutoLogon) {
-        # Remove Logon Banner
-        Write-Log -EntryType Information -EventId 28 -Message "Running Script to remove the logon banner because this is an autologon kiosk."
-        & "$DirConfigurationScripts\Apply-STIGAutoLogonExceptions.ps1"
-    }
-    Else {        
-        Write-Log -EntryType Information -EventId 28 -Message "Running Script to allow PKU2U online identities required for AAD logon."
-        & "$DirConfigurationScripts\Apply-STIGDirectSignOnExceptions.ps1"
-    }
-}
-
-#endregion STIGs
 
 #region Install AVD Client
 
@@ -579,11 +330,11 @@ Else {
             Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
     }
-    If ($IdleTimeoutActon -eq 'Lock') {
+    If ($LockScreenOnIdleTimeout) {
         # Will lock the system via the inactivity timeout built-in policy which locks the screen after inactivity.
         $sourceFile = Join-Path -Path $DirGPO -ChildPath 'MachineInactivityTimeout.inf'
         $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'MachineInactivityTimeout.inf'
-        (Get-Content -Path $SourceFile).Replace('900', ($IdleTimeoutInMinutes * 60)) | Out-File $outFile
+        (Get-Content -Path $SourceFile).Replace('<Seconds>', ($IdleTimeoutInMinutes * 60)) | Out-File $outFile
         $null = cmd /c lgpo /s "$outFile" '2>&1'
         Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$($IdleTimeout * 60) seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
@@ -594,110 +345,142 @@ Else {
 
 #region Registry Edits
 
-# update the Default User Hive to Hide the search button and task view icons on the taskbar.
-$null = cmd /c REG LOAD "HKLM\Default" "$env:SystemDrive\Users\default\ntuser.dat" '2>&1'
-Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
-
 # Import registry keys file
-Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
-$RegKeys = Import-Csv -Path $FileRegKeys
+Write-Log -EntryType Information -EventId 90 -Message "Setting Registry Keys."
+$RegKeys = @()
+
+$RegKeys += [PSCustomObject]@{
+    Path         = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin'
+    Name         = 'BlockAADWorkplaceJoin'
+    PropertyType = 'REG_DWORD'
+    Value        = 1
+    Description  = "Disable 'Stay Signed in to all your apps' pop-up"
+}
+
+If ($OneDrivePresent) {
+    # Remove OneDrive from starting for each user.
+    $RegKeys += [PSCustomObject]@{
+        Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+        Name         = 'OneDriveSetup'
+        PropertyType = 'REG_SZ'
+        Value        = ''
+        Description  = 'Remove OneDriveSetup from starting for each user.'
+    }
+}
+
+if ($AutoLogon -or $SharedPC) {
+    # Streamline the user experience by disabling First Run Experience
+    # https://learn.microsoft.com/en-us/windows-app/windowsautologoff#skipfre
+    $RegKeys += [PSCustomObject]@{
+        Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
+        Name         = 'SkipFRE'
+        PropertyType = 'REG_DWORD'
+        Value        = 1
+        Description  = 'Disable First Fun Experience in Windows App'
+    }
+}
+
 If ($AutoLogon) {
     #Configure AutoLogoff for the Windows App
     #https://learn.microsoft.com/en-us/windows-app/windowsautologoff
-    $NewEntry = [PSCustomObject]@{
-        Key         = 'HKLM\SOFTWARE\Microsoft\WindowsApp'
-        Value       = 'AutoLogoffEnable'
-        Type        = 'REG_DWORD'
-        Data        = 1
-        Description = 'Enable AutoLogoff for Windows App'
-    }
-    $RegKeys += $NewEntry
-
-    $NewEntry = [PSCustomObject]@{
-        Key         = 'HKLM\SOFTWARE\Microsoft\WindowsApp'
-        Value       = 'SkipFRE'
-        Type        = 'REG_DWORD'
-        Data        = 1
-        Description = 'Disable First Fun Experience in Windows App'
-    }
-    $RegKeys += $NewEntry
-
-    If ($IdleTimeoutAction -eq 'ResetClient') {
-        $NewEntry = [PSCustomObject]@{
-            Key         = 'HKLM\SOFTWARE\Microsoft\WindowsApp'
-            Value       = 'AutoLogoffTimeInterval'
-            Type        = 'REG_DWORD'
-            Data        = $IdleTimeoutInMinutes
-            Description = 'Set AutoLogoff Timeout for Windows App'
+    Switch ($AutoLogonConfig) {
+        'ResetAppOnCloseOnly' {
+            $RegKeys += [PSCustomObject]@{
+                Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
+                Name         = 'AutoLogoffEnable'
+                PropertyType = 'REG_DWORD'
+                Value        = 1
+                Description  = 'Sign all users out of Windows App and reset app data when the user closes the app.'
+            }
         }
-        $RegKeys += $NewEntry
+        'ResetAppAfterConnection' {
+            $RegKeys += [PSCustomObject]@{
+                Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
+                Name         = 'AutoLogoffOnSuccessfulConnect'
+                PropertyType = 'REG_DWORD'
+                Value        = 1
+                Description  = 'Sign all users out of Windows App and reset app data when a successful connection to an Azure Virtual Desktop session host or Windows 365 Cloud PC is made.'
+            }
+        }
+        'ResetAppOnCloseOrIdle' {
+            $RegKeys += [PSCustomObject]@{
+                Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
+                Name         = 'AutoLogoffTimeInterval'
+                PropertyType = 'REG_DWORD'
+                Value        = $IdleTimeoutInMinutes
+                Description  = 'Sign all users out of Windows App and reset app data when the operating system is idle for the specified time interval in minutes or the user closes the app.'
+            }     
+        }
     }
-
 }
+
 # create the reg key restore file if it doesn't exist, else load it to compare for appending new rows.
 Write-Log -EntryType Information -EventId 97 -Message "Creating a Registry key restore file for Kiosk Mode uninstall."
 $FileRestore = "$DirKiosk\RegKeyRestore.csv"
 New-Item -Path $FileRestore -ItemType File -Force | Out-Null
-Add-Content -Path $FileRestore -Value 'Key,Value,Type,Data,Description'
+Add-Content -Path $FileRestore -Value 'Path,Name,PropertyType,Value,Description'
 
 # Loop through the registry key file and perform actions.
 ForEach ($Entry in $RegKeys) {
     #reset from previous values
-    $Key = $null
+    $Path = $null
+    $Name = $null
+    $PropertyType = $null
     $Value = $null
-    $Type = $null
-    $Data = $null
     $Description = $Null
     #set values
-    $Key = $Entry.Key
+    $Path = $Entry.Path
+    $Name = $Entry.Name
+    $PropertyType = $Entry.PropertyType
     $Value = $Entry.Value
-    $Type = $Entry.Type
-    $Data = $Entry.Data
     $Description = $Entry.Description
     Write-Log -EntryType Information -EventId 99 -Message "Processing Registry Value to '$Description'."
 
-    If ($Key -like 'HKCU\*') {
-        $Key = $Key.Replace("HKCU\", "HKLM\Default\")
+    If ($Path -like 'HKCU:\*') {
+        $Path = $Path.Replace("HKCU:\", "HKLM:\Default\")
+        If (-not (Test-Path -Path 'HKLM:\Default')) {
+            Write-Log -EntryType Information -EventId 94 -Message "Loading Default User Hive Registry Keys via Reg.exe."
+            $null = cmd /c REG LOAD "HKLM\Default" "$env:SystemDrive\Users\default\ntuser.dat" '2>&1'
+            Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
+        }
     }
-    
-    If ($null -ne $Data -and $Data -ne '') {
-        # Output the Registry Key and value name to the restore csv so it can be deleted on restore.
-        Add-Content -Path $FileRestore -Value "$Key,$Value,,"        
-        $null = cmd /c REG ADD "$Key" /v $Value /t $Type /d "$Data" /f '2>&1'
-        Write-Log -EntryType Information -EventId 100 -Message "Added '$Type' Value '$Value' with Value '$Data' to '$Key' with reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
+    $CurrentRegValue = $null
+    If (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue) {
+        $CurrentRegValue = Get-ItemPropertyValue -Path $Path -Name $Name
+        Add-Content -Path $FileRestore -Value "$Path,$Name,$PropertyType,$CurrentRegValue"
     }
     Else {
-        # This is a delete action
-        # Get the current value so we can restore it later if needed.
-        $keyTemp = $Key.Replace("HKLM\", "HKLM:\")
-        If (Get-ItemProperty -Path "$keyTemp" -Name "$Value" -ErrorAction SilentlyContinue) {
-            $CurrentRegValue = Get-ItemPropertyValue -Path "$keyTemp" -Name $Value
-            If ($CurrentRegValue) {
-                Add-Content -Path $FileRestore -Value "$Key,$Value,$type,$CurrentRegValue"        
-                Write-Log -EntryType Information -EventId 101 -Message "Stored '$Type' Value '$Value' with value '$CurrentRegValue' to '$Key' to Restore CSV file."
-                $null = cmd /c REG DELETE "$Key" /v $Value /f '2>&1'
-                Write-Log -EntryType Information -EventId 102 -Message "REG command to delete '$Value' from '$Key' exited with exit code: [$LastExitCode]."
-            }
-        }        
+        Add-Content -Path $FileRestore -Value "$Path,$Name,,"
     }
-}
-Write-Log -EntryType Information -EventId 105 -Message "Unloading default user hive."
-$null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
-If ($LastExitCode -ne 0) {
-    # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
-    [GC]::Collect()
-    [GC]::WaitForPendingFinalizers()
-    Start-Sleep -Seconds 5
+
+    If ($Value -ne '' -and $null -ne $Value) {
+        # This is a set action
+        Set-RegistryValue -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value -Force       
+        Write-Log -EntryType Information -EventId 100 -Message "Setting '$PropertyType' Value '$Name' with Value '$Value' to '$Path'"
+    }
+    Elseif ($CurrentRegValue) {     
+        Remove-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+        Write-Log -EntryType Information -EventId 102 -Message "Deleted Value '$Name' from '$Path'."
+    }               
+}    
+
+If (Test-Path -Path 'HKLM:\Default') {
+    Write-Log -EntryType Information -EventId 103 -Message "Unloading Default User Hive Registry Keys via Reg.exe."
     $null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
-    If ($LastExitCode -eq 0) {
-        Write-Log -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
+    Write-Log -EntryType Information -EventId 104 -Message "Reg.exe Exit Code: [$LastExitCode]"
+    If ($LastExitCode -ne 0) {
+        # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
+        Start-Sleep -Seconds 5
+        $null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
+        If ($LastExitCode -eq 0) {
+            Write-Log -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
+        }
+        Else {
+            Write-Log -EntryType Error -EventId 107 -Message "Default User hive unloaded with exit code [$LastExitCode]."
+        }
     }
-    Else {
-        Write-Log -EntryType Error -EventId 107 -Message "Default User hive unloaded with exit code [$LastExitCode]."
-    }
-}
-Else {
-    Write-Log -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
 }
 
 #endregion Registry Edits
@@ -705,7 +488,6 @@ Else {
 #region Shell Launcher Configuration
 
 Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
-. "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
 If ($SingleAppKiosk) {
     If ($AutoLogon) {
         $configFile = Join-Path -Path $DirSingleAppKioskSettings -ChildPath "WindowsApp_AutoLogon.xml"
@@ -736,19 +518,20 @@ Else {
             Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App."
             $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
         }
-    }
-    Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
-    $destFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
-    Copy-Item -Path $configFile -Destination $destFile -Force
-    Set-AssignedAccessConfiguration -FilePath $destFile
-    If (Get-AssignedAccessConfiguration) {
-        Write-Log -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
-    }
-    Else {
-        Write-Log -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
-        Exit 1        
-    }
+    }    
 }
+Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
+$destFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
+Copy-Item -Path $configFile -Destination $destFile -Force
+Set-AssignedAccessConfiguration -FilePath $destFile
+If (Get-AssignedAccessConfiguration) {
+    Write-Log -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
+}
+Else {
+    Write-Log -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
+    Exit 1        
+}
+
 #endregion Assigned Access Launcher
 
 #endregion Prevent Microsoft AAD Broker Timeout

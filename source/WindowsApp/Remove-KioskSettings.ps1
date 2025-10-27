@@ -1,26 +1,17 @@
-[CmdletBinding()]
-param (
-    # Reinstall Kiosk Settings. If called from Installation Script this will be chosen.
-    [Parameter()]
-    [switch]$Reinstall
-)
-
 #region Set Variables
 $script:FullName = $MyInvocation.MyCommand.Path
 $script:Dir = Split-Path $script:FullName
 $Script:File = [string]$myInvocation.MyCommand.Name
-[String]$Script:LogDir = Join-Path -Path $env:SystemRoot -ChildPath "Logs"
-$date = Get-Date -UFormat "%Y-%m-%d %H-%M-%S"
-$Script:LogName = [io.path]::GetFileNameWithoutExtension($Script:File) + "-$date.log"
-$GPODir = "$Script:Dir\gposettings"
-$ToolsDir = "$Script:Dir\Tools"
+$DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
+$DirGPOs = "$Script:Dir\gposettings"
+$DirTools = "$Script:Dir\Tools"
 $DirConfigurationScripts = "$Script:Dir\Scripts\Configuration"
-$KioskDir = "$env:SystemDrive\KioskSettings"
-$ProvisioningPackagesDir = "$KioskDir\ProvisioningPackages"
-$RegKeysRestoreFile = "$KioskDir\RegKeyRestore.csv"
-$AppLockerRestoreFile = "$KioskDir\ApplockerPolicy.xml"
+$DirKiosk = "$env:SystemDrive\KioskSettings"
+$DirProvisioningPackages = "$DirKiosk\ProvisioningPackages"
+$FileAppLockerPolicy = "$DirKiosk\AppLockerPolicy.xml"
+$FileRegValuesRestore = "$DirKiosk\RegKeyRestore.csv"
 # Event Log Information
-$EventLog = 'AVD Client Kiosk'
+$EventLog = 'Windows App Kiosk'
 $EventSource = 'Configuration Removal Script'
 
 #endregion Set Variables
@@ -55,48 +46,15 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 
 #endregion Restart Script in 64-bit powershell if necessary
 
-#region Functions
-
-Function Write-Log {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [string]
-        $EventLog = $EventLog,
-        [Parameter()]
-        [string]
-        $EventSource = $EventSource,
-        [Parameter()]
-        [string]
-        [ValidateSet('Information','Warning','Error')]
-        $EntryType = 'Information',
-        [Parameter()]
-        [Int]
-        $EventID,
-        [Parameter()]
-        [string]
-        $Message
-    )
-    If ($EntryType -eq 'Error') {
-        Write-Error $Message
-    } Elseif ($EntryType -eq 'Warning') {
-        Write-Warning -Message $Message
-    } Else {
-        Write-Output $Message
-    }
-    Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
-}
-
-#endregion Functions
-
 #region Initialization and Logging
+
+$Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
+ForEach ($Function in $Functions) {
+    . "$($Function.FullName)"
+}
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 
-If (-not (Test-Path $Script:LogDir)) {
-    $null = New-Item -Path $Script:LogDir -ItemType Directory -Force
-}
-Start-Transcript -Path "$Script:LogDir\$Script:LogName" -Force
 Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
 
 #endregion Initialization and Logging
@@ -105,7 +63,6 @@ Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullNam
 
 # Removing Embedded Shells Configuration
 
-. "$DirConfigurationScripts\AssignedAccessWmiBridgeHelpers.ps1"
 If (Get-AssignedAccessShellLauncher) {
     Write-Log -EventId 6 -EntryType Information -Message "Removing Shell Launcher settings via WMI Bridge."
     Clear-AssignedAccessShellLauncher
@@ -131,51 +88,61 @@ If (Test-Path -Path $DirNonAdminsGPO) {
     }
 }
 
-If (Test-Path -Path $KioskDir) {
+If (Test-Path -Path $DirKiosk) {
     # Removing changes to default user hive by reading the restore file and resetting all configured registry values to their previous values.
-    If (Test-Path -Path $RegKeysRestoreFile) {
-        $RegKeys = Import-Csv -Path $RegKeysRestoreFile
+    If (Test-Path -Path $FileRegValuesRestore) {
+        $RegValues = Import-Csv -Path $FileRegValuesRestore
 
-        Write-Log -EventId 10 -EntryType Information -Message "Restoring registry keys to default."
-        Write-Log -EventId 11 -EntryType Information -Message "Loading Default User Hive and updated registry values."
-        Start-Process -FilePath "REG.exe" -ArgumentList "LOAD", "HKLM\Default", "$env:SystemDrive\Users\default\ntuser.dat" -Wait
+        Write-Log -EventId 10 -EntryType Information -Message "Restoring registry values to default."
+        
+        # Check if any registry keys require HKCU access before loading the hive
+        $RequiresHKCU = $RegValues | Where-Object { $_.Key -like 'HKCU:*' }
+        $HiveLoaded = $false
+        
+        If ($RequiresHKCU) {
+            Write-Log -EventId 11 -EntryType Information -Message "Loading Default User Hive for HKCU registry operations."
+            Start-Process -FilePath "REG.exe" -ArgumentList "LOAD", "HKLM\Default", "$env:SystemDrive\Users\default\ntuser.dat" -Wait
+            $HiveLoaded = $true
+        }
 
-        ForEach ($entry in $RegKeys) {
+        ForEach ($RegValue in $RegValues) {
             #reset from previous values
-            $Key = $null
+            $Path = $null
+            $Name = $null
+            $PropertyType = $null
             $Value = $null
-            $Type = $null
-            $Data = $null
             #set values
-            $Key = $Entry.Key
-            $Value = $Entry.Value
-            $Type = $Entry.Type
-            $Data = $Entry.Data
+            $Path = $RegValue.Path
+            $Name = $RegValue.Name
+            $PropertyType = $RegValue.PropertyType
+            $Value = $RegValue.Value
 
-            If ($Key -like 'HKCU\*') {
-                $Key = $Key.Replace("HKCU\","HKLM\Default\")
+            If ($Path -like 'HKCU:\*') {
+                $Path = $Path.Replace("HKCU:\","HKLM:\Default\")
             }
 
-            If ($null -ne $Data -and $Data -ne '') {
+            If ($null -ne $Value -and $Value -ne '') {
                 # Restore the value to the original
-                Start-Process -FilePath "REG.exe" -ArgumentList "ADD `"$Key`" /v $Value /t $Type /d `"$Data`" /f" -wait
+                Set-RegistryValue -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value
             }
             Else {
                 # Delete the value since it didn't exist.
-                Start-Process -FilePath "REG.exe" -ArgumentList "DELETE `"$Key`" /v $Value /f" -wait -ErrorAction SilentlyContinue
+                Remove-RegistryValue -Path $Path -Name $Name
             }
         }
         
-        Write-Log -EventId 12 -EntryType Information -Message "Unloading Default User Hive."
-        $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait -PassThru -NoNewWindow
-        $ExitCode = $HiveUnloadResult.ExitCode
-        If ($ExitCode -ne 0) {
-            # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
-            [GC]::Collect()
-            [GC]::WaitForPendingFinalizers()
-            Start-Sleep -Seconds 5
-            $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait
+        If ($HiveLoaded) {
+            Write-Log -EventId 12 -EntryType Information -Message "Unloading Default User Hive."
+            $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait -PassThru -NoNewWindow
             $ExitCode = $HiveUnloadResult.ExitCode
+            If ($ExitCode -ne 0) {
+                # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
+                [GC]::Collect()
+                [GC]::WaitForPendingFinalizers()
+                Start-Sleep -Seconds 5
+                $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait
+                $ExitCode = $HiveUnloadResult.ExitCode
+            }
         }
         If ($ExitCode -eq 0) {
             Write-Log -EventId 13 -EntryType Information -Message "Hive unloaded successfully."
@@ -189,17 +156,12 @@ If (Test-Path -Path $KioskDir) {
     If (Test-Path -Path $AppLockerRestoreFile) {
         Write-Log -EventID 15 -EntryType Information -Message "Restoring AppLocker Policy to Default."
         Set-AppLockerPolicy -XmlPolicy $AppLockerRestoreFile
-        Set-Service -Name AppIDSvc -StartupType Manual -ErrorAction SilentlyContinue
-        Stop-Service -Name AppIDSvc -Force
-        If ((Get-Service -Name AppIDSvc).Status -eq 'Running') {
-            Stop-Service -Name AppIDSvc -Force -ErrorAction SilentlyContinue
-        }
     }
 
     # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
-    If (Test-Path -Path $ProvisioningPackagesDir) {
-        Write-Log -EventID 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
-        $ProvisioningPackages = Get-ChildItem -Path $ProvisioningPackagesDir -Filter '*.ppkg'
+    If (Test-Path -Path $DirProvisioningPackages) {
+        Write-Log -EventID 16 -EntryType Information -Message "Removing any provisioning packages previously applied by a previous configuration."
+        $ProvisioningPackages = Get-ChildItem -Path $DirProvisioningPackages -Filter '*.ppkg'
         ForEach ($Package in $ProvisioningPackages) {
             $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
             If ($PackageId) {
@@ -209,15 +171,15 @@ If (Test-Path -Path $KioskDir) {
     }
 
     # Restore User Logos
-    If (Test-Path -Path "$kioskDir\UserLogos") {
+    If (Test-Path -Path "$DirKiosk\UserLogos") {
         Write-Log -EntryType Information -EventId 17 -Message "Restoring User Logo Files"
-        Get-ChildItem -Path "$KioskDir\UserLogos" | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
-        $null = cmd /c "$ToolsDir\lgpo.exe" /t "$GPODir\Remove-computer-userlogos.txt" '2>&1'
+        Get-ChildItem -Path "$DirKiosk\UserLogos" | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
+        $null = cmd /c "$DirTools\lgpo.exe" /t "$DirGPOs\Remove-computer-userlogos.txt" '2>&1'
     }
 
     # Remove Kiosk Settings Directory
-    Write-Log -EventId 18 -EntryType Information -Message "Removing '$KioskDir' Directory"
-    Remove-Item -Path $KioskDir -Recurse -Force 
+    Write-Log -EventId 18 -EntryType Information -Message "Removing '$DirKiosk' Directory"
+    Remove-Item -Path $DirKiosk -Recurse -Force 
 }
 
 # Remove Scheduled Tasks
@@ -235,9 +197,6 @@ ForEach ($DirShortcut in $DirsShortcuts) {
     }
 }
 
-# Remove Custom Start Menu
-Get-ChildItem -Path "$env:SystemDrive\Users\Default\AppData\Local\Microsoft\Windows\Shell" -Filter 'LayoutModification.*' | Remove-Item -Force
-
 # Remove Version Registry Entry
 Write-Log -EventId 21 -EntryType Information -Message "Removing Kiosk Registry Key to track install version."
 If (Test-Path -Path 'HKLM:\Software\Kiosk') {
@@ -247,8 +206,7 @@ If (Test-Path -Path 'HKLM:\Software\Kiosk') {
 # Remove Keyboard Filter
 If ((Get-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter).state -eq 'Enabled') {
     Write-Log -EventId 22 -EntryType Information -Message "Removing Keyboard Filter and configuration."
-    & "$DirConfigurationScripts\Disable-KeyboardFilter.ps1"
-    If (!$Reinstall) { Disable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -NoRestart }
+    Disable-KeyboardFilter    
 }
 
 If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
@@ -282,4 +240,3 @@ If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
 }
 
 Write-Log -EventId 27 -EntryType Information -Message "**** Custom Kiosk Mode removed successfully ****"
-Stop-Transcript
