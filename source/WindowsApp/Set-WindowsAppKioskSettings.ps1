@@ -165,7 +165,7 @@ $DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
 $DirAssignedAccess = Join-Path -Path $Script:Dir -ChildPath 'AssignedAccess'
 $DirMultiAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'MultiApp'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath 'ProvisioningPackages'
-$DirSingleAppKioskSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'SingleApp'
+$DirSingleAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'SingleApp'
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
@@ -368,7 +368,7 @@ If ($OneDrivePresent) {
     }
 }
 
-if ($AutoLogon -or $SharedPC) {
+if (($AutoLogon -and $AutoLogonConfig -ne 'Disabled') -or $SharedPC) {
     # Streamline the user experience by disabling First Run Experience
     # https://learn.microsoft.com/en-us/windows-app/windowsautologoff#skipfre
     $RegKeys += [PSCustomObject]@{
@@ -455,7 +455,7 @@ ForEach ($Entry in $RegKeys) {
 
     If ($Value -ne '' -and $null -ne $Value) {
         # This is a set action
-        Set-RegistryValue -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value -Force       
+        Set-RegistryValue -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value       
         Write-Log -EntryType Information -EventId 100 -Message "Setting '$PropertyType' Value '$Name' with Value '$Value' to '$Path'"
     }
     Elseif ($CurrentRegValue) {     
@@ -490,11 +490,11 @@ If (Test-Path -Path 'HKLM:\Default') {
 Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
 If ($SingleAppKiosk) {
     If ($AutoLogon) {
-        $configFile = Join-Path -Path $DirSingleAppKioskSettings -ChildPath "WindowsApp_AutoLogon.xml"
+        $ConfigFile = Join-Path -Path $DirSingleAppSettings -ChildPath "WindowsApp_AutoLogon.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App with Autologon via WMI MDM bridge."
     }
     Else {
-        $configFile = Join-Path -Path $DirSingleAppKioskSettings -ChildPath "WindowsApp.xml"
+        $ConfigFile = Join-Path -Path $DirSingleAppSettings -ChildPath "WindowsApp.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App via WMI MDM bridge."
     }
 }
@@ -502,28 +502,28 @@ Else {
     If ($AutoLogon) {
         If ($ShowSettings) {
             Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App with Settings and Autologon."
-            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings_Autologon.xml"
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings_AutoLogon.xml"
         }
         Else {
             Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App and Autologon."
-            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Autologon.xml"
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_AutoLogon.xml"
         }
     }
     Else {
         If ($ShowSettings) {
             Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App and Settings."
-            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings.xml"
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings.xml"
         }
         Else {
             Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App."
-            $configFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
         }
     }    
 }
-Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $configFile"
-$destFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
-Copy-Item -Path $configFile -Destination $destFile -Force
-Set-AssignedAccessConfiguration -FilePath $destFile
+Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
+$DestFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
+Copy-Item -Path $ConfigFile -Destination $DestFile -Force
+Set-AssignedAccessConfiguration -FilePath $DestFile
 If (Get-AssignedAccessConfiguration) {
     Write-Log -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
 }
@@ -544,7 +544,7 @@ Else {
 }
     
 Write-Log -EntryType Information -EventId 150 -Message "Updating Group Policy"
-$gpupdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
+$GPUpdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
 Write-Log -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
 $null = cmd /c reg add 'HKLM\Software\Kiosk' /v Version /d "$($version.ToString())" /t REG_SZ /f
 Write-Log -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: $ScriptExitCode"
