@@ -80,8 +80,8 @@ This kiosk solution can be used for numerous scenarios including secure remote a
    - **Windows App Kiosk:** Windows 11
 
 2. **Windows Editions:** Depending on the kiosk configuration chosen, different Windows editions are supported:
-   - **Single-app kiosk modes:** Education, Enterprise, Enterprise LTSC, IoT Enterprise, IoT Enterprise LTSC
-   - **Multi-app kiosk modes:** All above editions plus Pro and Pro Education
+   - **Remote Desktop Client Client Shell:** Education, Enterprise, Enterprise LTSC, IoT Enterprise, IoT Enterprise LTSC
+   - **All Other configurations:** All above editions plus Pro and Pro Education
 
 3. **Administrative Access:** The ability to run installation scripts with SYSTEM privileges (instructions provided in each solution's documentation)
 
