@@ -95,7 +95,7 @@ The table below outlines the automatic logoff behaviors available for Windows Ap
 > The SmartCardRemovalAction parameter only has an effect when the AutologonKiosk switch is not present.
 
 | SmartCardRemovalAction | Behavior |
-| :------------: | :--------------------: | :------- |
+| :--------------------: | :------- |
 | Lock | The built-in Smart Card Policy removal service is configured to lock the system when the smart card is removed. |
 | Logoff | The built-in Smart Card Policy removal service is configured to force logoff the user when the smart card is removed. |
 
