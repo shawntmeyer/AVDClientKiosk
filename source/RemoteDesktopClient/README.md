@@ -9,9 +9,9 @@ The solution consists of two main parts: User interface customizations and Remot
 The user interface customizations are configured using:
 
 - A Shell Launcher or Multi-App configuration applied via the Assigned Access CSP WMI Bridge.
-- a multi-user local group policy object for non-administrative users.
-- an applocker policy that disables Windows Search, Notepad, Internet Explorer, WordPad, and Edge for all Non-Administrators.
-- one or more provisioning packages that remove pinned items from the start menu and enable Shared PC mode when that switch is used.
+- A multi-user local group policy object for non-administrative users.
+- When the Remote Desktop Client is used the shell (i.e., `ClientShell` switch is present), an applocker policy that disables Notepad, Internet Explorer, WordPad, and Edge for all Non-Administrators.
+- Wnen the `ClientShell` switch is not present, one or more provisioning packages that remove pinned items from the start menu and enable Shared PC mode when that switch is used.
 
 The Remote Desktop client configurations are designed to enforce security of the client and access to the Azure Virtual Desktop service. The options can be summarized by the choice of triggers such as 'DeviceRemoval', 'IdleTimeout', or 'SessionDisconnect' (or supported combinations) and trigger actions such as 'Lock the workstation', 'Sign the user out of the workstation' or 'Reset the Remote Desktop client to remove cached credentials'.
 
@@ -23,14 +23,14 @@ This custom kiosk could be used for numerous scenarios including the three shown
 
 ## Prerequisites
 
-1. A currently [supported version of a Windows client operating system](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) with the choice of editions based on the use of the **RemoteDesktopClientShell** parameter as follows:
-   1. The `RemoteDesktopClientShell` option requires one of the following Windows client editions[^1]:
+1. A currently [supported version of a Windows client operating system](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) with the choice of editions based on the use of the **ClientShell** parameter as follows:
+   1. The `ClientShell` option requires one of the following Windows client editions[^1]:
       - Education
       - Enterprise
       - Enterprise LTSC
       - IoT Enterprise
       - IoT Enterprise LTSC
-   2. If you <ins>don't</ins> pick the `RemoteDesktopClientShell` option, then supported Windows client editions include[^2]:
+   2. If you <ins>don't</ins> pick the `ClientShell` option, then supported Windows client editions include[^2]:
       - Education
       - Enterprise
       - Enterprise LTSC
@@ -54,8 +54,8 @@ The user interface experience is determined by several factors and parameters. T
 
 **Table 1:** Azure Virtual Desktop User Interface Summary
 
-| RemoteDesktopClientShell | AutoLogon | User Interface |
-|:------------------------:|:---------:|----------------|
+| ClientShell | AutoLogon | User Interface |
+|:-----------:|:---------:|----------------|
 | True           | True      | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The Windows 10 (or later) client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. This is one option for the user interface in the Scenario 2 configuration. |
 | True           | False     | The default explorer shell will be replaced with the Remote Desktop client for Windows via the Shell Launcher Assigned Access CSP. The user will sign-in to the device using Entra ID credentials and will be automatically signed in to the Remote Desktop client. |
 | False          | True      | A Multi-App Kiosk configuration is applied via the Assigned Access CSP which automatically locks down the explorer interface to only show the Remote Desktop client. This configuration allows for easier user interaction with remote sessions and the Remote Desktop client along with Display Settings if the option is chosen. The Windows 11 22H2+ client will automatically logon to the shell with 'KioskUser0' account. The user will be presented with a dialog to logon to Remote Desktop client. This is the other Windows 11 (and later) option for the user interface in the Scenario 2 configuration. |
@@ -65,7 +65,7 @@ The user interface experience is determined by several factors and parameters. T
 
 #### Multi-App Kiosk
 
-When the operating system of the client device is Windows 11 22H2 or greater, and the `RemoteDesktopClientShell` switch parameter is <u>not</u> specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk).
+When the operating system of the client device is Windows 11 22H2 or greater, and the `ClientShell` switch parameter is <u>not</u> specified, the device is configured using the [Multi-App Kiosk Assigned Access CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/multi-app-kiosk).
 
 The user interface experience with the `ShowSettings` switch parameter selected is shown in the video and figures below. You can also see that the remote desktop connection automatically launched because it was the only resource assigned to the user. Click on the first screenshot below to open the video on Youtube.
 
@@ -85,7 +85,7 @@ The figure below illustrates the Settings applet restricted to allow the user to
 
 #### Shell Launcher
 
-When the `RemoteDesktopClientShell` parameter is selected on any operating system, the default user shell (explorer.exe) is replaced with the [Remote Desktop client](https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-remote-desktop-client?tabs=windows) using the [Shell Launcher CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/shell-launcher).
+When the `ClientShell` parameter is selected on any operating system, the default user shell (explorer.exe) is replaced with the [Remote Desktop client](https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-remote-desktop-client?tabs=windows) using the [Shell Launcher CSP](https://learn.microsoft.com/en-us/windows/iot/iot-enterprise/customize/shell-launcher).
 
 The user interface experience is shown in the video and figure below. Click on the first screenshot below to open the video on Youtube. 
 
@@ -99,14 +99,14 @@ In the figure below, you can see that the interface no longer has a taskbar or S
 
 ## Triggers and Actions
 
-The tables below outline the actions taken based on the `AutologonKiosk` and *Trigger Action parameters*.
+The tables below outline the actions taken based on the `Autologon` and *Trigger Action parameters*.
 
 The first trigger action parameter is `DeviceRemovalAction`. This trigger is activated when a security device, defined as either a smart card or a FIDO2 token with a Vendor ID specified in the `DeviceVendorId` parameter is removed from the local system.
 
 **Table 2:** Device Removal Action Summary
 
-| AutoLogonKiosk | DeviceRemovalAction | DeviceType | Behavior |
-| :------------: | :-----------------: | :--------: | :------- |
+| Autologon | DeviceRemovalAction | DeviceType | Behavior |
+| :-------: | :-----------------: | :--------: | :------- |
 | True | ResetClient | Either | The client launch script creates a WMI Event Filter that fires when a user removes their authentication device - either a SmartCard (`SmartCard`) or a FIDO2 passkey device (`DeviceVendorId`) or closes the Remote Desktop client, then the launch script resets the client removing the cached credentials and restarts the launch script. |
 | | Lock | SmartCard | The built-in Smart Card Policy removal service is configured using the [SmartCard removal behavior policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-smart-card-removal-behavior) to lock the system when the smart card is removed. |
 | | Lock | FIDO2 | The client launch script creates a WMI Event Filter that fires when a user removes their [FIDO2 passkey device](https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-passwordless#passkeys-fido2) as specified using the `DeviceVendorID` parameter. When the event is detected, the script locks the computer. |
@@ -117,8 +117,8 @@ The next trigger action parameter is `IdleTimeoutAction`. This trigger is activa
 
 **Table 3:** Idle Timeout Action Summary
 
-| AutoLogonKiosk | IdleTimeoutAction | Behavior |
-| :------------: | :---------------: | :------- |
+| Autologon | IdleTimeoutAction | Behavior |
+| :-------: | :---------------: | :------- |
 | True | ResetClient | The client launch script starts a timer at 0. Every 30 seconds, it checks to see if there are cached credentials and no open Remote Connections to resources. If this condition is true, then it increments the counter by 30 seconds. If it is not True, then the counter is reset to 0. If the counter reaches the value specified by the `IdleTimeout` parameter, then the launch script resets the client removing the cached credentials and restarts the launch script. |
 | | Lock | The system will lock the computer after the amount of time specified in the `IdleTimeout` parameter using the [Interactive Logon Machine Inactivity Limit built-in policy](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/security-policy-settings/interactive-logon-machine-inactivity-limit) Windows. |
 | | Logoff | The client launch script starts a timer at 0. Every 30 seconds, it checks to see if there are open Remote Connections to resources. If this condition there are no open connections, then it increments the counter by 30 seconds. If there are open connections, then the counter is reset to 0. If the counter reaches the value specified by the `IdleTimeout` parameter, then the launch script will logoff the user. |
@@ -127,8 +127,8 @@ The next trigger action parameter is `SystemDisconnectAction`. This trigger is a
 
 **Table 4:** System Disconnect Action Summary
 
-| AutoLogonKiosk | SystemDisconnectAction | Behavior |
-| :------------: | :--------------------: | :------- |
+| Autologon | SystemDisconnectAction | Behavior |
+| :-------: | :--------------------: | :------- |
 | True | ResetClient | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 3 that indicates the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script resets the client removing the cached credentials and restarts the launch script. |
 | | Lock | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 3 that indicates the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script locks the local computer. |
 | | Logoff | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 3 that indicates the connection was closed due to a remote connection (from another client system) or a locked or disconnected session. When these events are detected and there are no other open remote desktop connections, the launch script signs the user out of the local computer. |
@@ -137,8 +137,8 @@ The next trigger action parameter is `UserDisconnectSignOffAction`. This trigger
 
 **Table 5:** User Disconnect or SignOut Action Summary
 
-| AutoLogonKiosk | UserDisconnectSignOutAction | Behavior |
-| :------------: | :-------------------------: | :------- |
+| Autologon | UserDisconnectSignOutAction | Behavior |
+| :-------: | :-------------------------: | :------- |
 | True | ResetClient | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 1 or 2 that indicates the connection was closed by the user. When these events are detected and there are no other open remote desktop connections, the launch script resets the client removing the cached credentials and restarts the launch script. |
 | | Lock | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 1 or 2 that indicates the connection was closed by the user. When these events are detected and there are no other open remote desktop connections, the launch script locks the local computer. |
 | | Logoff | The client launch script creates a WMI Event Filter that fires when a Remote Desktop connection is closed based on an event ID 1026 in the 'Microsoft-Windows-TerminalServices-RDPClient/Operational' log. When this event is detected the event log is queried for reason code = 1 or 2 that indicates the connection was closed by the user. When these events are detected and there are no other open remote desktop connections, the launch script signs the user out of the local computer. |
@@ -153,14 +153,14 @@ The table below describes each parameter and any requirements or usage informati
 
 **Table 6:** Set-RemoteDesktopClientKioskSettings.ps1 Parameters
 
-| Parameter Name   | Type   | Description | Notes/Requirements |
-|:-----------------|:------:|:------------|:-------------------|
-| `AutologonKiosk` | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. | When configured, Windows will automatically create a new user, 'KioskUser0', which will not have a password and be configured to automatically logon when Windows starts. **This is the primary parameter used to configure the kiosk for Scenario 2**. |
-| `RemoteDesktopClientShell` | Switch | Determines whether the default Windows shell (explorer.exe) is replaced by the Remote Desktop client for Windows. | When not specified the default shell is used and, on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. |
+| Parameter Name | Type   | Description | Notes/Requirements |
+|:---------------|:------:|:------------|:-------------------|
+| `Autologon` | Switch | Determines if Autologon is enabled through the Shell Launcher or Multi-App Kiosk configuration. | When configured, Windows will automatically create a new user, 'KioskUser0', which will not have a password and be configured to automatically logon when Windows starts. **This is the primary parameter used to configure the kiosk for Scenario 2**. |
+| `ClientShell` | Switch | Determines whether the default Windows shell (explorer.exe) is replaced by the Remote Desktop client for Windows. | When not specified the default shell is used and, on Windows 11 22H2 and later, the Multi-App Kiosk configuration is used along with additional local group policy settings and provisioning packages to lock down the shell. On Windows 10, only local group policy settings and provisioning packages are used to lock down the shell. |
 | `EnvironmentAVD` | String | Determines the Azure environment to which you are connecting. | Determines the Url of the Remote Desktop Feed which varies by environment by setting the '$SubscribeUrl' variable and replacing placeholders in several files during installation. The possible values are 'AzureCloud', 'AzureChina', 'AzureUSGovernment', 'AzureGovernmentSecret', and 'AzureGovernmentTopSecret'. See [Air-Gapped Cloud Support](#air-gapped-cloud-support) for updating the code to support 'AzureGovernmentSecret' and 'AzureGovernmentTopSecret'. Default is 'AzureCloud' |
 | `InstallRemoteDesktopClient` | Switch | Determines if the latest Remote Desktop client for Windows and the Visual Studio C++ Redistributables are downloaded from the Internet and installed prior to configuration. | Requires access to https://go.microsoft.com/fwlink/?linkid=2139369 and https://aka.ms/vs/17/release/vc_redist.x64.exe |
 | `SharedPC` | Switch | Determines if the computer is setup as a shared PC. The account management process is enabled and all user profiles are automatically deleted on logoff. | Only valid for direct logon mode ("Autologon" switch is not used). |
-| `ShowSettings` | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when the `RemoteDesktopClientShell` switch is not specified. |
+| `ShowSettings` | Switch | Determines if the Settings App and Control Panel are restricted to only allow access to the Display Settings page. If this value is not set, then the Settings app and Control Panel are not displayed or accessible. | Only valid when the `ClientShell` switch is not specified. |
 | `DeviceRemovalAction` | string | determines what occurs when a FIDO Passkey device or SmartCard is removed from the system.  | The possible values are 'Lock', 'Logoff', or 'ResetClient'. |
 | `DeviceVendorID` | String | Defines the Vendor ID of the hardware FIDO2 authentication token that, if removed, will trigger the action defined in `DeviceRemovalAction`. | You can find the Vendor ID by looking at the Hardware IDs property of the device in device manager. See the [example for a Yubikey](docs\media\HardwareIds.png). |
 | `SmartCard` | Switch | Determines if SmartCard removal will trigger the action specified by `DeviceRemovalAction`. | This value is only used when `DeviceRemovalAction` is defined. |
@@ -284,7 +284,7 @@ In order to use this solution in Microsoft's US Government Air-Gapped clouds, yo
       - Replace the Windows default shell with the Remote Desktop client.
 
         ``` powershell
-        .\Set-RemoteDesktopClientKioskSettings.ps1 -RemoteDesktopClientShell [other parameters]
+        .\Set-RemoteDesktopClientKioskSettings.ps1 -ClientShell [other parameters]
         ```
 
       - Install the Remote Desktop client

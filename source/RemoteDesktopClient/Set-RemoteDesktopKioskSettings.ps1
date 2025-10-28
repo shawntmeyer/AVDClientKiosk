@@ -9,7 +9,7 @@
     * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11)
     * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11), both with autologon
 
-    These options are controlled by the combination of the two switch parameters - 'RemoteDesktopClientShell' and 'AutologonKiosk'.
+    These options are controlled by the combination of the two switch parameters - 'ClientShell' and 'Autologon'.
     
     When the RemoteDesktopClientShell switch parameter is not used, then you can utilize the 'ShowSettings' switch parameter to allow access to the Display Settings page.
     
@@ -44,11 +44,11 @@
     https://learn.microsoft.com/en-us/windows/security/application-security/application-control/windows-defender-application-control/applocker/applocker-overview
     https://learn.microsoft.com/en-us/windows/configuration/kiosk-shelllauncher
  
-.PARAMETER AutoLogonKiosk
+.PARAMETER Autologon
 This switch parameter determines If autologon is enabled through the Assigned Access configuration. The Assigned Access feature will automatically
 create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts.
 
-.PARAMETER RemoteDesktopClientShell
+.PARAMETER ClientShell
 This switch parameter determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'.
 When the default 'explorer' shell is used additional local group policy settings and provisioning packages are applied to lock down the shell.
 
@@ -72,8 +72,8 @@ then the Settings app and Control Panel are not displayed or accessible.
 
 .PARAMETER DeviceRemovalAction
 This string parameter determines what occurs when a FIDO Passkey device or SmartCard is removed from the system. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogonKiosk is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogonKiosk is false, you can leave this empty or choose 'Lock' or 'Logoff'. You must also use the SmartCard switch parameter or specify a 'DeviceVendorID'.
+When 'AutoLogon' is present, you can leave this empty or choose only 'ResetClient'.
+When 'AutoLogon' is not present, you can leave this empty or choose 'Lock' or 'Logoff'. You must also use the SmartCard switch parameter or specify a 'DeviceVendorID'.
 
 .PARAMETER DeviceVendorID
 This string parameter defines the Vendor ID of the hardware authentication token that if removed will trigger the action defined in "DeviceRemovalAction".
@@ -84,8 +84,8 @@ This switch parameter determines if SmartCard removal will trigger the 'DeviceRe
 
 .PARAMETER IdleTimeoutAction
 This string parameter determines what occurs when the system is idle for a specified amount of time. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogonKiosk is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogonKiosk is false, you can leave this empty or choose 'Lock' or 'Logoff'.
+When 'Autologon' is present, you can leave this empty or choose only 'ResetClient'.
+When 'Autologon' is not present, you can leave this empty or choose 'Lock' or 'Logoff'.
 
 .PARAMETER IdleTimeOut
 This integer value determines the number of seconds in the that system will wait before performing the action specified in the IdleTimeoutAction parameter.
@@ -93,13 +93,13 @@ This integer value determines the number of seconds in the that system will wait
 .PARAMETER SystemDisconnectAction
 This string parameter determines what occurs when the remote desktop session connection is disconnected by the system. This could be due to an IdleTimeout on the session host in the SSO scenario or
 the user has initiated a connection to the session host from another client. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogonKiosk is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogonKiosk is false, you can leave this empty or choose 'Lock' or 'Logoff'.
+When 'Autologon' is present, you can leave this empty or choose only 'ResetClient'.
+When 'Autologon' is not present, you can leave this empty or choose 'Lock' or 'Logoff'.
 
 .PARAMETER UserDisconnectSignOutAction
 This string parameter determines what occurs when the user disconnects or signs out from the remote session. The possible values are 'Lock', 'Logoff', or 'ResetClient'.
-When AutoLogonKiosk is true, you can leave this empty or choose only 'ResetClient'.
-When AutoLogonKiosk is false, you can leave this empty or choose 'Lock' or 'Logoff'.
+When 'Autologon' is present, you can leave this empty or choose only 'ResetClient'.
+When 'Autologon' is not present, you can leave this empty or choose 'Lock' or 'Logoff'.
 
 .PARAMETER Version
 This version parameter allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version.
@@ -109,11 +109,11 @@ This version parameter allows tracking of the installed version using configurat
 param (
     [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
     [Parameter(Mandatory, ParameterSetName = 'DirectLogonClientShell')]
-    [switch]$RemoteDesktopClientShell,
+    [switch]$ClientShell,
 
     [Parameter(Mandatory, ParameterSetName = 'AutologonClientShell')]
     [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
-    [switch]$AutoLogonKiosk,
+    [switch]$Autologon,
 
     [ValidateSet('AzureChina', 'AzureCloud', 'AzureUSGovernment', 'AzureGovernmentSecret', 'AzureGovernmentTopSecret')]
     [string]$EnvironmentAVD = 'AzureCloud',
@@ -152,7 +152,7 @@ param (
 
 #region Parameter Validation and Configuration
 $ActionParameters = @($DeviceRemovalAction, $IdleTimeoutAction, $SystemDisconnectAction, $UserDisconnectSignOutAction)
-If ($AutoLogonKiosk) {
+If ($Autologon) {
     ForEach ($Action in $ActionParameters) {
         If ($null -ne $Action) {
             If ($Action -eq 'Lock' -or $Action -eq 'Logoff') {
@@ -216,6 +216,7 @@ $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
+$DirAppLocker = Join-Path -Path $Script:Dir -ChildPath 'AppLocker'
 $DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
 $DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
@@ -242,13 +243,13 @@ If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
     $SecurityKey = $true
 }
 # Only create the custom launch shortcut when necessary. It is only necessary any of the following conditions are true:
-# 1. AutoLogonKiosk is enabled (Scenario 2)
-# 2. SystemDisconnectAction or UserDisconnectSignOutAction is defined
-# 3. IdleTimeoutAction is Logoff
-# 4. DeviceRemovalAction is defined and a DeviceVendorId is defined
-# 5. None of the available triggers and actions are defined (DeviceRemovalAction, IdleTimeoutAction, or SystemDisconnectAction or UserDisconnectSignOutAction). (Scenario 3)
+# 1. 'Autologon' is enabled (Scenario 2)
+# 2. 'SystemDisconnectAction' or 'UserDisconnectSignOutAction' is defined
+# 3. 'IdleTimeoutAction' is 'Logoff'
+# 4. 'DeviceRemovalAction' is defined and a 'DeviceVendorId' is defined
+# 5. None of the available triggers and actions are defined ('DeviceRemovalAction', 'IdleTimeoutAction', or 'SystemDisconnectAction', or 'UserDisconnectSignOutAction'). (Scenario 3)
 
-If ($AutoLogonKiosk -or $IdleTimeoutAction -eq 'Logoff' -or $SystemDisconnectAction -or $UserDisconnectSignOutAction -or ($DeviceRemovalAction -and $SecurityKey) -or (-not $AutoLogonKiosk -and ($null -eq $DeviceRemovalAction -and $null -eq $IdleTimeoutAction -and $null -eq $SystemDisconnectAction -and $null -eq $UserDisconnectSignOutAction))) {
+If ($Autologon -or $IdleTimeoutAction -eq 'Logoff' -or $SystemDisconnectAction -or $UserDisconnectSignOutAction -or ($DeviceRemovalAction -and $SecurityKey) -or (-not $Autologon -and ($null -eq $DeviceRemovalAction -and $null -eq $IdleTimeoutAction -and $null -eq $SystemDisconnectAction -and $null -eq $UserDisconnectSignOutAction))) {
     $CustomLaunchScript = $true
 }
     
@@ -358,7 +359,7 @@ If ($CustomLaunchScript) {
     $Content = Get-Content -Path $FileToUpdate
     $Content = $Content.Replace('[string]$EventLog', "[string]`$EventLog = '$EventLog'") 
     $Content = $Content.Replace('[string]$EventSource', "[string]`$EventSource = '$LaunchScriptSource'")
-    If ($AutoLogonKiosk) {
+    If ($Autologon) {
         $Content = $Content.Replace('[string]$SubscribeUrl', "[string]`$SubscribeUrl = '$SubscribeUrl'")
     }
     If ($SecurityKey) { $Content = $Content.Replace('[string]$DeviceVendorID', "[string]`$DeviceVendorID = '$DeviceVendorID'") }
@@ -370,7 +371,7 @@ If ($CustomLaunchScript) {
     if ($UserDisconnectSignOutAction) { $Content = $Content.Replace('[string]$UserDisconnectSignOutAction', "[string]`$UserDisconnectSignOutAction = '$UserDisconnectSignOutAction'") }    
     $Content | Set-Content -Path $FileToUpdate
 }
-If ($AutoLogonKiosk) {
+If ($Autologon) {
     $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
     If (-not (Test-Path $SchedTasksScriptsDir)) {
         $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
@@ -399,7 +400,7 @@ If ($SharedPC) {
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
 }
 
-If (!$RemoteDesktopClientShell) {
+If (!$ClientShell) {
     Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
@@ -415,7 +416,7 @@ ForEach ($Package in $ProvisioningPackages) {
 
 #region Start Menu
 
-If (-not ($RemoteDesktopClientShell)) {
+If (-not ($ClientShell)) {
     # Create custom Remote Desktop Client shortcut and configure custom start menu for Non-Admins
     [string]$StringVersion = $Version
     $ObjShell = New-Object -ComObject WScript.Shell
@@ -438,7 +439,7 @@ If (-not ($RemoteDesktopClientShell)) {
         $Shortcut.Save()
     }
     Else {
-        # Do not need special Remote Desktop Client shortcut if not using AutoLogonKiosk or a Device Other than SmartCards. Updating it to start maximized.
+        # Do not need special Remote Desktop Client shortcut if not using 'Autologon' or a Device Other than SmartCards. Updating it to start maximized.
         $ShortcutPath = $PathLinkRD
         $Shortcut = $ObjShell.CreateShortcut($ShortcutPath)
         $Shortcut.WindowStyle = 3
@@ -455,7 +456,7 @@ If (-not ($RemoteDesktopClientShell)) {
 #endregion Start Menu
 
 #region User Logos
-If ($AutoLogonKiosk) {
+If ($Autologon) {
     $null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
     Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
@@ -468,7 +469,7 @@ If ($AutoLogonKiosk) {
 #region Local GPO Settings
 
 # Apply Non-Admin GPO settings
-If ($RemoteDesktopClientShell) {
+If ($ClientShell) {
     $nonAdminsFile = 'nonadmins-RemoteDesktopClientShell.txt'
     $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
     Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -480,7 +481,7 @@ ElseIf ($ShowSettings) {
 
 
 # Configure Feed URL for Autologon User
-If ($AutoLogonKiosk) {
+If ($Autologon) {
     $outfile = "$env:Temp\Users-AVDURL.txt"
     $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
     (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
@@ -521,15 +522,15 @@ Else {
 Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
 $RegKeys = Import-Csv -Path $FileRegKeys
 
-If (-not $AutoLogonKiosk) {
+If (-not $Autologon) {
     #Configure AutoSubscription URL for AVD Client
     #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
     $RegKeys += [PSCustomObject]@{
         Path         = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
-        Name       = 'AutoSubscription'
-        PropertyType        = 'String'
+        Name         = 'AutoSubscription'
+        PropertyType = 'String'
         Value        = "$SubscribeUrl/api/arm/feeddiscovery"
-        Description = 'AVD Client Subscription URL'
+        Description  = 'AVD Client Subscription URL'
     }
 }
 
@@ -615,82 +616,106 @@ If (Test-Path -Path 'HKLM:\Default') {
 
 #endregion Registry Edits
 
+#region Applocker Policy
+
+If ($ClientShell) {
+    # With Shell Launcher, we need to use applocker to block access to other applications which could be launched from the Remote Desktop Client.
+    Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Microsoft Edge, Internet Explorer, Notepad, and Wordpad for the Kiosk User."
+    # If there is an existing applocker policy, back it up and store its XML for restore.
+    # Else, copy a blank policy to the restore location.
+    # Then apply the new AppLocker Policy
+    $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "ClientShellAppLockerPolicy.xml"
+    [xml]$Policy = Get-ApplockerPolicy -Local -XML
+    If ($Policy.AppLockerPolicy.RuleCollection) {
+        Get-ApplockerPolicy -Local -XML | out-file "$DirKiosk\ApplockerPolicy.xml" -force
+    }
+    Else {
+        Copy-Item -Path (Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml") -Destination "$DirKiosk\ApplockerPolicy.xml" -Force | Out-Null
+    }
+    Set-AppLockerPolicy -XmlPolicy "$FileAppLockerKiosk"
+    Write-Log -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
+    Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
+    # Start the service if not already running
+    If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
+        Start-Service -Name AppIDSvc
+    }
+}
+
+#endregion Applocker Policy
+
 #region Shell Launcher Configuration
 
-If ($AutoLogonKiosk -or $RemoteDesktopClientShell) {
-    Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
-    If ($RemoteDesktopClientShell) {
-        If ($AutoLogonKiosk) {
-            $ConfigFile = "Launch-AVDClient_AutoLogon.xml"
-            Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings with Autologon via WMI MDM bridge."
-        }
-        ElseIf ($CustomLaunchScript) {
-            $ConfigFile = "Launch-AVDClient.xml"
-            Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings for Security Keys via WMI MDM bridge."
+Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
+
+If ($ClientShell) {
+    If ($Autologon) {
+        $ConfigFile = "Launch-AVDClient_AutoLogon.xml"
+        Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings with Autologon via WMI MDM bridge."
+    }
+    ElseIf ($CustomLaunchScript) {
+        $ConfigFile = "Launch-AVDClient.xml"
+        Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings for Security Keys via WMI MDM bridge."
+    }
+    Else {
+        $ConfigFile = "msrdcw.xml"
+        Write-Log -EntryType Information -EventId 114 -Message "Enabling Remote Desktop Client Shell Launcher Settings via WMI MDM bridge."
+    }
+    $SourceFile = Join-Path $DirShellLauncherSettings -ChildPath $ConfigFile
+    $DestFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
+    Copy-Item -Path $SourceFile -Destination $DestFile -Force | Out-Null
+    Set-AssignedAccessShellLauncher -FilePath $DestFile
+    If (Get-AssignedAccessShellLauncher) {
+        Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+        Exit 1
+    }
+}
+Else {
+    If ($Autologon) {
+        If ($ShowSettings) {
+            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
+            $ConfigFile = "AzureVirtualDesktop_Settings_Autologon.xml"
         }
         Else {
-            $ConfigFile = "msrdcw.xml"
-            Write-Log -EntryType Information -EventId 114 -Message "Enabling Remote Desktop Client Shell Launcher Settings via WMI MDM bridge."
-        }
-    }      
-    If ($ConfigFile) {
-        $sourceFile = Join-Path $DirShellLauncherSettings -ChildPath $ConfigFile
-        $DestFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
-        Copy-Item -Path $sourceFile -Destination $DestFile -Force | Out-Null
-        Set-AssignedAccessShellLauncher -FilePath $DestFile
-        If (Get-AssignedAccessShellLauncher) {
-            Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
-        }
-        Else {
-            Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
-            Exit 1
+            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script and Autologon."
+            $ConfigFile = "AzureVirtualDesktop_Autologon.xml"
         }
     }
-    ElseIf (-not $RemoteDesktopClientShell) {
-        If ($AutoLogonKiosk) {
-            If ($ShowSettings) {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
-                $ConfigFile = "AzureVirtualDesktop_Settings_Autologon.xml"
+    Else {
+        If ($ShowSettings) {
+            If ($CustomLaunchScript) {
+                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings."
+                $ConfigFile = "AzureVirtualDesktop_Settings.xml"
             }
             Else {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script and Autologon."
-                $ConfigFile = "AzureVirtualDesktop_Autologon.xml"
+                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client and Settings."
+                $ConfigFile = "RemoteDesktop_Settings.xml"
             }
         }
         Else {
-            If ($ShowSettings) {
-                If ($CustomLaunchScript) {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings."
-                    $ConfigFile = "AzureVirtualDesktop_Settings.xml"
-                }
-                Else {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client and Settings."
-                    $ConfigFile = "RemoteDesktop_Settings.xml"
-                }
+            If ($CustomLaunchScript) {
+                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script."
+                $ConfigFile = "AzureVirtualDesktop.xml"
             }
             Else {
-                If ($CustomLaunchScript) {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script."
-                    $ConfigFile = "AzureVirtualDesktop.xml"
-                }
-                Else {
-                    Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client."
-                    $ConfigFile = "RemoteDesktop.xml"
-                }
+                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client."
+                $ConfigFile = "RemoteDesktop.xml"
             }
         }
-        Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
-        $sourceFile = Join-Path -Path $DirMultiAppSettings -ChildPath $ConfigFile
-        $DestFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
-        Copy-Item -Path $sourceFile -Destination $DestFile -Force
-        Set-AssignedAccessConfiguration -FilePath $DestFile
-        If (Get-AssignedAccessConfiguration) {
-            Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
-        }
-        Else {
-            Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
-            Exit 1        
-        }
+    }
+    Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
+    $SourceFile = Join-Path -Path $DirMultiAppSettings -ChildPath $ConfigFile
+    $DestFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
+    Copy-Item -Path $SourceFile -Destination $DestFile -Force
+    Set-AssignedAccessConfiguration -FilePath $DestFile
+    If (Get-AssignedAccessConfiguration) {
+        Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
+        Exit 1        
     }
 }
 
@@ -698,7 +723,7 @@ If ($AutoLogonKiosk -or $RemoteDesktopClientShell) {
 
 #region Prevent Microsoft AAD Broker Timeout
 
-If ($AutoLogonKiosk) {
+If ($Autologon) {
     $TaskName = "(AVD Client) - Restart AAD Sign-in"
     $TaskDescription = 'Restarts the AAD Sign-in process if there are no active connections to prevent a stale sign-in attempt.'
     Write-Log -EntryType Information -EventId 135 -Message "Creating Scheduled Task: '$TaskName'."

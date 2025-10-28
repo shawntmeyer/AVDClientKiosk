@@ -64,7 +64,7 @@ The figure below illustrates the Settings applet restricted to allow the user to
 
 **Figure 2:** Multi-App Showing Display Settings
 
-*[Screenshot would show the restricted Settings interface]*
+![Windows App Multi-App Showing Display Settings](../../docs/media/WindowsApp-MultiApp.png)
 
 #### Single-App Kiosk
 
@@ -74,11 +74,11 @@ The user interface experience provides only the Windows App with no access to ot
 
 **Figure 3:** Single-App Kiosk showing Windows App only
 
-*[Screenshot would show full-screen Windows App interface]*
+![Windows App Single-App](../../docs/media/WindowsApp-SingleApp.png)
 
 ## Windows App Auto Logoff Behaviors
 
-The tables below outline the automatic logoff behaviors available for Windows App in kiosk scenarios.
+The table below outlines the automatic logoff behaviors available for Windows App in kiosk scenarios. For more information see [Configure auto logoff on Windows](https://learn.microsoft.com/en-us/windows-app/windowsautologoff).
 
 **Table 2:** Windows App Auto Logoff Configuration Summary
 
@@ -91,11 +91,13 @@ The tables below outline the automatic logoff behaviors available for Windows Ap
 
 **Table 3:** Smart Card Removal Action Summary
 
-| AutoLogonKiosk | SmartCardRemovalAction | Behavior |
+> [!NOTE]
+> The SmartCardRemovalAction parameter only has an effect when the AutologonKiosk switch is not present.
+
+| SmartCardRemovalAction | Behavior |
 | :------------: | :--------------------: | :------- |
-| False | Lock | The built-in Smart Card Policy removal service is configured to lock the system when the smart card is removed. |
-| False | Logoff | The built-in Smart Card Policy removal service is configured to force logoff the user when the smart card is removed. |
-| True | N/A | Smart card removal actions are not available in AutoLogon mode as there is no user authentication. |
+| Lock | The built-in Smart Card Policy removal service is configured to lock the system when the smart card is removed. |
+| Logoff | The built-in Smart Card Policy removal service is configured to force logoff the user when the smart card is removed. |
 
 ## Installation
 
