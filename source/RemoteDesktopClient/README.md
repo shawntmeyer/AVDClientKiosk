@@ -19,7 +19,7 @@ This custom kiosk could be used for numerous scenarios including the three shown
 
 **Figure 1:** Azure Virtual Desktop Client Kiosk Usage Scenarios
 
-![Azure Virtual Desktop Client Kiosk Usage Scenarios](docs/media/KioskTypes.png)
+![Azure Virtual Desktop Client Kiosk Usage Scenarios](../../docs/media/KioskTypes.png)
 
 ## Prerequisites
 
@@ -95,7 +95,7 @@ In the figure below, you can see that the interface no longer has a taskbar or S
 
 **Figure 4:** Shell Launcher full screen
 
-![Shell Launcher full Screen](docs/media/shellLauncherInterface.png)
+![Shell Launcher full Screen](../../docs/media/shellLauncherInterface.png)
 
 ## Triggers and Actions
 
