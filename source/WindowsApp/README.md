@@ -86,8 +86,8 @@ The table below outlines the automatic logoff behaviors available for Windows Ap
 | :--------------: | :------- | :------- |
 | Disabled | No automatic sign-out or app data reset | Not recommended for the AutoLogon Kiosk scenarios |
 | ResetAppOnCloseOnly | Sign out users and reset app data when the Windows App is closed | Suitable when users manually close the app |
-| ResetAppAfterConnection | Sign out users and reset app data when a successful connection is made to a session host or Cloud PC. Provides automatic cleanup after establishing connections |
-| ResetAppOnCloseOrIdle | Sign out users and reset app data when the app is closed OR the system is idle for the specified interval | Comprehensive cleanup for shared devices |
+| ResetAppAfterConnection | Sign out users and reset app data when a successful connection is made to a session host or Cloud PC. | Provides comprehensive cleanup after establishing connections. Suitable when users have only one resource assigned. |
+| ResetAppOnCloseOrIdle | Sign out users and reset app data when the app is closed OR the system is idle for the specified interval | Enforces idle time restrictions to help prevent credential theft. |
 
 ## Installation
 
