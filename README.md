@@ -19,10 +19,12 @@ The traditional Remote Desktop Client for Windows kiosk solution provides compre
 
 **Key Features:**
 
-- Shell Launcher or Multi-App Kiosk configurations via Assigned Access CSP
+- Windows Operating System Autologon support
+- Auto Subscription to the user feed
+- Remote Desktop Client shell or Multi-App Kiosk with restricted user experience and customized Start Menu
 - WMI Event-based monitoring and automated responses
+- Support for Settings app access options
 - Support for air-gapped government clouds
-- Custom launch scripts with credential management
 
 ### 2. Windows App Kiosk
 
@@ -38,7 +40,8 @@ The modern Windows App kiosk solution leverages Microsoft's latest remote deskto
 
 **Key Features:**
 
-- Assigned Access configuration for single-app or multi-app kiosk modes
+- Windows Operating System Autologon support
+- Windows App Single App Kiosk or Multi-App Kiosk with restricted user experience and customized Start Menu
 - Native Windows App auto logoff behaviors (ResetAppOnCloseOnly, ResetAppAfterConnection, ResetAppOnCloseOrIdle)
 - Streamlined provisioning package deployment
 - Smart card integration with Windows security policies
@@ -48,9 +51,9 @@ The modern Windows App kiosk solution leverages Microsoft's latest remote deskto
 
 | Feature | Remote Desktop Client | Windows App |
 |---------|:---------------------:|:-----------:|
-| **Client Technology** | Remote Desktop Client for Windows | Windows App (Microsoft Remote Desktop) |
+| **Client Technology** | Remote Desktop Client for Windows | Windows App |
 | **Security Triggers** | Device Removal (Smart Card or FIDO2), Idle, Session Disconnect, App Close | Smart Card Removal, Idle, App Close |
-| **Auto Logoff** | Custom Script-based | Native App Features |
+| **Auto Logoff** | Custom Script-based | Native Windows App Features |
 | **Setup Complexity** | Complex | Simple |
 | **Maintenance** | Higher | Lower |
 
