@@ -170,6 +170,18 @@ If (Test-Path -Path $DirKiosk) {
         }
     }
 
+    # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
+    If (Test-Path -Path $ProvisioningPackagesDir) {
+        Write-Log -EventID 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
+        $ProvisioningPackages = Get-ChildItem -Path $ProvisioningPackagesDir -Filter '*.ppkg'
+        ForEach ($Package in $ProvisioningPackages) {
+            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
+            If ($PackageId) {
+                Remove-ProvisioningPackage -PackageId $PackageId
+            }
+        }
+    }
+
     # Restore User Logos
     If (Test-Path -Path "$DirKiosk\UserLogos") {
         Write-Log -EntryType Information -EventId 17 -Message "Restoring User Logo Files"

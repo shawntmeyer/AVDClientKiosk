@@ -1,41 +1,38 @@
 <# 
 .SYNOPSIS
-    This script creates a custom Remote Desktop client for Windows (AVD Client) kiosk configuration designed to only allow the use of the client.
-    It uses a combination of Applocker policies, multi-local group policy settings, Shell Launcher configuration, provisioning packages, and
-    registry edits to complete the configuration. There are basically four major options for configuration:
+    This script creates a custom Windows App (Microsoft Remote Desktop) kiosk configuration designed to only allow the use of the Windows App.
+    It uses a combination of Assigned Access policies, multi-local group policy settings, provisioning packages, and registry edits to complete 
+    the configuration. There are basically four major configuration scenarios:
 
-    * Remote Desktop client shell
-    * Remote Desktop client shell with autologon
-    * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11)
-    * Custom Explorer shell (Windows 10) or Multi-App Kiosk Shell (Windows 11), both with autologon
+    * Single-app kiosk mode with Windows App as the dedicated application
+    * Single-app kiosk mode with Windows App as the dedicated application and autologon
+    * Multi-app kiosk mode with restricted Start menu and taskbar access
+    * Multi-app kiosk mode with restricted Start menu and taskbar access with autologon
 
-    These options are controlled by the combination of the two switch parameters - SingleAppKiosk and Autologon.
+    These options are controlled by the combination of the SingleAppKiosk and AutoLogonKiosk switch parameters.
     
-    When the SingleAppKiosk switch parameter is not used, then you can utilize the -ShowDisplaySettings switch parameter to allow access to the Display Settings page.
+    When the SingleAppKiosk switch parameter is not used, you can utilize the ShowSettings switch parameter to allow access to the Settings app.
     
-    Additionally, you can choose to
+    Additionally, you can choose to:
 
-    * Install the latest Remote Desktop client for Windows and Visual C++ Redistributables directly from the web.
-    * Apply the latest applicable Security Technical Implementation Guides (STIG) group policy settings into the local group policy object via the
-      local group policy object tool. This also applies several delta settings to maintain operability as a kiosk.
-    * Monitor for FIDO Passkey device removals and perform the same actions as smart cards such as local computer lock or Remote Desktop
-      client reset.
+    * Provision the latest Windows App directly from the Microsoft download site so that it is installed for every user.
+    * Configure automatic logoff behavior for the Windows App in kiosk scenarios.
+    * When not configured as an autologon kiosk:
+        * Monitor for smart card removals and perform lock or logoff actions.
+        * Enable SharedPC mode for automatic profile cleanup.
 
 .DESCRIPTION 
     This script completes a series of configuration tasks based on the parameters chosen. These tasks can include:
 
-    * Applocker policy application to block Internet Explorer, Edge, Wordpad, and Notepad
-    * Provisioning packages to remove pinned items from the Start Menu for the custom explorer shell option with Windows 10.
-    * Provisioning packages to enable SharedPC mode.
-    * Multi-Local Group Policy configuration to limit interface elements.
-    * Built-in application removal.
-    * Shell Launcher configuration for the SingleAppKiosk and Windows 10 Autologon scenarios
-    * Multi-App Kiosk configuration for Windows 11 when the SingleAppKiosk switch parameter is not used.
-    * Remote Desktop client for Windows install (If selected)
-    * STIG application (If selected)
-    * Start layout modification for the custom explorer shell options
-    * Custom Azure Virtual Desktop client shortcuts that launches the Remote Desktop client for Windows
-      via a script to enable WMI Event subscription.
+    * Assigned Access configuration for single-app or multi-app kiosk modes
+    * Windows App provisioning from the Microsoft download site or via a local source file.
+    * Automatic logoff and app reset configuration for Windows App
+    * Multi-Local Group Policy configuration to limit interface elements and restrict access
+    * Provisioning packages to Hide Start Menu elements and optionally enable SharedPC mode for automatic profile cleanup
+    * Built-in application removal to reduce attack surface and speed logon.
+    * Start menu and taskbar customization for multi-app kiosk scenarios
+    * Smart card removal behavior configuration (lock or logoff)
+    * Registry modifications to enforce kiosk behavior and settings
 
 .NOTES 
     The script will automatically remove older configurations by running 'Remove-KioskSettings.ps1' during the install process.    
@@ -46,16 +43,20 @@
 .LINK 
 
 
-.PARAMETER AutoLogon
-This switch parameter determines If autologon is enabled through the Shell Launcher configuration. The Shell Launcher feature will automatically
+.PARAMETER AutoLogonKiosk
+This switch parameter determines If autologon is enabled through the Assigned Access configuration. The Assigned Access feature will automatically
 create a new user - 'KioskUser0' - which will not have a password and be configured to automatically logon when Windows starts.
 
-.PARAMETER AutoLogonConfig
-This string parameter determines the autologon configuration for the Windows App when the AutoLogon switch parameter is used. The possible values are:
+.PARAMETER WindowsAppAutoLogoffConfig
+This string parameter determines the automatic logoff configuration for the Windows App when the AutoLogonKiosk switch parameter is used. The possible values are:
 * Disabled - Disables automatic sign-out and app data reset for the Windows App. (Not RECOMMENDED for Kiosk scenarios)
 * ResetAppOnCloseOnly - Sign all users out of Windows App and reset app data when the user closes the app.
 * ResetAppAfterConnection - Sign all users out of Windows App and reset app data when a successful connection to an Azure Virtual Desktop session host or Windows 365 Cloud PC is made.
 * ResetAppOnCloseOrIdle - Sign all users out of Windows App and reset app data when the operating system is idle for the specified time interval in minutes or the user closes the app.
+
+.PARAMETER WindowsAppAutoLogoffTimeInterval
+This integer value determines the interval at which Windows App checks the Windows OS for inactivity.
+For example, if set to 5, the app will poll the OS for inactivity every 5 minutes and the logout process will initiate if the OS reports 5 or more minutes of inactivity. 
 
 .PARAMETER SingleAppKiosk
 This switch parameter determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'.
@@ -73,8 +74,8 @@ deleted on logoff.
 This switch parameter determines If the Settings App appears on the start menu. The settings app and control panel are restricted to the applets/pages specified in the nonadmins-ShowSettings.txt file. If this value is not set,
 then the Settings app and Control Panel are not displayed or accessible.
 
-.PARAMETER IdleTimeOutInMinutes
-This integer value determines the number of minutes in the that system will wait before performing the action specified in the IdleTimeoutAction parameter.
+.PARAMETER LockScreenAfterSeconds
+This integer value determines the number of seconds of idle time before the lock screen is displayed. This parameter is only valid when the AutoLogonKiosk switch parameter is not used.
 
 .PARAMETER SmartCardRemovalAction   
 This string parameter determines what occurs when the smart card that was used to authenticate to the operating system is removed from the system. The possible values are 'Lock' or 'Logoff'.
@@ -86,22 +87,24 @@ This version parameter allows tracking of the installed version using configurat
 #>
 [CmdletBinding()]
 param (
+    [switch]$InstallWindowsApp,
+
     [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
     [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
-    [switch]$AutoLogon,
+    [switch]$AutoLogonKiosk,
 
     [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
     [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [ValidateSet('Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle')]
-    [string]$AutoLogonConfig,
+    [string]$WindowsAppAutoLogoffConfig,
 
-    [int]$IdleTimeoutInMinutes = 15,
+    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
+    [int]$WindowsAppAutoLogoffTimeInterval,
 
-    [switch]$InstallWindowsApp,
-
-    [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
     [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
-    [switch]$LockScreenOnIdleTimeout,
+    [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]    
+    [int]$LockScreenAfterSeconds,
 
     [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
@@ -215,7 +218,7 @@ Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in 
 # Remove Built-in Windows 11 Apps on non LTSC builds of Windows
 If (-not $LTSC) {
     Write-Log -EntryType Information -EventId 25 -Message "Starting Remove Apps Script."
-    Remove-BuildInApps
+    Remove-BuiltInApps
 }
 # Remove OneDrive
 If (Test-Path -Path "$env:SystemRoot\Syswow64\onedrivesetup.exe") {
@@ -294,7 +297,7 @@ ForEach ($Package in $ProvisioningPackages) {
 #endregion Provisioning Packages
 
 #region User Logos
-if ($AutoLogon) {
+if ($AutoLogonKiosk) {
     $null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
     Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
@@ -312,7 +315,7 @@ If ($ShowSettings) {
     Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
-If ($AutoLogon) {
+If ($AutoLogonKiosk) {
     # Disable Password requirement for screen saver lock and wake from sleep.
     $null = cmd /c lgpo.exe /t "$DirGPO\disablePasswordForUnlock.txt" '2>&1'
     Write-Log -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -320,23 +323,21 @@ If ($AutoLogon) {
     Write-Log -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
-    If ($SmartCardRemovalAction) {
-        If ($SmartCardRemovalAction -eq 'Lock') {
-            $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
-            Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-        }
-        ElseIf ($SmartCardRemovalAction -eq 'Logoff') {
-            $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
-            Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-        }
+    If ($SmartCardRemovalAction -eq 'Lock') {
+        $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
+        Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
-    If ($LockScreenOnIdleTimeout) {
+    ElseIf ($SmartCardRemovalAction -eq 'Logoff') {
+        $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
+        Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    }
+    If ($LockScreenAfterSeconds) {
         # Will lock the system via the inactivity timeout built-in policy which locks the screen after inactivity.
         $sourceFile = Join-Path -Path $DirGPO -ChildPath 'MachineInactivityTimeout.inf'
         $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'MachineInactivityTimeout.inf'
-        (Get-Content -Path $SourceFile).Replace('<Seconds>', ($IdleTimeoutInMinutes * 60)) | Out-File $outFile
+        (Get-Content -Path $SourceFile).Replace('<Seconds>', ($LockScreenAfterSeconds)) | Out-File $OutFile
         $null = cmd /c lgpo /s "$outFile" '2>&1'
-        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$($IdleTimeout * 60) seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$LockScreenAfterSeconds seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
     }
 }
@@ -368,7 +369,7 @@ If ($OneDrivePresent) {
     }
 }
 
-if (($AutoLogon -and $AutoLogonConfig -ne 'Disabled') -or $SharedPC) {
+if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $SharedPC) {
     # Streamline the user experience by disabling First Run Experience
     # https://learn.microsoft.com/en-us/windows-app/windowsautologoff#skipfre
     $RegKeys += [PSCustomObject]@{
@@ -380,10 +381,10 @@ if (($AutoLogon -and $AutoLogonConfig -ne 'Disabled') -or $SharedPC) {
     }
 }
 
-If ($AutoLogon) {
+If ($AutoLogonKiosk) {
     #Configure AutoLogoff for the Windows App
     #https://learn.microsoft.com/en-us/windows-app/windowsautologoff
-    Switch ($AutoLogonConfig) {
+    Switch ($WindowsAppAutoLogoffConfig) {
         'ResetAppOnCloseOnly' {
             $RegKeys += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
@@ -485,11 +486,11 @@ If (Test-Path -Path 'HKLM:\Default') {
 
 #endregion Registry Edits
 
-#region Shell Launcher Configuration
+#region Assigned Access Configuration
 
 Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
 If ($SingleAppKiosk) {
-    If ($AutoLogon) {
+    If ($AutoLogonKiosk) {
         $ConfigFile = Join-Path -Path $DirSingleAppSettings -ChildPath "WindowsApp_AutoLogon.xml"
         Write-Log -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App with Autologon via WMI MDM bridge."
     }
@@ -499,7 +500,7 @@ If ($SingleAppKiosk) {
     }
 }
 Else {
-    If ($AutoLogon) {
+    If ($AutoLogonKiosk) {
         If ($ShowSettings) {
             Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App with Settings and Autologon."
             $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings_AutoLogon.xml"
