@@ -77,11 +77,11 @@ The figure below illustrates the Multi-App interface and the ease at which a use
 
 ![Multi-App Showing a client connection](docs/media/multi-app-showing-client-and-connection.png)
 
-The figure below illustrates the Settings applet restricted to allow the user to adjust display settings. This would primarily be used in a multi-monitor scenario.
+The figure below illustrates the Settings applet restricted to allow the user to adjust display or sound settings. This would primarily be used in a multi-monitor scenario.
 
-**Figure 3:** Multi-App Showing Display Settings
+**Figure 3:** Multi-App Showing Restricted Settings
 
-![Multi-App Showing a client connection](docs/media/displaySettings.png)
+![Multi-App Settings](docs/media/Settings.png)
 
 #### Shell Launcher
 

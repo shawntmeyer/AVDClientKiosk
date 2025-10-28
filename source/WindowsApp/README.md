@@ -58,13 +58,13 @@ The user interface experience provides a restricted Start menu with only the Win
 
 **Figure 1:** Multi-App Kiosk showing Windows App interface
 
-*[Screenshot would show the restricted Start menu with Windows App]*
+![Windows App Multi-App](../../docs/media/WindowsApp-MultiApp.png)
 
 The figure below illustrates the Settings applet restricted to allow the user to adjust display and audio settings. This would primarily be used in a multi-monitor scenario or when audio configuration is needed.
 
 **Figure 2:** Multi-App Showing Display Settings
 
-![Windows App Multi-App Showing Display Settings](../../docs/media/WindowsApp-MultiApp.png)
+![Restricted Settings App](../../docs/media/Settings.png)
 
 #### Single-App Kiosk
 
@@ -97,7 +97,7 @@ This section documents the parameters and the manual installation instructions
 
 The table below describes each parameter and any requirements or usage information.
 
-**Table 4:** Set-WindowsAppKioskSettings.ps1 Parameters
+**Table 3:** Set-WindowsAppKioskSettings.ps1 Parameters
 
 | Parameter Name   | Type   | Description | Notes/Requirements |
 |:-----------------|:------:|:------------|:-------------------|
@@ -105,7 +105,7 @@ The table below describes each parameter and any requirements or usage informati
 | `SingleAppKiosk` | Switch | Determines whether to configure single-app kiosk mode with Windows App as the only available application. | When not specified, multi-app kiosk mode is used with a restricted Start menu. |
 | `WindowsAppAutoLogoffConfig` | String | Determines the automatic logoff configuration for the Windows App when AutoLogonKiosk is used. | Possible values: 'Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle'. |
 | `WindowsAppAutoLogoffTimeInterval` | Int | Determines the interval in minutes at which Windows App checks for OS inactivity. | Used with 'ResetAppOnCloseOrIdle' configuration. Default is 15 minutes. |
-| `InstallWindowsApp` | Switch | Determines if the latest Windows App is automatically downloaded and provisioned on the system prior to configuration. | Requires internet access to Microsoft download servers. |
+| `InstallWindowsApp` | Switch | Determines if the latest Windows App is automatically downloaded and provisioned on the system prior to configuration. | Requires internet access to (https://go.microsoft.com/fwlink/?linkid=2262633) and the url to which it redirects. Alternatively, download the MSIX file from this link and place it in the root of the [Apps\WindowsApp](Apps\WindowsApp) folder |
 | `SharedPC` | Switch | Determines if the computer is setup as a shared PC with automatic profile cleanup. | Only valid for direct logon mode (AutoLogonKiosk switch is not used). |
 | `ShowSettings` | Switch | Determines if the Settings App appears in the restricted interface, limited to display and audio settings. | Only valid when SingleAppKiosk is not specified. |
 | `LockScreenAfterSeconds` | Int | Determines the number of seconds of idle time before the lock screen is displayed. | Only valid when AutoLogonKiosk is not used. |
