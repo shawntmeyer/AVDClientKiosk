@@ -89,16 +89,6 @@ The table below outlines the automatic logoff behaviors available for Windows Ap
 | ResetAppAfterConnection | Sign out users and reset app data when a successful connection is made to a session host or Cloud PC. Provides automatic cleanup after establishing connections |
 | ResetAppOnCloseOrIdle | Sign out users and reset app data when the app is closed OR the system is idle for the specified interval | Comprehensive cleanup for shared devices |
 
-**Table 3:** Smart Card Removal Action Summary
-
-> [!NOTE]
-> The SmartCardRemovalAction parameter only has an effect when the AutologonKiosk switch is not present.
-
-| SmartCardRemovalAction | Behavior |
-| :--------------------: | :------- |
-| Lock | The built-in Smart Card Policy removal service is configured to lock the system when the smart card is removed. |
-| Logoff | The built-in Smart Card Policy removal service is configured to force logoff the user when the smart card is removed. |
-
 ## Installation
 
 This section documents the parameters and the manual installation instructions
