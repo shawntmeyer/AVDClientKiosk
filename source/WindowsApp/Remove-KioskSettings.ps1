@@ -198,8 +198,11 @@ If (Test-Path -Path $DirKiosk) {
 }
 
 # Remove Scheduled Tasks
-Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 19 -EntryType Information -Message "Removing Scheduled Tasks."
-Get-ScheduledTask | Where-Object {$_.TaskName -like '(AVD Client)*'} | Unregister-ScheduledTask -Confirm:$false
+$ScheduledTasks = Get-ScheduledTask | Where-Object {$_.TaskName -like '(AVD Client)*'}
+If ($ScheduledTasks) {
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 19 -EntryType Information -Message "Removing Scheduled Tasks."
+    $ScheduledTasks | Unregister-ScheduledTask -Confirm:$false
+}
 
 # Remove Custom Start Menu Shortcut
 Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 20 -EntryType Information -Message "Removing Custom AVD Client Shortcuts."
