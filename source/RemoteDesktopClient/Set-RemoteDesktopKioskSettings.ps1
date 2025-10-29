@@ -280,12 +280,11 @@ Else {
 #endregion Functions
 
 #region Initialization
-If (-not (Get-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue)) {
-    New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-    Write-Output "Waiting 5 seconds for event log to be ready..."
-    # Wait for event log to be ready
-    Start-Sleep -Seconds 5
-}
+New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
+Write-Output "Waiting 5 seconds for event log to be ready..."
+# Wait for event log to be ready
+Start-Sleep -Seconds 5
+
 
 $message = @"
 Starting Remote Desktop Client Kiosk Configuration Script
@@ -776,7 +775,7 @@ If ($ScriptExitCode -eq 1618) {
     Restart-Computer -Force
 }
 Else {
-    $ScriptExitCode = 1641
+    $ScriptExitCode = 0
 }
     
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"

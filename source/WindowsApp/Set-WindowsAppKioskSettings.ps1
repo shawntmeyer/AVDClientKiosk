@@ -189,11 +189,11 @@ ForEach ($Function in $Functions) {
 
 #region Initialization
 
-If (-not (Get-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue)) {
-    New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-    # Wait for event log to be ready
-    Start-Sleep -Seconds 5
-}
+
+New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
+# Wait for event log to be ready
+Start-Sleep -Seconds 5
+
 $message = @"
 Starting Windows App Kiosk Configuration Script
 Script Name:    $($Script:FullName)
