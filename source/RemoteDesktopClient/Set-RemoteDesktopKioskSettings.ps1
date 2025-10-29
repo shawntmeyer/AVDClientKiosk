@@ -267,11 +267,19 @@ ForEach ($Function in $Functions) {
 #endregion Functions
 
 #region Initialization
+If (-not (Get-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue)) {
+    New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
+    # Wait for event log to be ready
+    Start-Sleep -Seconds 5
+}
 
-New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message "Executing '$Script:FullName'."
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 2 -Message "Running on $($OS.Caption) version $($OS.Version)."
+$message = @"
+Starting Remote Desktop Client Kiosk Configuration Script
+Script Name:    $($Script:FullName)
+Parameters:     $($PSBoundParameters | Out-String)
+Running on:     $($OS.Caption) version $($OS.Version)
+"@
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message $message
 
 If (Get-PendingReboot) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
