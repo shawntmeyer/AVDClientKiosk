@@ -4,16 +4,17 @@ param (
     [string]$EventSource = 'Removal',
     [switch]$Reinstall
 )
-
 #region Set Variables
 $script:FullName = $MyInvocation.MyCommand.Path
 $script:Dir = Split-Path $script:FullName
+$Script:File = [string]$myInvocation.MyCommand.Name
+$DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 $DirGPOs = "$Script:Dir\gposettings"
 $DirTools = "$Script:Dir\Tools"
 $DirKiosk = "$env:SystemDrive\KioskSettings"
 $DirProvisioningPackages = "$DirKiosk\ProvisioningPackages"
+$FileAppLockerRestore = "$DirKiosk\AppLockerPolicy.xml"
 $FileRegValuesRestore = "$DirKiosk\RegKeyRestore.csv"
-$FileAppLockerRestore = "$DirKiosk\ApplockerPolicy.xml"
 
 #endregion Set Variables
 
@@ -22,19 +23,20 @@ $FileAppLockerRestore = "$DirKiosk\ApplockerPolicy.xml"
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     $scriptArguments = $null
     Try {
-        foreach ($k in $PSBoundParameters.keys) {
-            switch ($PSBoundParameters[$k].GetType().Name) {
-                "SwitchParameter" { if ($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
-                "String" { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
-                "Int32" { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
-                "Boolean" { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
-                "Version" { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
+        foreach($k in $PSBoundParameters.keys)
+        {
+            switch($PSBoundParameters[$k].GetType().Name)
+            {
+                "SwitchParameter" {if($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
+                "String"          { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
+                "Int32"           { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
+                "Boolean"         { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
+                "Version"          { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
             }
         }
         If ($null -ne $scriptArguments) {
             $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`" $scriptArguments" -PassThru -Wait -NoNewWindow
-        }
-        Else {
+        } Else {
             $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`"" -PassThru -Wait -NoNewWindow
         }
     }
@@ -118,7 +120,7 @@ If (Test-Path -Path $DirKiosk) {
             $Value = $RegValue.Value
 
             If ($Path -like 'HKCU:\*') {
-                $Path = $Path.Replace("HKCU:\", "HKLM:\Default\")
+                $Path = $Path.Replace("HKCU:\","HKLM:\Default\")
             }
 
             If ($null -ne $Value -and $Value -ne '') {
@@ -156,19 +158,26 @@ If (Test-Path -Path $DirKiosk) {
     If (Test-Path -Path $FileAppLockerRestore) {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 15 -EntryType Information -Message "Restoring AppLocker Policy to Default."
         Set-AppLockerPolicy -XmlPolicy $FileAppLockerRestore
-        Set-Service -Name AppIDSvc -StartupType Manual -ErrorAction SilentlyContinue
-        Stop-Service -Name AppIDSvc -Force
-        If ((Get-Service -Name AppIDSvc).Status -eq 'Running') {
-            Stop-Service -Name AppIDSvc -Force -ErrorAction SilentlyContinue
-        }
     }
 
     # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
     If (Test-Path -Path $DirProvisioningPackages) {
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by a previous configuration."
         $ProvisioningPackages = Get-ChildItem -Path $DirProvisioningPackages -Filter '*.ppkg'
         ForEach ($Package in $ProvisioningPackages) {
-            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object { $_.PackageName -eq "$($package.BaseName)" }).PackageId
+            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
+            If ($PackageId) {
+                Remove-ProvisioningPackage -PackageId $PackageId
+            }
+        }
+    }
+
+    # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
+    If (Test-Path -Path $ProvisioningPackagesDir) {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
+        $ProvisioningPackages = Get-ChildItem -Path $ProvisioningPackagesDir -Filter '*.ppkg'
+        ForEach ($Package in $ProvisioningPackages) {
+            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
             If ($PackageId) {
                 Remove-ProvisioningPackage -PackageId $PackageId
             }
@@ -177,7 +186,7 @@ If (Test-Path -Path $DirKiosk) {
 
     # Restore User Logos
     If (Test-Path -Path "$DirKiosk\UserLogos") {
-        Write-Log -EntryType Information -EventId 17 -Message "Restoring User Logo Files"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 17 -Message "Restoring User Logo Files"
         Get-ChildItem -Path "$DirKiosk\UserLogos" | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
         $null = cmd /c "$DirTools\lgpo.exe" /t "$DirGPOs\Remove-computer-userlogos.txt" '2>&1'
     }
@@ -214,15 +223,15 @@ If (Test-Path -Path 'HKLM:\Software\Kiosk') {
 # Remove Keyboard Filter
 If ((Get-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter).state -eq 'Enabled') {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 22 -EntryType Information -Message "Removing Keyboard Filter and configuration."
-    If ($Reinstall) { Disable-KeyboardFilter -Reinstall } Else { Disable-KeyboardFilter }
+    if ($Reinstall) { Disable-KeyboardFilter -Reinstall } Else { Disable-KeyboardFilter }   
 }
 
-If (Get-LocalUser | Where-Object { $_.Name -eq 'KioskUser0' }) {
+If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
 
     # Delete Kiosk User Profile if it exists. First Logoff Kiosk User.
     try {
         ## Find all sessions matching the specified username
-        $sessions = quser | Where-Object { $_ -match 'kioskuser0' }
+        $sessions = quser | Where-Object {$_ -match 'kioskuser0'}
         If ($sessions) {
             ## Parse the session IDs from the output
             $sessionIds = ($sessions -split ' +')[2]
@@ -233,12 +242,10 @@ If (Get-LocalUser | Where-Object { $_.Name -eq 'KioskUser0' }) {
                 logoff $_
             }
         }
-    }
-    catch {
+    } catch {
         if ($_.Exception.Message -match 'No user exists') {
             Write-Host "The user is not logged in."
-        }
-        else {
+        } else {
             throw $_.Exception.Message
         }
     }

@@ -11,10 +11,9 @@ $Script:File = [string]$myInvocation.MyCommand.Name
 $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 $DirGPOs = "$Script:Dir\gposettings"
 $DirTools = "$Script:Dir\Tools"
-$DirConfigurationScripts = "$Script:Dir\Scripts\Configuration"
 $DirKiosk = "$env:SystemDrive\KioskSettings"
 $DirProvisioningPackages = "$DirKiosk\ProvisioningPackages"
-$FileAppLockerPolicy = "$DirKiosk\AppLockerPolicy.xml"
+$FileAppLockerRestore = "$DirKiosk\AppLockerPolicy.xml"
 $FileRegValuesRestore = "$DirKiosk\RegKeyRestore.csv"
 
 #endregion Set Variables
@@ -156,9 +155,9 @@ If (Test-Path -Path $DirKiosk) {
     }
 
     # Remove Applocker Configuration by clearing Applocker Policy.
-    If (Test-Path -Path $AppLockerRestoreFile) {
+    If (Test-Path -Path $FileAppLockerRestore) {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 15 -EntryType Information -Message "Restoring AppLocker Policy to Default."
-        Set-AppLockerPolicy -XmlPolicy $AppLockerRestoreFile
+        Set-AppLockerPolicy -XmlPolicy $FileAppLockerRestore
     }
 
     # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
