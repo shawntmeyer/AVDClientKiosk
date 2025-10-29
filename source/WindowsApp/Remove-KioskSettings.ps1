@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param (
-    [string]$EventLog = 'Windows App Kiosk',
+    [string]$EventLog = 'Windows-App-Kiosk',
     [string]$EventSource = 'Removal',
     [switch]$Reinstall
 )
