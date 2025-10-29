@@ -557,13 +557,22 @@ If (-not $Autologon) {
 }
 
 If ($OneDrivePresent) {
-    # Remove OneDrive from starting for each user.
     $RegKeys += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
         Name         = 'OneDriveSetup'
         PropertyType = 'String'
         Value        = ''
         Description  = 'Remove OneDriveSetup from starting for each user.'
+    }
+}
+
+If (-not $ClientShell) {
+    $RegKeys += [PSCustomObject]@{
+        Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+        Name         = 'StartShownOnUpgrade'
+        PropertyType = 'DWord'
+        Value        = 1
+        Description  = 'Disable Start Menu from opening automatically'
     }
 }
 
@@ -589,17 +598,17 @@ ForEach ($Entry in $RegKeys) {
     $Description = $Entry.Description
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 99 -Message "Processing Registry Value to '$Description'."
 
-    If ($Path -like 'HKCU:\*') {
-        $Path = $Path.Replace("HKCU:\", "HKLM:\Default\")
+    If ($Path -like 'HKCU:*') {
+        $PathTemp = $Path.Replace("HKCU:\", "HKLM:\Default\")
         If (-not (Test-Path -Path 'HKLM:\Default')) {
             Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 94 -Message "Loading Default User Hive Registry Keys via Reg.exe."
-            $null = cmd /c REG LOAD "HKLM\Default" "$env:SystemDrive\Users\default\ntuser.dat" '2>&1'
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
+            $RegLoad = Start-Process -FilePath 'reg.exe' -ArgumentList 'load', 'HKLM\Default', "$env:SystemDrive\Users\default\ntuser.dat" -NoNewWindow -Wait -PassThru
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$($RegLoad.ExitCode)]"
         }
     }
     $CurrentRegValue = $null
-    If (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue) {
-        $CurrentRegValue = Get-ItemPropertyValue -Path $Path -Name $Name
+    If (Get-ItemProperty -Path $PathTemp -Name $Name -ErrorAction SilentlyContinue) {
+        $CurrentRegValue = Get-ItemPropertyValue -Path $PathTemp -Name $Name
         Add-Content -Path $FileRestore -Value "$Path,$Name,$PropertyType,$CurrentRegValue"
     }
     Else {
@@ -608,32 +617,22 @@ ForEach ($Entry in $RegKeys) {
 
     If ($Value -ne '' -and $null -ne $Value) {
         # This is a set action
-        Set-RegistryValue -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value       
+        Set-RegistryValue -Path $PathTemp -Name $Name -PropertyType $PropertyType -Value $Value       
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 100 -Message "Setting '$PropertyType' Value '$Name' with Value '$Value' to '$Path'"
     }
     Elseif ($CurrentRegValue) {     
-        Remove-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $PathTemp -Name $Name -ErrorAction SilentlyContinue
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 102 -Message "Deleted Value '$Name' from '$Path'."
     }               
 }    
 
 If (Test-Path -Path 'HKLM:\Default') {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 103 -Message "Unloading Default User Hive Registry Keys via Reg.exe."
-    $null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 104 -Message "Reg.exe Exit Code: [$LastExitCode]"
-    If ($LastExitCode -ne 0) {
-        # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
-        [GC]::Collect()
-        [GC]::WaitForPendingFinalizers()
-        Start-Sleep -Seconds 5
-        $null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
-        If ($LastExitCode -eq 0) {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
-        }
-        Else {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 107 -Message "Default User hive unloaded with exit code [$LastExitCode]."
-        }
-    }
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+    Start-Sleep -Seconds 5
+    $RegUnload = Start-Process 'reg.exe' -ArgumentList 'UNLOAD', 'HKLM\Default' -Wait -NoNewWindow -PassThru
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 104 -Message "Reg.exe Exit Code: [$($RegUnload.ExitCode)]"
 }
 
 #endregion Registry Edits

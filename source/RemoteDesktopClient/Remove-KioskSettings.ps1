@@ -22,20 +22,19 @@ $FileRegValuesRestore = "$DirKiosk\RegKeyRestore.csv"
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     $scriptArguments = $null
     Try {
-        foreach($k in $PSBoundParameters.keys)
-        {
-            switch($PSBoundParameters[$k].GetType().Name)
-            {
-                "SwitchParameter" {if($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
-                "String"          { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
-                "Int32"           { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
-                "Boolean"         { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
-                "Version"          { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
+        foreach ($k in $PSBoundParameters.keys) {
+            switch ($PSBoundParameters[$k].GetType().Name) {
+                "SwitchParameter" { if ($PSBoundParameters[$k].IsPresent) { $scriptArguments += "-$k " } }
+                "String" { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
+                "Int32" { $scriptArguments += "-$k $($PSBoundParameters[$k]) " }
+                "Boolean" { $scriptArguments += "-$k `$$($PSBoundParameters[$k]) " }
+                "Version" { $scriptArguments += "-$k `"$($PSBoundParameters[$k])`" " }
             }
         }
         If ($null -ne $scriptArguments) {
             $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`" $scriptArguments" -PassThru -Wait -NoNewWindow
-        } Else {
+        }
+        Else {
             $RunScript = Start-Process -FilePath "$env:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -ArgumentList "-File `"$PSCommandPath`"" -PassThru -Wait -NoNewWindow
         }
     }
@@ -123,7 +122,7 @@ If (Test-Path -Path $DirKiosk) {
             $Value = $RegValue.Value
 
             If ($Path -like 'HKCU:\*') {
-                $Path = $Path.Replace("HKCU:\","HKLM:\Default\")
+                $Path = $Path.Replace("HKCU:\", "HKLM:\Default\")
             }
 
             If ($null -ne $Value -and $Value -ne '') {
@@ -138,23 +137,18 @@ If (Test-Path -Path $DirKiosk) {
         
         If ($HiveLoaded) {
             Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 12 -EntryType Information -Message "Unloading Default User Hive."
+            [GC]::Collect()
+            [GC]::WaitForPendingFinalizers()
+            Start-Sleep -Seconds 5
             $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait -PassThru -NoNewWindow
-            $ExitCode = $HiveUnloadResult.ExitCode
-            If ($ExitCode -ne 0) {
-                # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
-                [GC]::Collect()
-                [GC]::WaitForPendingFinalizers()
-                Start-Sleep -Seconds 5
-                $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait
-                $ExitCode = $HiveUnloadResult.ExitCode
+            
+            If ($HiveUnloadResult.ExitCode -eq 0) {
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 13 -EntryType Information -Message "Hive unloaded successfully."
             }
+            Else {
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 14 -EntryType Error -Message "Hive unloaded with exit code '$($HiveUnloadResult.ExitCode)'."
+            }      
         }
-        If ($ExitCode -eq 0) {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 13 -EntryType Information -Message "Hive unloaded successfully."
-        }
-        Else {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 14 -EntryType Error -Message "Hive unloaded with exit code '$ExitCode'."
-        }      
     }
 
     # Remove Applocker Configuration by clearing Applocker Policy.
@@ -168,19 +162,7 @@ If (Test-Path -Path $DirKiosk) {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by a previous configuration."
         $ProvisioningPackages = Get-ChildItem -Path $DirProvisioningPackages -Filter '*.ppkg'
         ForEach ($Package in $ProvisioningPackages) {
-            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
-            If ($PackageId) {
-                Remove-ProvisioningPackage -PackageId $PackageId
-            }
-        }
-    }
-
-    # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
-    If (Test-Path -Path $ProvisioningPackagesDir) {
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
-        $ProvisioningPackages = Get-ChildItem -Path $ProvisioningPackagesDir -Filter '*.ppkg'
-        ForEach ($Package in $ProvisioningPackages) {
-            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
+            $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object { $_.PackageName -eq "$($package.BaseName)" }).PackageId
             If ($PackageId) {
                 Remove-ProvisioningPackage -PackageId $PackageId
             }
@@ -200,7 +182,7 @@ If (Test-Path -Path $DirKiosk) {
 }
 
 # Remove Scheduled Tasks
-$ScheduledTasks = Get-ScheduledTask | Where-Object {$_.TaskName -like '(AVD Client)*'}
+$ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like '(AVD Client)*' }
 If ($ScheduledTasks) {
     $Removed = $true
     Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 19 -EntryType Information -Message "Removing Scheduled Tasks."
@@ -234,13 +216,13 @@ If ((Get-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter).stat
     if ($Reinstall) { Disable-KeyboardFilter -Reinstall } Else { Disable-KeyboardFilter }   
 }
 
-If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
+If (Get-LocalUser | Where-Object { $_.Name -eq 'KioskUser0' }) {
     $Removed = $true
 
     # Delete Kiosk User Profile if it exists. First Logoff Kiosk User.
     try {
         ## Find all sessions matching the specified username
-        $sessions = quser | Where-Object {$_ -match 'kioskuser0'}
+        $sessions = quser | Where-Object { $_ -match 'kioskuser0' }
         If ($sessions) {
             ## Parse the session IDs from the output
             $sessionIds = ($sessions -split ' +')[2]
@@ -251,10 +233,12 @@ If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
                 logoff $_
             }
         }
-    } catch {
+    }
+    catch {
         if ($_.Exception.Message -match 'No user exists') {
             Write-Host "The user is not logged in."
-        } else {
+        }
+        else {
             throw $_.Exception.Message
         }
     }
@@ -266,6 +250,7 @@ If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
 }
 If ($Removed) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 27 -EntryType Information -Message "Elements of Custom Kiosk Mode removed successfully."
-} Else {
+}
+Else {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 28 -EntryType Information -Message "No elements of Custom Kiosk Mode were found to remove."
 }
