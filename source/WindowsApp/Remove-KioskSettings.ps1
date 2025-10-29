@@ -1,3 +1,9 @@
+[CmdletBinding()]
+param (
+    [string]$EventLog = 'Windows App Kiosk',
+    [string]$EventSource = 'Configuration Removal Script',
+    [switch]$Reinstall
+)
 #region Set Variables
 $script:FullName = $MyInvocation.MyCommand.Path
 $script:Dir = Split-Path $script:FullName
@@ -10,9 +16,6 @@ $DirKiosk = "$env:SystemDrive\KioskSettings"
 $DirProvisioningPackages = "$DirKiosk\ProvisioningPackages"
 $FileAppLockerPolicy = "$DirKiosk\AppLockerPolicy.xml"
 $FileRegValuesRestore = "$DirKiosk\RegKeyRestore.csv"
-# Event Log Information
-$EventLog = 'Windows App Kiosk'
-$EventSource = 'Configuration Removal Script'
 
 #endregion Set Variables
 
@@ -55,7 +58,7 @@ ForEach ($Function in $Functions) {
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 
-Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
 
 #endregion Initialization and Logging
 
@@ -64,26 +67,26 @@ Write-Log -EntryType Information -EventId 5 -Message "Executing '$Script:FullNam
 # Removing Embedded Shells Configuration
 
 If (Get-AssignedAccessShellLauncher) {
-    Write-Log -EventId 6 -EntryType Information -Message "Removing Shell Launcher settings via WMI Bridge."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 6 -EntryType Information -Message "Removing Shell Launcher settings via WMI Bridge."
     Clear-AssignedAccessShellLauncher
 }
 
 If (Get-AssignedAccessConfiguration) {
-    Write-Log -EventId 6 -EntryType Information -Message "Removing Multi-App Kiosk Configuration via WMI Bridge."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 6 -EntryType Information -Message "Removing Multi-App Kiosk Configuration via WMI Bridge."
     Clear-AssignedAccessConfiguration
 }
 
 # Removing Non-Administrators Local GPO.
 $DirNonAdminsGPO = "$env:SystemRoot\System32\GroupPolicyUsers\S-1-5-32-545"
 If (Test-Path -Path $DirNonAdminsGPO) {
-    Write-Log -EventId 7 -EntryType Information -Message "Deleting Non-Administrators local group policy object and forcing GPUpdate."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 7 -EntryType Information -Message "Deleting Non-Administrators local group policy object and forcing GPUpdate."
     Remove-Item -Path $DirNonAdminsGPO -Recurse -Force -ErrorAction SilentlyContinue
     If (!(Test-Path -Path $DirNonAdminsGPO)) {
-        Write-Log -EventId 8 -EntryType Information -Message "Non-Administrators Local GPO removed successfully."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 8 -EntryType Information -Message "Non-Administrators Local GPO removed successfully."
         Start-Process -FilePath "gpupdate.exe" -ArgumentList "/Force" -Wait -ErrorAction SilentlyContinue
     }
     Else {
-        Write-Log -EventId 9 -EntryType Error -Message "Non-Administrators Local GPO folder was not removed successfully."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 9 -EntryType Error -Message "Non-Administrators Local GPO folder was not removed successfully."
         Exit 2
     }
 }
@@ -93,14 +96,14 @@ If (Test-Path -Path $DirKiosk) {
     If (Test-Path -Path $FileRegValuesRestore) {
         $RegValues = Import-Csv -Path $FileRegValuesRestore
 
-        Write-Log -EventId 10 -EntryType Information -Message "Restoring registry values to default."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 10 -EntryType Information -Message "Restoring registry values to default."
         
         # Check if any registry keys require HKCU access before loading the hive
         $RequiresHKCU = $RegValues | Where-Object { $_.Key -like 'HKCU:*' }
         $HiveLoaded = $false
         
         If ($RequiresHKCU) {
-            Write-Log -EventId 11 -EntryType Information -Message "Loading Default User Hive for HKCU registry operations."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 11 -EntryType Information -Message "Loading Default User Hive for HKCU registry operations."
             Start-Process -FilePath "REG.exe" -ArgumentList "LOAD", "HKLM\Default", "$env:SystemDrive\Users\default\ntuser.dat" -Wait
             $HiveLoaded = $true
         }
@@ -132,7 +135,7 @@ If (Test-Path -Path $DirKiosk) {
         }
         
         If ($HiveLoaded) {
-            Write-Log -EventId 12 -EntryType Information -Message "Unloading Default User Hive."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 12 -EntryType Information -Message "Unloading Default User Hive."
             $HiveUnloadResult = Start-Process -FilePath "REG.exe" -ArgumentList "UNLOAD", "HKLM\Default" -Wait -PassThru -NoNewWindow
             $ExitCode = $HiveUnloadResult.ExitCode
             If ($ExitCode -ne 0) {
@@ -145,22 +148,22 @@ If (Test-Path -Path $DirKiosk) {
             }
         }
         If ($ExitCode -eq 0) {
-            Write-Log -EventId 13 -EntryType Information -Message "Hive unloaded successfully."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 13 -EntryType Information -Message "Hive unloaded successfully."
         }
         Else {
-            Write-Log -EventId 14 -EntryType Error -Message "Hive unloaded with exit code '$ExitCode'."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 14 -EntryType Error -Message "Hive unloaded with exit code '$ExitCode'."
         }      
     }
 
     # Remove Applocker Configuration by clearing Applocker Policy.
     If (Test-Path -Path $AppLockerRestoreFile) {
-        Write-Log -EventID 15 -EntryType Information -Message "Restoring AppLocker Policy to Default."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 15 -EntryType Information -Message "Restoring AppLocker Policy to Default."
         Set-AppLockerPolicy -XmlPolicy $AppLockerRestoreFile
     }
 
     # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
     If (Test-Path -Path $DirProvisioningPackages) {
-        Write-Log -EventID 16 -EntryType Information -Message "Removing any provisioning packages previously applied by a previous configuration."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by a previous configuration."
         $ProvisioningPackages = Get-ChildItem -Path $DirProvisioningPackages -Filter '*.ppkg'
         ForEach ($Package in $ProvisioningPackages) {
             $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
@@ -172,7 +175,7 @@ If (Test-Path -Path $DirKiosk) {
 
     # Remove Provisioning Packages by finding the package files in the kiosksettings directory and removing them from the OS.
     If (Test-Path -Path $ProvisioningPackagesDir) {
-        Write-Log -EventID 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 16 -EntryType Information -Message "Removing any provisioning packages previously applied by this configuration."
         $ProvisioningPackages = Get-ChildItem -Path $ProvisioningPackagesDir -Filter '*.ppkg'
         ForEach ($Package in $ProvisioningPackages) {
             $PackageId = (Get-ProvisioningPackage -AllInstalledPackages | Where-Object {$_.PackageName -eq "$($package.BaseName)"}).PackageId
@@ -184,22 +187,22 @@ If (Test-Path -Path $DirKiosk) {
 
     # Restore User Logos
     If (Test-Path -Path "$DirKiosk\UserLogos") {
-        Write-Log -EntryType Information -EventId 17 -Message "Restoring User Logo Files"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 17 -Message "Restoring User Logo Files"
         Get-ChildItem -Path "$DirKiosk\UserLogos" | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
         $null = cmd /c "$DirTools\lgpo.exe" /t "$DirGPOs\Remove-computer-userlogos.txt" '2>&1'
     }
 
     # Remove Kiosk Settings Directory
-    Write-Log -EventId 18 -EntryType Information -Message "Removing '$DirKiosk' Directory"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 18 -EntryType Information -Message "Removing '$DirKiosk' Directory"
     Remove-Item -Path $DirKiosk -Recurse -Force 
 }
 
 # Remove Scheduled Tasks
-Write-Log -EventId 19 -EntryType Information -Message "Removing Scheduled Tasks."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 19 -EntryType Information -Message "Removing Scheduled Tasks."
 Get-ScheduledTask | Where-Object {$_.TaskName -like '(AVD Client)*'} | Unregister-ScheduledTask -Confirm:$false
 
 # Remove Custom Start Menu Shortcut
-Write-Log -EventId 20 -EntryType Information -Message "Removing Custom AVD Client Shortcuts."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 20 -EntryType Information -Message "Removing Custom AVD Client Shortcuts."
 $DirsShortcuts = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup", "$env:SystemDrive\Users\Public\Desktop"
 $linkAVD = "Azure Virtual Desktop.lnk"
 ForEach ($DirShortcut in $DirsShortcuts) {
@@ -210,15 +213,15 @@ ForEach ($DirShortcut in $DirsShortcuts) {
 }
 
 # Remove Version Registry Entry
-Write-Log -EventId 21 -EntryType Information -Message "Removing Kiosk Registry Key to track install version."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 21 -EntryType Information -Message "Removing Kiosk Registry Key to track install version."
 If (Test-Path -Path 'HKLM:\Software\Kiosk') {
     Remove-Item -Path 'HKLM:\Software\Kiosk' -Recurse -Force
 }
 
 # Remove Keyboard Filter
 If ((Get-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter).state -eq 'Enabled') {
-    Write-Log -EventId 22 -EntryType Information -Message "Removing Keyboard Filter and configuration."
-    Disable-KeyboardFilter    
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 22 -EntryType Information -Message "Removing Keyboard Filter and configuration."
+    if ($Reinstall) { Disable-KeyboardFilter -Reinstall } Else { Disable-KeyboardFilter }   
 }
 
 If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
@@ -230,10 +233,10 @@ If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
         If ($sessions) {
             ## Parse the session IDs from the output
             $sessionIds = ($sessions -split ' +')[2]
-            Write-Log -EventId 23 -EntryType Information -Message "Found $(@($sessionIds).Count) user login(s) on computer."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 23 -EntryType Information -Message "Found $(@($sessionIds).Count) user login(s) on computer."
             ## Loop through each session ID and pass each to the logoff command
             $sessionIds | ForEach-Object {
-                Write-Log -EventId 24 -EntryType Information -Message "Logging off session id [$($_)]..."
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 24 -EntryType Information -Message "Logging off session id [$($_)]..."
                 logoff $_
             }
         }
@@ -245,10 +248,10 @@ If (Get-LocalUser | Where-Object {$_.Name -eq 'KioskUser0'}) {
         }
     }
 
-    Write-Log -EventId 25 -EntryType Information -Message "Deleting User Profile"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 25 -EntryType Information -Message "Deleting User Profile"
     Get-CimInstance -Class Win32_UserProfile | Where-Object { $_.LocalPath.split('\')[-1] -eq 'KioskUser0' } | Remove-CimInstance -ErrorAction SilentlyContinue
-    Write-Log -EventId 26 -EntryType Information -Message "Removing 'KioskUser0' User Account."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 26 -EntryType Information -Message "Removing 'KioskUser0' User Account."
     Remove-LocalUser -Name 'KioskUser0'
 }
 
-Write-Log -EventId 27 -EntryType Information -Message "**** Custom Kiosk Mode removed successfully ****"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 27 -EntryType Information -Message "**** Custom Kiosk Mode removed successfully ****"

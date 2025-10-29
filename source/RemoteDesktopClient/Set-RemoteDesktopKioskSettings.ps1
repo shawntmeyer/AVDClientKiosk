@@ -269,11 +269,11 @@ ForEach ($Function in $Functions) {
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 
-Write-Log -EntryType Information -EventId 1 -Message "Executing '$Script:FullName'."
-Write-Log -EntryType Information -EventId 2 -Message "Running on $($OS.Caption) version $($OS.Version)."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message "Executing '$Script:FullName'."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 2 -Message "Running on $($OS.Caption) version $($OS.Version)."
 
 If (Get-PendingReboot) {
-    Write-Log -EntryType Error -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
     Start-Process -FilePath 'shutdown.exe' -ArgumentList '/r /t 15'
     Exit 2
 }
@@ -291,7 +291,7 @@ $TaskschdLog.SaveChanges()
 #region Remove Previous Versions
 
 # Run Removal Script first in the event that a previous version is installed or in the event of a failed installation.
-Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
 & "$Script:Dir\Remove-KioskSettings.ps1"
 
 #endregion Previous Version Removal
@@ -300,18 +300,18 @@ Write-Log -EntryType Information -EventId 3 -Message 'Running removal script in 
 
 # Remove Built-in Windows 10 Apps on non LTSC builds of Windows
 If (-not $LTSC) {
-    Write-Log -EntryType Information -EventId 25 -Message "Starting Remove Apps Script."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 25 -Message "Starting Remove Apps Script."
     Remove-BuiltInApps
 }
 
 # Remove OneDrive
 If (Test-Path -Path "$env:SystemRoot\Syswow64\onedrivesetup.exe") {
-    Write-Log -EntryType Information -EventId 26 -Message "Removing Per-User installation of OneDrive."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 26 -Message "Removing Per-User installation of OneDrive."
     Start-Process -FilePath "$env:SystemRoot\Syswow64\onedrivesetup.exe" -ArgumentList "/uninstall" -Wait -ErrorAction SilentlyContinue
     $OneDrivePresent = $true
 }
 ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
-    Write-Log -EntryType Information -EventId 26 -Message "Removing Per-Machine Installation of OneDrive."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 26 -Message "Removing Per-Machine Installation of OneDrive."
     $OneDriveSetup = Get-ChildItem -Path "$env:ProgramFiles\Microsoft OneDrive" -Filter 'onedrivesetup.exe' -Recurse
     If ($OneDriveSetup) {
         Start-Process -FilePath $OneDriveSetup[0].FullName -ArgumentList "/uninstall" -Wait -ErrorAction SilentlyContinue
@@ -322,9 +322,9 @@ ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
 
 #region Install Remote Desktop Client
 If ($InstallRemoteDesktopClient) {
-    Write-Log -EntryType Information -EventID 30 -Message "Running Script to install or update Visual C++ Redistributables."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 30 -Message "Running Script to install or update Visual C++ Redistributables."
     & "$DirApps\VisualC++Redistributables\Install-VisualC++Redistributables.ps1"
-    Write-Log -EntryType Information -EventId 31 -Message "Running Script to install or update the Remote Desktop Client."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 31 -Message "Running Script to install or update the Remote Desktop Client."
     & "$DirApps\RemoteDesktopClient\Install-RemoteDesktopClient.ps1"
 }
 #endregion Install Remote Desktop Client
@@ -332,13 +332,13 @@ If ($InstallRemoteDesktopClient) {
 #region KioskSettings Directory
 
 #Create the KioskSettings Directory
-Write-Log -EntryType Information -EventId 40 -Message "Creating KioskSettings Directory at root of system drive."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 40 -Message "Creating KioskSettings Directory at root of system drive."
 If (-not (Test-Path $DirKiosk)) {
     New-Item -Path $DirKiosk -ItemType Directory -Force | Out-Null
 }
 
 # Setting ACLs on the Kiosk Settings directory to prevent Non-Administrators from changing files. Defense in Depth.
-Write-Log -EntryType Information -EventId 41 -Message "Configuring Kiosk Directory ACLs"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 41 -Message "Configuring Kiosk Directory ACLs"
 $Group = New-Object System.Security.Principal.NTAccount("Builtin", "Administrators")
 $ACL = Get-ACL $DirKiosk
 $ACL.SetOwner($Group)
@@ -352,7 +352,7 @@ Update-ACLInheritance -Path $DirKiosk -DisableInheritance $true -PreserveInherit
 If ($CustomLaunchScript) {
     $LaunchScriptSource = 'Launch AVD Client'
     New-EventLog -LogName $EventLog -Source $LaunchScriptSource -ErrorAction SilentlyContinue
-    Write-Log -EntryType Information -EventId 42 -Message "Copying Launch AVD Client Scripts from '$DirCustomLaunchScript' to '$DirKiosk'"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 42 -Message "Copying Launch AVD Client Scripts from '$DirCustomLaunchScript' to '$DirKiosk'"
     Copy-Item -Path "$DirCustomLaunchScript\*" -Destination $DirKiosk -Force | Out-Null
     # dynamically update parameters of launch script.
     $FileToUpdate = Join-Path -Path $DirKiosk -ChildPath 'Launch-AVDClient.ps1'
@@ -376,7 +376,7 @@ If ($Autologon) {
     If (-not (Test-Path $SchedTasksScriptsDir)) {
         $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
     }
-    Write-Log -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
     Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
 }
 If ($SystemDisconnectAction -or $UserDisconnectSignOutAction) {
@@ -389,26 +389,26 @@ If ($SystemDisconnectAction -or $UserDisconnectSignOutAction) {
 
 $ProvisioningPackages = @()
 
-Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable Windows Spotlight"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable Windows Spotlight"
 $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableWindowsSpotlight.ppkg'
 
-Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable first sign-in animation"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable first sign-in animation"
 $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableFirstLogonAnimation.ppkg'
 
 If ($SharedPC) {
-    Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
 }
 
 If (!$ClientShell) {
-    Write-Log -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
 
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
 ForEach ($Package in $ProvisioningPackages) {
     Copy-Item -Path $Package -Destination "$DirKiosk\ProvisioningPackages" -Force
-    Write-Log -EntryType Information -EventID 46 -Message "Installing $($Package)."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 46 -Message "Installing $($Package)."
     Install-ProvisioningPackage -PackagePath $Package -ForceInstall -QuietInstall
 }
 
@@ -425,7 +425,7 @@ If (-not ($ClientShell)) {
     $PathLinkRD = Join-Path $DirShortcut -ChildPath $LinkRemoteDesktop
         
     If ($CustomLaunchScript) {
-        Write-Log -EntryType Information -EventId 48 -Message "Creating a custom AVD Shortcut in Start Menu."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 48 -Message "Creating a custom AVD Shortcut in Start Menu."
         $LinkAVD = "Azure Virtual Desktop.lnk"    
         $ShortcutPath = Join-Path $DirShortcut -ChildPath $LinkAVD
         $Shortcut = $ObjShell.CreateShortcut($ShortcutPath)
@@ -458,10 +458,10 @@ If (-not ($ClientShell)) {
 #region User Logos
 If ($Autologon) {
     $null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    Write-Log -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
     Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
-    Write-Log -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
     Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
 }
 #endregion User Logos
@@ -472,11 +472,11 @@ If ($Autologon) {
 If ($ClientShell) {
     $nonAdminsFile = 'nonadmins-RemoteDesktopClientShell.txt'
     $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
-    Write-Log -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 ElseIf ($ShowSettings) {
     $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 
@@ -486,22 +486,22 @@ If ($Autologon) {
     $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
     (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
     $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
-    Write-Log -EntryType Information -EventId 70 -Message "Configured Default Connection URL for autologon user via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 70 -Message "Configured Default Connection URL for autologon user via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     # Disable Password requirement for screen saver lock and wake from sleep.
     $null = cmd /c lgpo.exe /t "$DirGPO\disablePasswordForUnlock.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-autologon.txt" '2>&1'
-    Write-Log -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
     If ($DeviceRemovalAction -and $SmartCard) {
         If ($DeviceRemovalAction -eq 'Lock') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
-            Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
         ElseIf ($DeviceRemovalAction -eq 'Logoff') {
             $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
-            Write-Log -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         }
     }
     If ($IdleTimeoutActon -eq 'Lock') {
@@ -510,7 +510,7 @@ Else {
         $outFile = Join-Path -Path $env:Temp -ChildPath 'MachineInactivityTimeout.inf'
         (Get-Content -Path $SourceFile).Replace('900', $IdleTimeout) | Out-File $outFile
         $null = cmd /c lgpo /s "$outFile" '2>&1'
-        Write-Log -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$IdleTimeout seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$IdleTimeout seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
 }
 
@@ -519,7 +519,7 @@ Else {
 #region Registry Edits
 
 # Import registry keys file
-Write-Log -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
 $RegKeys = Import-Csv -Path $FileRegKeys
 
 If (-not $Autologon) {
@@ -546,7 +546,7 @@ If ($OneDrivePresent) {
 }
 
 # create the reg key restore file if it doesn't exist, else load it to compare for appending new rows.
-Write-Log -EntryType Information -EventId 97 -Message "Creating a Registry key restore file for Kiosk Mode uninstall."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 97 -Message "Creating a Registry key restore file for Kiosk Mode uninstall."
 $FileRestore = "$DirKiosk\RegKeyRestore.csv"
 New-Item -Path $FileRestore -ItemType File -Force | Out-Null
 Add-Content -Path $FileRestore -Value 'Path,Name,PropertyType,Value,Description'
@@ -565,14 +565,14 @@ ForEach ($Entry in $RegKeys) {
     $PropertyType = $Entry.PropertyType
     $Value = $Entry.Value
     $Description = $Entry.Description
-    Write-Log -EntryType Information -EventId 99 -Message "Processing Registry Value to '$Description'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 99 -Message "Processing Registry Value to '$Description'."
 
     If ($Path -like 'HKCU:\*') {
         $Path = $Path.Replace("HKCU:\", "HKLM:\Default\")
         If (-not (Test-Path -Path 'HKLM:\Default')) {
-            Write-Log -EntryType Information -EventId 94 -Message "Loading Default User Hive Registry Keys via Reg.exe."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 94 -Message "Loading Default User Hive Registry Keys via Reg.exe."
             $null = cmd /c REG LOAD "HKLM\Default" "$env:SystemDrive\Users\default\ntuser.dat" '2>&1'
-            Write-Log -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$LastExitCode]"
         }
     }
     $CurrentRegValue = $null
@@ -587,18 +587,18 @@ ForEach ($Entry in $RegKeys) {
     If ($Value -ne '' -and $null -ne $Value) {
         # This is a set action
         Set-RegistryValue -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value       
-        Write-Log -EntryType Information -EventId 100 -Message "Setting '$PropertyType' Value '$Name' with Value '$Value' to '$Path'"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 100 -Message "Setting '$PropertyType' Value '$Name' with Value '$Value' to '$Path'"
     }
     Elseif ($CurrentRegValue) {     
         Remove-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
-        Write-Log -EntryType Information -EventId 102 -Message "Deleted Value '$Name' from '$Path'."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 102 -Message "Deleted Value '$Name' from '$Path'."
     }               
 }    
 
 If (Test-Path -Path 'HKLM:\Default') {
-    Write-Log -EntryType Information -EventId 103 -Message "Unloading Default User Hive Registry Keys via Reg.exe."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 103 -Message "Unloading Default User Hive Registry Keys via Reg.exe."
     $null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
-    Write-Log -EntryType Information -EventId 104 -Message "Reg.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 104 -Message "Reg.exe Exit Code: [$LastExitCode]"
     If ($LastExitCode -ne 0) {
         # sometimes the registry doesn't unload properly so we have to perform powershell garbage collection first.
         [GC]::Collect()
@@ -606,10 +606,10 @@ If (Test-Path -Path 'HKLM:\Default') {
         Start-Sleep -Seconds 5
         $null = cmd /c REG UNLOAD "HKLM\Default" '2>&1'
         If ($LastExitCode -eq 0) {
-            Write-Log -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 106 -Message "Hive unloaded successfully."
         }
         Else {
-            Write-Log -EntryType Error -EventId 107 -Message "Default User hive unloaded with exit code [$LastExitCode]."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 107 -Message "Default User hive unloaded with exit code [$LastExitCode]."
         }
     }
 }
@@ -620,7 +620,7 @@ If (Test-Path -Path 'HKLM:\Default') {
 
 If ($ClientShell) {
     # With Shell Launcher, we need to use applocker to block access to other applications which could be launched from the Remote Desktop Client.
-    Write-Log -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Microsoft Edge, Internet Explorer, Notepad, and Wordpad for the Kiosk User."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 110 -Message "Applying AppLocker Policy to disable Microsoft Edge, Internet Explorer, Notepad, and Wordpad for the Kiosk User."
     # If there is an existing applocker policy, back it up and store its XML for restore.
     # Else, copy a blank policy to the restore location.
     # Then apply the new AppLocker Policy
@@ -633,7 +633,7 @@ If ($ClientShell) {
         Copy-Item -Path (Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml") -Destination "$DirKiosk\ApplockerPolicy.xml" -Force | Out-Null
     }
     Set-AppLockerPolicy -XmlPolicy "$FileAppLockerKiosk"
-    Write-Log -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 111 -Message "Enabling and Starting Application Identity Service"
     Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
     # Start the service if not already running
     If ((Get-Service -Name AppIDSvc).Status -ne 'Running') {
@@ -645,76 +645,76 @@ If ($ClientShell) {
 
 #region Shell Launcher Configuration
 
-Write-Log -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
 
 If ($ClientShell) {
     If ($Autologon) {
         $ConfigFile = "Launch-AVDClient_AutoLogon.xml"
-        Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings with Autologon via WMI MDM bridge."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings with Autologon via WMI MDM bridge."
     }
     ElseIf ($CustomLaunchScript) {
         $ConfigFile = "Launch-AVDClient.xml"
-        Write-Log -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings for Security Keys via WMI MDM bridge."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Custom AVD Client Launch Script Shell Launcher Settings for Security Keys via WMI MDM bridge."
     }
     Else {
         $ConfigFile = "msrdcw.xml"
-        Write-Log -EntryType Information -EventId 114 -Message "Enabling Remote Desktop Client Shell Launcher Settings via WMI MDM bridge."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Remote Desktop Client Shell Launcher Settings via WMI MDM bridge."
     }
     $SourceFile = Join-Path $DirShellLauncherSettings -ChildPath $ConfigFile
     $DestFile = Join-Path -Path $DirKiosk -ChildPath "ShellLauncher.xml"
     Copy-Item -Path $SourceFile -Destination $DestFile -Force | Out-Null
     Set-AssignedAccessShellLauncher -FilePath $DestFile
     If (Get-AssignedAccessShellLauncher) {
-        Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
     }
     Else {
-        Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
         Exit 1
     }
 }
 Else {
     If ($Autologon) {
         If ($ShowSettings) {
-            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings and Autologon."
             $ConfigFile = "AzureVirtualDesktop_Settings_Autologon.xml"
         }
         Else {
-            Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script and Autologon."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script and Autologon."
             $ConfigFile = "AzureVirtualDesktop_Autologon.xml"
         }
     }
     Else {
         If ($ShowSettings) {
             If ($CustomLaunchScript) {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings."
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script with Settings."
                 $ConfigFile = "AzureVirtualDesktop_Settings.xml"
             }
             Else {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client and Settings."
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client and Settings."
                 $ConfigFile = "RemoteDesktop_Settings.xml"
             }
         }
         Else {
             If ($CustomLaunchScript) {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script."
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Custom Launch Script."
                 $ConfigFile = "AzureVirtualDesktop.xml"
             }
             Else {
-                Write-Log -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client."
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Remote Desktop Client."
                 $ConfigFile = "RemoteDesktop.xml"
             }
         }
     }
-    Write-Log -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
     $SourceFile = Join-Path -Path $DirMultiAppSettings -ChildPath $ConfigFile
     $DestFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
     Copy-Item -Path $SourceFile -Destination $DestFile -Force
     Set-AssignedAccessConfiguration -FilePath $DestFile
     If (Get-AssignedAccessConfiguration) {
-        Write-Log -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
     }
     Else {
-        Write-Log -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
         Exit 1        
     }
 }
@@ -726,7 +726,7 @@ Else {
 If ($Autologon) {
     $TaskName = "(AVD Client) - Restart AAD Sign-in"
     $TaskDescription = 'Restarts the AAD Sign-in process if there are no active connections to prevent a stale sign-in attempt.'
-    Write-Log -EntryType Information -EventId 135 -Message "Creating Scheduled Task: '$TaskName'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 135 -Message "Creating Scheduled Task: '$TaskName'."
     $TaskScriptEventSource = 'AAD Sign-in Restart'
     New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue
     $TaskTrigger = New-ScheduledTaskTrigger -AtLogOn -User KioskUser0
@@ -739,26 +739,26 @@ If ($Autologon) {
     $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -Compatibility Win8 -StartWhenAvailable
     Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Description $TaskDescription -Principal $TaskPrincipal -Settings $TaskSettings -Trigger $TaskTrigger
     If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
     }
     Else {
-        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 120 -Message "Scheduled Task not created."
         $ScriptExitCode = 1618
     }
 }
 
 #endregion Prevent Microsoft AAD Broker Timeout
 If ($ScriptExitCode -eq 1618) {
-    Write-Log -EntryType Error -EventId 135 -Message "At least one critical failure occurred. Exiting Script and restarting computer."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 135 -Message "At least one critical failure occurred. Exiting Script and restarting computer."
     Restart-Computer -Force
 }
 Else {
     $ScriptExitCode -eq 1641
 }
     
-Write-Log -EntryType Information -EventId 150 -Message "Updating Group Policy"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
 $GPUpdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
-Write-Log -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
 Set-RegistryValue -Path 'HKLM:\Software\Kiosk' -Name 'Version' -PropertyType 'String' -Value $($version.ToString())
-Write-Log -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: $ScriptExitCode"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: $ScriptExitCode"
 Exit $ScriptExitCode

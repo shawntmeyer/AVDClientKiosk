@@ -4,19 +4,24 @@ Function Update-ACL {
     [OutputType([int])]
     Param
     (
-        [Parameter(Mandatory = $true,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 0)]
-        $Path,
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)]
+        [string]$Path,
+
         [Parameter(Mandatory = $true)]
-        $Identity,
+        [string]$Identity,
+
         [Parameter(Mandatory = $true)]
-        $FileSystemRights,
-        $InheritanceFlags = 'ContainerInherit,ObjectInherit',
-        $PropogationFlags = 'None',
-        [Parameter(Mandatory)]
+        [string]$FileSystemRights,
+        
+        [Parameter()]
+        [string]$InheritanceFlags = 'ContainerInherit,ObjectInherit',
+
+        [Parameter()]
+        [string]$PropogationFlags = 'None',
+
+        [Parameter()]
         [ValidateSet('Allow', 'Deny')]
-        $Type
+        $Type = 'Allow'
     )
 
     If (Test-Path $Path) {
@@ -34,15 +39,13 @@ Function Update-ACLInheritance {
     [OutputType([int])]
     Param
     (
-        [Parameter(Mandatory = $true,
-            Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [string]$Path,
-        [Parameter(Mandatory = $false,
-            Position = 1)]
+
+        [Parameter(Mandatory = $false, Position = 1)]
         [bool]$DisableInheritance = $false,
 
-        [Parameter(Mandatory = $true,
-            Position = 2)]
+        [Parameter(Mandatory = $true, Position = 2)]
         [bool]$PreserveInheritedACEs = $true
     )
 

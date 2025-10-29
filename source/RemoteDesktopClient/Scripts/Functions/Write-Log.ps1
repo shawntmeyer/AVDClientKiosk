@@ -1,22 +1,21 @@
 Function Write-Log {
     [CmdletBinding()]
     param (
+        [Parameter(Mandatory=$true)]
+        [string]$EventLog,
+
+        [Parameter(Mandatory=$true)]
+        [string]$EventSource,
+
         [Parameter()]
-        [string]
-        $EventLog = $EventLog,
-        [Parameter()]
-        [string]
-        $EventSource = $EventSource,
-        [Parameter()]
-        [string]
         [ValidateSet('Information', 'Warning', 'Error')]
-        $EntryType = 'Information',
-        [Parameter()]
-        [Int]
-        $EventID,
-        [Parameter()]
-        [string]
-        $Message
+        [string]$EntryType = 'Information',
+        
+        [Parameter(Mandatory=$true)]
+        [Int]$EventID,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$Message
     )
     Write-EventLog -LogName $EventLog -Source $EventSource -EntryType $EntryType -EventId $EventId -Message $Message -ErrorAction SilentlyContinue
     Switch ($EntryType) {

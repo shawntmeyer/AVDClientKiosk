@@ -27,15 +27,16 @@ Function Remove-RegistryValue {
 Function Set-RegistryValue {
     [CmdletBinding()]
     param (
-        [Parameter()]
-        [string]
-        $Name,
-        [Parameter()]
-        [string]
-        $Path,
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
         [string]$PropertyType,
-        [Parameter()]
+
+        [Parameter(Mandatory = $true)]
         $Value
     )
 

@@ -8,6 +8,10 @@
     allowing all key sequences through the filter.
 #>
 Function Disable-KeyboardFilter {
+    [CmdletBinding()]
+    Param (
+        [switch]$Reinstall
+    )   
     $Namespace = "root\standardcimv2\embedded"
 
     $Classes = @(
@@ -39,6 +43,7 @@ Function Disable-KeyboardFilter {
             }
         }
     }
-
-    Disable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -NoRestart
+    If (!$Reinstall) {
+        Disable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -NoRestart
+    }
 }
