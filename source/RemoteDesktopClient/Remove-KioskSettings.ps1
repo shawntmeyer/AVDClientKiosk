@@ -7,7 +7,6 @@ param (
 #region Set Variables
 $script:FullName = $MyInvocation.MyCommand.Path
 $script:Dir = Split-Path $script:FullName
-$Script:File = [string]$myInvocation.MyCommand.Name
 $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 $DirGPOs = "$Script:Dir\gposettings"
 $DirTools = "$Script:Dir\Tools"
