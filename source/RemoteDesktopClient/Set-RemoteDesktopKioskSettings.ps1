@@ -230,6 +230,7 @@ $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirCustomLaunchScript = Join-Path -Path $Script:Dir -ChildPath "Scripts\CustomLaunchScript"
 $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
+$DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 
 # Set AVD feed subscription Url.
 Switch ($EnvironmentAVD) {
@@ -259,9 +260,21 @@ $ScriptExitCode = 0
 
 #region Load Functions
 
-$Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
-ForEach ($Function in $Functions) {
-    . "$($Function.FullName)"
+If (Test-Path -Path $DirFunctions) {
+    $Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
+    ForEach ($Function in $Functions) {
+        Try {
+            . "$($Function.FullName)"
+        }
+        Catch {
+            Write-Error "Failed to load function from $($Function.FullName): $($_.Exception.Message)"
+            Exit 1
+        }
+    }
+}
+Else {
+    Write-Error "Functions directory not found at: $DirFunctions"
+    Exit 1
 }
 
 #endregion Functions
@@ -269,6 +282,7 @@ ForEach ($Function in $Functions) {
 #region Initialization
 If (-not (Get-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue)) {
     New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
+    Write-Output "Waiting 5 seconds for event log to be ready..."
     # Wait for event log to be ready
     Start-Sleep -Seconds 5
 }
@@ -762,7 +776,7 @@ If ($ScriptExitCode -eq 1618) {
     Restart-Computer -Force
 }
 Else {
-    $ScriptExitCode -eq 1641
+    $ScriptExitCode = 1641
 }
     
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
