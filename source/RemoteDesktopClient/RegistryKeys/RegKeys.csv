@@ -1,5 +1,4 @@
 Path,Name,PropertyType,Value,Description
-HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\TrayNotify,SystemTrayChevronVisibility,DWord,0,Disable System Tray Chevron Visibility
 HKCU:\Software\Microsoft\RDclientRadc,EnableMSRDCTelemetry,DWord,0,Disable Remote Desktop client telemetry data.
 HKLM:\SOFTWARE\Microsoft\MSRDC\Policies,AutomaticUpdates,DWord,0,Disable Updates and Notifications in Remote Desktop Client application.
 HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin,BlockAADWorkplaceJoin,DWord,1,Disable 'Stay Signed in to all your apps' pop-up.

@@ -189,16 +189,16 @@ ForEach ($Function in $Functions) {
 
 #region Initialization
 
-
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 # Wait for event log to be ready
 Start-Sleep -Seconds 5
 
 $message = @"
 Starting Windows App Kiosk Configuration Script
-Script Name:    $($Script:FullName)
-Parameters:     $($PSBoundParameters | Out-String)
-Running on:     $($OS.Caption) version $($OS.Version)
+Script Full Name: $($Script:FullName)
+Parameters:
+    $($PSBoundParameters | Out-String)
+Running on: $($OS.Caption) version $($OS.Version)
 "@
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message $message
 

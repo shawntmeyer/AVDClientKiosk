@@ -285,12 +285,12 @@ Write-Output "Waiting 5 seconds for event log to be ready..."
 # Wait for event log to be ready
 Start-Sleep -Seconds 5
 
-
 $message = @"
 Starting Remote Desktop Client Kiosk Configuration Script
-Script Name:    $($Script:FullName)
-Parameters:     $($PSBoundParameters | Out-String)
-Running on:     $($OS.Caption) version $($OS.Version)
+Script Full Name: $($Script:FullName)
+Parameters:
+    $($PSBoundParameters | Out-String)
+Running on: $($OS.Caption) version $($OS.Version)
 "@
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message $message
 
@@ -422,7 +422,12 @@ If ($SharedPC) {
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
 }
 
-If (!$ClientShell) {
+If ($ClientShell) {
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message 'Adding Provisioning Package to hide OOBE'
+    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideOOBE.ppkg'
+    
+}
+Else {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
@@ -601,7 +606,6 @@ ForEach ($Entry in $RegKeys) {
     If ($Path -like 'HKCU:*') {
         $PathTemp = $Path.Replace("HKCU:\", "HKLM:\Default\")
         If (-not (Test-Path -Path 'HKLM:\Default')) {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 94 -Message "Loading Default User Hive Registry Keys via Reg.exe."
             $RegLoad = Start-Process -FilePath 'reg.exe' -ArgumentList 'load', 'HKLM\Default', "$env:SystemDrive\Users\default\ntuser.dat" -NoNewWindow -Wait -PassThru
             Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$($RegLoad.ExitCode)]"
         }
@@ -729,7 +733,7 @@ Else {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
     $SourceFile = Join-Path -Path $DirMultiAppSettings -ChildPath $ConfigFile
     $DestFile = Join-Path $DirKiosk -ChildPath 'MultiAppKioskConfiguration.xml'
-    Copy-Item -Path $SourceFile -Destination $DestFile -Force
+    Copy-Item -Path $SourceFile -Destination $DestFile -Force | Out-Null
     Set-AssignedAccessConfiguration -FilePath $DestFile
     If (Get-AssignedAccessConfiguration) {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Multi-App Kiosk configuration successfully applied."
