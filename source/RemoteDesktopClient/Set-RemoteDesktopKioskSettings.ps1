@@ -218,13 +218,14 @@ If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
 $DirAppLocker = Join-Path -Path $Script:Dir -ChildPath 'AppLocker'
 $DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
-$DirMultiAppSettings = Join-Path -Path $Script:Dir -ChildPath 'MultiAppConfigs'
+$DirAssignedAccess = Join-Path -Path $Script:Dir -ChildPath 'AssignedAccess'
+$DirMultiAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'MultiAppConfigs'
+$DirShellLauncherSettings = Join-Path -Path $DirAssignedAccess -ChildPath "ShellLauncherConfigs"
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
-$DirShellLauncherSettings = Join-Path -Path $Script:Dir -ChildPath "ShellLauncherConfigs"
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys-win11.csv"
+$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirCustomLaunchScript = Join-Path -Path $Script:Dir -ChildPath "Scripts\CustomLaunchScript"
