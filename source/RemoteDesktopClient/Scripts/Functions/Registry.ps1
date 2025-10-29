@@ -18,7 +18,7 @@ Function Remove-RegistryValue {
         [string]$Name
     )
 
-    if (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop) {
+    if (Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentyContinue) {
         Remove-ItemProperty -Path $Path -Name $Name -ErrorAction Stop
     }
 
