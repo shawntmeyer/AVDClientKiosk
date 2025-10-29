@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param (
-    [string]$EventLog = 'Remote Desktop Client Kiosk',
-    [string]$EventSource = 'Configuration Removal Script',
+    [string]$EventLog = 'Application',
+    [string]$EventSource = 'Remote Desktop Kiosk',
     [switch]$Reinstall
 )
 
