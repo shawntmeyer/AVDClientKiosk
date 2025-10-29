@@ -209,8 +209,8 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:Dir = Split-Path $Script:FullName
 # Windows Event Log (.evtx)
-$EventLog = 'Application'
-$EventSource = 'Remote Desktop Client Kiosk'
+$EventLog = 'Remote Desktop Client Kiosk'
+$EventSource = 'Configuration'
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11

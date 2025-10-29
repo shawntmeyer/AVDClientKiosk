@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param (
-    [string]$EventLog = 'Application',
-    [string]$EventSource = 'Windows App Kiosk',
+    [string]$EventLog = 'Windows App Kiosk',
+    [string]$EventSource = 'Removal',
     [switch]$Reinstall
 )
 #region Set Variables
