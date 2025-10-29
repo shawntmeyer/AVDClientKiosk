@@ -416,7 +416,7 @@ If ($AutoLogonKiosk) {
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffTimeInterval'
                 PropertyType = 'DWord'
-                Value        = $IdleTimeoutInMinutes
+                Value        = $WindowsAppAutoLogoffTimeInterval
                 Description  = 'Sign all users out of Windows App and reset app data when the operating system is idle for the specified time interval in minutes or the user closes the app.'
             }     
         }
@@ -549,7 +549,7 @@ If ($ScriptExitCode -eq 1618) {
     Restart-Computer -Force
 }
 Else {
-    $ScriptExitCode -eq 1641
+    $ScriptExitCode = 1641
 }
     
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
