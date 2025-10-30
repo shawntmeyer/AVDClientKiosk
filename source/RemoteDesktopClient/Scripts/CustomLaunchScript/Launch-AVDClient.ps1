@@ -106,7 +106,7 @@ New-Item -Path $RegKey -Force | Out-Null
 New-ItemProperty -Path $RegKey -Name $RegValue -PropertyType DWORD -Value 0 -Force | Out-Null
 Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' -EventId 503 -Message "Starting the Remote Desktop Client." -ErrorAction SilentlyContinue
 
-If ($Env:UserName -eq 'KioskUser0') {
+If ($Env:UserName -eq 'KioskUser0' -and $null -ne $SubscribeUrl -and $SubscribeUrl -ne '') {
     # Always start client with subscribe Url in Autologon scenario
     $MSRDCW = Start-Process -FilePath "ms-rd:subscribe?url=$SubscribeUrl" -PassThru -WindowStyle Maximized
 }
