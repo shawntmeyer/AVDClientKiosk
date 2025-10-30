@@ -42,7 +42,7 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 
 [String]$Script:LogDir = "$($env:SystemRoot)\Logs\Software"
 If (-not(Test-Path -Path $Script:LogDir)) {
-    New-Item -Path $Script:LogDir -ItemType Dir -Force
+    New-Item -Path $Script:LogDir -ItemType Dir -Force | Out-Null
 }
 
 #endregion Initialization

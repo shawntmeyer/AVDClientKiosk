@@ -421,9 +421,8 @@ If ($SharedPC) {
 }
 
 If ($ClientShell) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message 'Adding Provisioning Package to hide OOBE'
-    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideOOBE.ppkg'
-    
+    #Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message 'Adding Provisioning Package to hide OOBE'
+    #$ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideOOBE.ppkg'    
 }
 Else {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
@@ -493,11 +492,13 @@ If ($Autologon) {
 
 #region Local GPO Settings
 
-# Apply Non-Admin GPO settings
 If ($ClientShell) {
     $nonAdminsFile = 'nonadmins-RemoteDesktopClientShell.txt'
     $null = cmd /c lgpo.exe /t "$DirGPO\$nonAdminsFile" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Configured basic Explorer settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    $computerFile = 'computer-RemoteDesktopClientShell.txt'
+    $null = cmd /c lgpo.exe /t "$DirGPO\$computerFile" '2>&1'
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 61 -Message "Disabled New User Privacy Experience via Computer Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 ElseIf ($ShowSettings) {
     $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'

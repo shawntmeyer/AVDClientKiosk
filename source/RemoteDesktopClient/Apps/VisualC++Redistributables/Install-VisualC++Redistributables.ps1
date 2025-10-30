@@ -10,7 +10,7 @@
 [String]$Script:LogDir = "$($env:SystemRoot)\Logs\Software"
 [string]$Script:LogName = $SoftwareVendor + "_" + $SoftwareName + "_" + $DeploymentType + ".log"
 If (-not(Test-Path -Path $Script:LogDir)) {
-    New-Item -Path $Script:LogDir -ItemType Dir -Force
+    New-Item -Path $Script:LogDir -ItemType Dir -Force | Out-Null
 }
 
 #endregion

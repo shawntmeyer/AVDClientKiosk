@@ -297,7 +297,7 @@ If (!$SingleAppKiosk) {
 
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
 ForEach ($Package in $ProvisioningPackages) {
-    Copy-Item -Path $Package -Destination "$DirKiosk\ProvisioningPackages" -Force
+    Copy-Item -Path $Package -Destination "$DirKiosk\ProvisioningPackages" -Force | Out-Null
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 46 -Message "Installing $($Package)."
     Install-ProvisioningPackage -PackagePath $Package -ForceInstall -QuietInstall
 }
