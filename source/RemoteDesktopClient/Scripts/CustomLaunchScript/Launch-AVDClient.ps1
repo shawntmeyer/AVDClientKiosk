@@ -108,11 +108,11 @@ Write-EventLog -LogName $EventLog -Source $EventSource -EntryType 'Information' 
 
 If ($Env:UserName -eq 'KioskUser0') {
     # Always start client with subscribe Url in Autologon scenario
-    $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -ArgumentList "ms-rd:subscribe?url=$SubscribeUrl" -PassThru -WindowStyle Maximized
+    $MSRDCW = Start-Process -FilePath "ms-rd:subscribe?url=$SubscribeUrl" -PassThru -WindowStyle Maximized
 }
 Else {
     # Start client without subscribe Url in non-Autologon scenario because GPO will handle the subscription.
-    $MSRDCW = Start-Process -FilePath "$env:ProgramFiles\Remote Desktop\Msrdcw.exe" -PassThru -WindowStyle Maximized
+    $MSRDCW = Start-Process -FilePath "ms-rd:" -PassThru -WindowStyle Maximized
 }
 
 If ($SubscribeUrl -match '.us' -or $SubscribeUrl -match '.com') {
