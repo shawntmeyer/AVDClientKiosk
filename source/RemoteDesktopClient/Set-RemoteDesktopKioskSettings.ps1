@@ -586,7 +586,7 @@ $RegValues += [PSCustomObject]@{
 }
 
 
-If (-not $Autologon -and $null -ne $SubscribeUrl) {
+If (-not $Autologon -and $null -ne $SubscribeUrl -and $Cloud -ne 'AzureCloud') {
     #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
     If ($SubscribeUrl -notlike '*/feeddiscovery*') {
         $SubscribeUrl = "$SubscribeUrl/api/arm/feeddiscovery"
