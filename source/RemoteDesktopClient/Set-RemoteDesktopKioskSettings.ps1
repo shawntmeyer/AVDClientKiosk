@@ -618,6 +618,7 @@ ForEach ($Entry in $RegValues) {
     $PropertyType = $null
     $Value = $null
     $Description = $Null
+    $PathHKLM = $null
     #set values
     $Path = $Entry.Path
     $Name = $Entry.Name
@@ -627,11 +628,13 @@ ForEach ($Entry in $RegValues) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 99 -Message "Processing Registry Value to '$Description'."
 
     If ($Path -like 'HKCU:*') {
-        $PathTemp = $Path.Replace("HKCU:\", "HKLM:\Default\")
+        $PathHKLM = $Path.Replace("HKCU:\", "HKLM:\Default\")
+    } Else {
+        $PathHKLM = $Path
     }
     $CurrentRegValue = $null
-    If (Get-ItemProperty -Path $PathTemp -Name $Name -ErrorAction SilentlyContinue) {
-        $CurrentRegValue = Get-ItemPropertyValue -Path $PathTemp -Name $Name
+    If (Get-ItemProperty -Path $PathHKLM -Name $Name -ErrorAction SilentlyContinue) {
+        $CurrentRegValue = Get-ItemPropertyValue -Path $PathHKLM -Name $Name
         Add-Content -Path $FileRestore -Value "$Path,$Name,$PropertyType,$CurrentRegValue"
     }
     Else {
@@ -640,11 +643,11 @@ ForEach ($Entry in $RegValues) {
 
     If ($Value -ne '' -and $null -ne $Value) {
         # This is a set action
-        Set-RegistryValue -Path $PathTemp -Name $Name -PropertyType $PropertyType -Value $Value       
+        Set-RegistryValue -Path $PathHKLM -Name $Name -PropertyType $PropertyType -Value $Value       
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 100 -Message "Setting '$PropertyType' Value '$Name' with Value '$Value' to '$Path'"
     }
     Elseif ($CurrentRegValue) {     
-        Remove-ItemProperty -Path $PathTemp -Name $Name -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $PathHKLM -Name $Name -ErrorAction SilentlyContinue
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 102 -Message "Deleted Value '$Name' from '$Path'."
     }               
 }    
