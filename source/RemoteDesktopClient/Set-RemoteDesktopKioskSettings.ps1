@@ -159,7 +159,7 @@ param (
 #region Parameter Validation and Configuration
 
 If ($AutoSubscribe) {
-    If ($null -eq $EnvironmentAVD -or $EnvironmentAVD -eq '') {
+    If ($null -eq $Cloud -or $Cloud -eq '') {
         Throw 'You must specify the EnvironmentAVD parameter when AutoSubscribe is enabled.'
     }
 }
