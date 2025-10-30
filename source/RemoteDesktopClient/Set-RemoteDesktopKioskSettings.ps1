@@ -540,8 +540,6 @@ Else {
 
 #region Registry Edits
 
-# Import registry keys file
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
 $RegValues = @()
 
 $RegValues += [PSCustomObject]@{
@@ -575,7 +573,7 @@ If (-not $Autologon) {
         Path         = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
         Name         = 'AutoSubscription'
         PropertyType = 'String'
-        Value        = "$SubscribeUrl/api/arm/feeddiscovery"
+        Value        = "$SubscribeUrl"
         Description  = 'AVD Client Subscription URL'
     }
 }
