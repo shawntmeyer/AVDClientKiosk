@@ -363,7 +363,7 @@ $RegValues += [PSCustomObject]@{
     Name         = 'BlockAADWorkplaceJoin'
     PropertyType = 'DWord'
     Value        = 1
-    Description  = "Disable 'Stay Signed in to all your apps' pop-up"
+    Description  = 'Disable "Stay Signed in to all your apps" pop-up'
 }
 
 If ($OneDrivePresent) {

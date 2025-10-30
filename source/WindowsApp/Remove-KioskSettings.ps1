@@ -13,7 +13,7 @@ $DirTools = "$Script:Dir\Tools"
 $DirKiosk = "$env:SystemDrive\KioskSettings"
 $DirProvisioningPackages = "$DirKiosk\ProvisioningPackages"
 $FileAppLockerRestore = "$DirKiosk\AppLockerPolicy.xml"
-$FileRegValuesRestore = "$DirKiosk\RegKeyRestore.csv"
+$FileRegValuesRestore = (Get-ChildItem -Path $DirKiosk -Filter '*.csv').FullName
 
 #endregion Set Variables
 
@@ -94,7 +94,7 @@ If (Test-Path -Path $DirNonAdminsGPO) {
 If (Test-Path -Path $DirKiosk) {
     $Removed = $true
     # Removing changes to default user hive by reading the restore file and resetting all configured registry values to their previous values.
-    If (Test-Path -Path $FileRegValuesRestore) {
+    If ($null -ne $FileRegValuesRestore) {
         $RegValues = Import-Csv -Path $FileRegValuesRestore
 
         Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 10 -EntryType Information -Message "Restoring registry values to default."
