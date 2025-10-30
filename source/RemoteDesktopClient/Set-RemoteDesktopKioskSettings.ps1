@@ -391,13 +391,13 @@ If ($CustomLaunchScript) {
     if ($UserDisconnectSignOutAction) { $Content = $Content.Replace('[string]$UserDisconnectSignOutAction', "[string]`$UserDisconnectSignOutAction = '$UserDisconnectSignOutAction'") }    
     $Content | Set-Content -Path $FileToUpdate
 }
-If ($Autologon) {
-    $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
-    If (-not (Test-Path $SchedTasksScriptsDir)) {
-        $null = New-Item -Path $SchedTasksScriptsDir -ItemType Directory -Force
+If ($Autologon -or $ClientShell) {
+    $DirSchedTasksScripts = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasks'
+    If (-not (Test-Path $DirSchedTasksScripts)) {
+        $null = New-Item -Path $DirSchedTasksScripts -ItemType Directory -Force
     }
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$SchedTasksScriptsDir'"
-    Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $SchedTasksScriptsDir -Force
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 43 -Message "Copying Scheduled Task Scripts from '$DirSchedTasksScripts' to '$DirSchedTasksScripts'"
+    Get-ChildItem -Path $DirSchedTasksScripts -filter '*.*' | Copy-Item -Destination $DirSchedTasksScripts -Force
 }
 If ($SystemDisconnectAction -or $UserDisconnectSignOutAction) {
     $parentKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey("SYSTEM\CurrentControlSet\Services\EventLog", $true)
@@ -496,9 +496,16 @@ If ($ClientShell) {
     $null = cmd /c lgpo.exe /t "$DirGPO\$computerFile" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 61 -Message "Disabled New User Privacy Experience via Computer Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
-ElseIf ($ShowSettings) {
-    $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+Else {
+
+    # Hide Windows Security notification area control
+    $null = cmd /c lgpo.exe /t "$DirGPO\computer-HideWindowsSecurityControl.txt" '2>&1'
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 62 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+
+    If ($ShowSettings) {
+        $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    }
 }
 
 
@@ -629,7 +636,8 @@ ForEach ($Entry in $RegValues) {
 
     If ($Path -like 'HKCU:*') {
         $PathHKLM = $Path.Replace("HKCU:\", "HKLM:\Default\")
-    } Else {
+    }
+    Else {
         $PathHKLM = $Path
     }
     $CurrentRegValue = $null
@@ -768,6 +776,41 @@ Else {
 
 #endregion Assigned Access Launcher
 
+#region Keyboard Filter
+
+If ($ClientShell) {
+
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 117 -Message "Enabling Keyboard filter."
+    Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
+
+    # Configure Keyboard Filter after reboot
+    $TaskName = "(AVD Client) - Configure Keyboard Filter"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 118 -Message "Creating Scheduled Task: '$TaskName'."
+    $TaskScriptEventSource = 'Keyboard Filter Configuration'
+    $TaskDescription = "Configures the Keyboard Filter"
+    $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
+    $TaskScriptFullName = Join-Path -Path $DirSchedTasksScripts -ChildPath $TaskScriptName
+    New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
+    $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
+    $TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
+    If ($ShowSettings) {
+        $TaskScriptArgs = "$TaskScriptArgs -ShowSettings"
+    }
+    $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
+    $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
+    Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
+    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+    }
+    Else {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 120 -Message "Scheduled Task not created."
+        $ScriptExitCode = 1618
+    }
+}
+
+#endrgion Keyboard Filter
+
 #region Prevent Microsoft AAD Broker Timeout
 
 If ($Autologon) {
@@ -780,7 +823,7 @@ If ($Autologon) {
     $TaskTrigger.Delay = 'PT30M'
     $TaskTrigger.Repetition = (New-ScheduledTaskTrigger -Once -At "12:00 AM" -RepetitionInterval (New-TimeSpan -Minutes 30)).Repetition
     $TaskAction = New-ScheduledTaskAction -Execute "wscript.exe" `
-        -Argument "$SchedTasksScriptsDir\Restart-AADSignIn.vbs"
+        -Argument "$DirSchedTasksScripts\Restart-AADSignIn.vbs"
     # Set up scheduled task to run interactively (only when user is logged in)
     $TaskPrincipal = New-ScheduledTaskPrincipal -UserId KioskUser0 -LogonType Interactive
     $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -Compatibility Win8 -StartWhenAvailable

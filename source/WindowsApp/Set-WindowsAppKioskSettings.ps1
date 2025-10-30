@@ -321,7 +321,12 @@ if ($AutoLogonKiosk) {
 
 #region Local GPO Settings
 
-# Apply Non-Admin GPO settings
+if (-not $SingleAppKiosk) {
+    # Hide Windows Security notification area control
+    $null = cmd /c lgpo.exe /t "$DirGPO\computer-HideWindowsSecurityControl.txt" '2>&1'
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+}
+
 If ($ShowSettings) {
     $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -389,7 +394,7 @@ if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $Share
         Name         = 'SkipFRE'
         PropertyType = 'DWord'
         Value        = 1
-        Description  = 'Disable First Fun Experience in Windows App'
+        Description  = 'Disable First Run Experience in Windows App'
     }
 }
 
