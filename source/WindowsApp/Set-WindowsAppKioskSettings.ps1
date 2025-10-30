@@ -98,8 +98,8 @@ param (
     [ValidateSet('Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle')]
     [string]$WindowsAppAutoLogoffConfig,
 
-    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
-    [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [int]$WindowsAppAutoLogoffTimeInterval,
 
     [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
@@ -125,6 +125,10 @@ param (
 
     [version]$Version = '1.0.0'
 )
+
+If ($WindowsAppAutoLogoffConfig -eq 'ResetAppOnCloseOrIdle' -and $null -eq $WindowsAppAutoLogoffTimeInterval) {
+    Throw "You must specify a value for 'WindowsAppAutoLogoffTimeInterval' when 'WindowsAppAutoLogoffConfig' = 'ResetAppOnCloseOrIdle'"
+} 
 
 # Restart in 64-Bit PowerShell if not already running in 64-bit mode
 # primarily designed to support Microsoft Endpoint Manager application deployment
