@@ -420,11 +420,7 @@ If ($SharedPC) {
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
 }
 
-If ($ClientShell) {
-    #Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message 'Adding Provisioning Package to hide OOBE'
-    #$ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideOOBE.ppkg'    
-}
-Else {
+If (!$ClientShell) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
