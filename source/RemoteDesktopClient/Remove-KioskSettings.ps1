@@ -13,7 +13,7 @@ $DirTools = "$Script:Dir\Tools"
 $DirKiosk = "$env:SystemDrive\KioskSettings"
 $DirProvisioningPackages = "$DirKiosk\ProvisioningPackages"
 $FileAppLockerRestore = "$DirKiosk\AppLockerPolicy.xml"
-$FileRegValuesRestore = (Get-ChildItem -Path $DirKiosk -Filter '*.csv').FullName
+$FileRegValuesRestore = If (Test-Path -Path $DirKiosk) { (Get-ChildItem -Path $DirKiosk -Filter '*.csv').FullName } Else { $null }
 
 #endregion Set Variables
 
