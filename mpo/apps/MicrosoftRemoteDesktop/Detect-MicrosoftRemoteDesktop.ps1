@@ -1,5 +1,5 @@
 $SoftwareName = 'Remote Desktop'
-[version]$TargetVersion = '1.2.6599.0'
+[version]$TargetVersion = '1.2.6676.0'
 $RegistryEntry = Get-ChildItem Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall | Where-Object { $_.GetValue('DisplayName') -eq $SoftwareName }
 $ErrorActionPreference = 'Stop'
 # Perform Tests

@@ -1,4 +1,4 @@
-$TargetVersion = '2.0.706.0'
+$TargetVersion = '2.0.757.0'
 
 $InstalledVersion = (Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "MicrosoftCorporationII.Windows365" }).Version
 
