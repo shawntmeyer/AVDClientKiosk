@@ -1,5 +1,0 @@
-Path,Name,PropertyType,Value,Description
-HKCU:\Software\Microsoft\RDclientRadc,EnableMSRDCTelemetry,DWord,0,Disable Remote Desktop client telemetry data.
-HKLM:\SOFTWARE\Microsoft\MSRDC\Policies,AutomaticUpdates,DWord,0,Disable Updates and Notifications in Remote Desktop Client application.
-HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin,BlockAADWorkplaceJoin,DWord,1,Disable 'Stay Signed in to all your apps' pop-up.
-HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run,SecurityHealth,ExpandString,,Disable the Windows Security system tray icon.

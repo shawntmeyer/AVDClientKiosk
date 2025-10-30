@@ -356,9 +356,9 @@ Else {
 
 # Import registry keys file
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 90 -Message "Setting Registry Keys."
-$RegKeys = @()
+$RegValues = @()
 
-$RegKeys += [PSCustomObject]@{
+$RegValues += [PSCustomObject]@{
     Path         = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin'
     Name         = 'BlockAADWorkplaceJoin'
     PropertyType = 'DWord'
@@ -368,7 +368,7 @@ $RegKeys += [PSCustomObject]@{
 
 If ($OneDrivePresent) {
     # Remove OneDrive from starting for each user.
-    $RegKeys += [PSCustomObject]@{
+    $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
         Name         = 'OneDriveSetup'
         PropertyType = 'String'
@@ -380,7 +380,7 @@ If ($OneDrivePresent) {
 if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $SharedPC) {
     # Streamline the user experience by disabling First Run Experience
     # https://learn.microsoft.com/en-us/windows-app/windowsautologoff#skipfre
-    $RegKeys += [PSCustomObject]@{
+    $RegValues += [PSCustomObject]@{
         Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
         Name         = 'SkipFRE'
         PropertyType = 'DWord'
@@ -390,7 +390,7 @@ if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $Share
 }
 
 If (-not $SingleAppKiosk) {
-    $RegKeys += [PSCustomObject]@{
+    $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
         Name         = 'StartShownOnUpgrade'
         PropertyType = 'DWord'
@@ -404,7 +404,7 @@ If ($AutoLogonKiosk) {
     #https://learn.microsoft.com/en-us/windows-app/windowsautologoff
     Switch ($WindowsAppAutoLogoffConfig) {
         'ResetAppOnCloseOnly' {
-            $RegKeys += [PSCustomObject]@{
+            $RegValues += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffEnable'
                 PropertyType = 'DWORD'
@@ -413,7 +413,7 @@ If ($AutoLogonKiosk) {
             }
         }
         'ResetAppAfterConnection' {
-            $RegKeys += [PSCustomObject]@{
+            $RegValues += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffOnSuccessfulConnect'
                 PropertyType = 'DWord'
@@ -422,7 +422,7 @@ If ($AutoLogonKiosk) {
             }
         }
         'ResetAppOnCloseOrIdle' {
-            $RegKeys += [PSCustomObject]@{
+            $RegValues += [PSCustomObject]@{
                 Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
                 Name         = 'AutoLogoffTimeInterval'
                 PropertyType = 'DWord'
@@ -439,8 +439,14 @@ $FileRestore = "$DirKiosk\RegKeyRestore.csv"
 New-Item -Path $FileRestore -ItemType File -Force | Out-Null
 Add-Content -Path $FileRestore -Value 'Path,Name,PropertyType,Value,Description'
 
+# Check if any registry keys require HKCU access before loading the hive     
+If ($RegValues | Where-Object { $_.Key -like 'HKCU:*' }) {
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 11 -EntryType Information -Message "Loading Default User Hive for HKCU registry operations."
+    Start-Process -FilePath "REG.exe" -ArgumentList "LOAD", "HKLM\Default", "$env:SystemDrive\Users\default\ntuser.dat" -Wait
+}
+
 # Loop through the registry key file and perform actions.
-ForEach ($Entry in $RegKeys) {
+ForEach ($Entry in $RegValues) {
     #reset from previous values
     $Path = $null
     $Name = $null

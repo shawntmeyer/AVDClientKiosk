@@ -224,8 +224,6 @@ $DirShellLauncherSettings = Join-Path -Path $DirAssignedAccess -ChildPath "Shell
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath "ProvisioningPackages"
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
-$DirRegKeys = Join-Path -Path $Script:Dir -ChildPath "RegistryKeys"
-$FileRegKeys = Join-Path -Path $DirRegKeys -ChildPath "RegKeys.csv"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirCustomLaunchScript = Join-Path -Path $Script:Dir -ChildPath "Scripts\CustomLaunchScript"
@@ -234,11 +232,11 @@ $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 
 # Set AVD feed subscription Url.
 Switch ($EnvironmentAVD) {
-    'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn' }
-    'AzureCloud' { $SubscribeUrl = 'https://rdweb.wvd.azure.com' }
-    'AzureUSGovernment' { $SubscribeUrl = 'https://rdweb.wvd.azure.us' }
-    'AzureGovernmentSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>' }
-    'AzureGovernmentTopSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>' }
+    'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn/api/arm/feeddiscovery' }
+    'AzureCloud' { $SubscribeUrl = 'https://rdweb.wvd.azure.com/api/arm/feeddiscovery' }
+    'AzureUSGovernment' { $SubscribeUrl = 'https://rdweb.wvd.azure.us/api/arm/feeddiscovery' }
+    'AzureGovernmentSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>/api/arm/feeddiscovery' }
+    'AzureGovernmentTopSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>/api/arm/feeddiscovery' }
 }
 
 If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
@@ -547,12 +545,36 @@ Else {
 
 # Import registry keys file
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 96 -Message "Loading Registry Keys from CSV file."
-$RegKeys = Import-Csv -Path $FileRegKeys
+$RegValues = @()
+
+$RegValues += [PSCustomObject]@{
+    Path         = 'HKCU:\Software\Microsoft\RDclientRadc'
+    Name         = 'EnableMSRDCTelemetry'
+    PropertyType = 'DWord'
+    Value        = 0
+    Description  = 'Disable Remote Desktop client telemetry data'
+}
+
+$RegValues += [PSCustomObject]@{
+    Path         = 'HKLM:\SOFTWARE\Microsoft\MSRDC\Policies'
+    Name         = 'AutomaticUpdates'
+    PropertyType = 'DWord'
+    Value        = 0
+    Description  = 'Disable Updates and Notifications in Remote Desktop Client'
+}
+
+$RegValues += [PSCustomObject]@{
+    Path         = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WorkplaceJoin'
+    Name         = 'BlockAADWorkplaceJoin'
+    PropertyType = 'DWord'
+    Value        = 1
+    Description  = 'Disable "Stay Signed in to all your apps" pop-up'
+}
+
 
 If (-not $Autologon) {
-    #Configure AutoSubscription URL for AVD Client
     #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
-    $RegKeys += [PSCustomObject]@{
+    $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
         Name         = 'AutoSubscription'
         PropertyType = 'String'
@@ -562,7 +584,7 @@ If (-not $Autologon) {
 }
 
 If ($OneDrivePresent) {
-    $RegKeys += [PSCustomObject]@{
+    $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
         Name         = 'OneDriveSetup'
         PropertyType = 'String'
@@ -572,7 +594,7 @@ If ($OneDrivePresent) {
 }
 
 If (-not $ClientShell) {
-    $RegKeys += [PSCustomObject]@{
+    $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
         Name         = 'StartShownOnUpgrade'
         PropertyType = 'DWord'
@@ -587,8 +609,14 @@ $FileRestore = "$DirKiosk\RegKeyRestore.csv"
 New-Item -Path $FileRestore -ItemType File -Force | Out-Null
 Add-Content -Path $FileRestore -Value 'Path,Name,PropertyType,Value,Description'
 
+# Check if any registry keys require HKCU access before loading the hive     
+If ($RegValues | Where-Object { $_.Key -like 'HKCU:*' }) {
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 11 -EntryType Information -Message "Loading Default User Hive for HKCU registry operations."
+    Start-Process -FilePath "REG.exe" -ArgumentList "LOAD", "HKLM\Default", "$env:SystemDrive\Users\default\ntuser.dat" -Wait
+}
+
 # Loop through the registry key file and perform actions.
-ForEach ($Entry in $RegKeys) {
+ForEach ($Entry in $RegValues) {
     #reset from previous values
     $Path = $null
     $Name = $null
@@ -605,10 +633,6 @@ ForEach ($Entry in $RegKeys) {
 
     If ($Path -like 'HKCU:*') {
         $PathTemp = $Path.Replace("HKCU:\", "HKLM:\Default\")
-        If (-not (Test-Path -Path 'HKLM:\Default')) {
-            $RegLoad = Start-Process -FilePath 'reg.exe' -ArgumentList 'load', 'HKLM\Default', "$env:SystemDrive\Users\default\ntuser.dat" -NoNewWindow -Wait -PassThru
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 95 -Message "Loaded Default User Hive Registry Keys via Reg.exe.`nReg.exe Exit Code: [$($RegLoad.ExitCode)]"
-        }
     }
     $CurrentRegValue = $null
     If (Get-ItemProperty -Path $PathTemp -Name $Name -ErrorAction SilentlyContinue) {
