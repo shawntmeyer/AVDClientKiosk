@@ -396,7 +396,7 @@ If ($CustomLaunchScript) {
     $Content = Get-Content -Path $FileToUpdate
     $Content = $Content.Replace('[string]$EventLog', "[string]`$EventLog = '$EventLog'") 
     $Content = $Content.Replace('[string]$EventSource', "[string]`$EventSource = '$LaunchScriptSource'")
-    If ($Autologon -and $SubscribeUrl) {
+    If ($Autologon -and $SubscribeUrl -and $Cloud -ne 'AzureCloud') {
         $Content = $Content.Replace('[string]$SubscribeUrl', "[string]`$SubscribeUrl = '$SubscribeUrl'")
     }
     If ($SecurityKey) { $Content = $Content.Replace('[string]$DeviceVendorID', "[string]`$DeviceVendorID = '$DeviceVendorID'") }
@@ -586,7 +586,7 @@ $RegValues += [PSCustomObject]@{
 }
 
 
-If (-not $Autologon -and $null -ne $SubscribeUrl -and $Cloud -ne 'AzureCloud') {
+If (-not $Autologon -and $null -ne $SubscribeUrl) {
     #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
     If ($SubscribeUrl -notlike '*/feeddiscovery*') {
         $SubscribeUrl = "$SubscribeUrl/api/arm/feeddiscovery"
