@@ -52,8 +52,11 @@ create a new user - 'KioskUser0' - which will not have a password and be configu
 This switch parameter determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'.
 When the default 'explorer' shell is used additional local group policy settings and provisioning packages are applied to lock down the shell.
 
-.PARAMETER EnvironmentAVD
-This value determines the Azure environment to which you are connecting. It ultimately determines the Url of the Remote Desktop Feed which
+.PARAMETER AutoSubscribe
+This switch parameter determines If the Remote Desktop client for Windows automatically subscribes to an Azure Virtual Desktop workspace.
+
+.PARAMETER Cloud
+This value is REQUIRED if 'AutoSubscribe' is present. It determines the Azure environment to which you are connecting. It ultimately determines the Url of the Remote Desktop Feed which
 varies by environment by setting the $SubscribeUrl variable and replacing placeholders in several files during installation.
 The list of Urls can be found at
 https://learn.microsoft.com/en-us/azure/virtual-desktop/users/connect-microsoft-store?source=recommendations#subscribe-to-a-workspace.
@@ -115,8 +118,11 @@ param (
     [Parameter(Mandatory, ParameterSetName = 'AutologonExplorerShell')]
     [switch]$Autologon,
 
+    [Parameter()]
+    [switch]$AutoSubscribe,
+
     [ValidateSet('AzureChina', 'AzureCloud', 'AzureUSGovernment', 'AzureGovernmentSecret', 'AzureGovernmentTopSecret')]
-    [string]$EnvironmentAVD = 'AzureCloud',
+    [string]$Cloud,
 
     [switch]$InstallRemoteDesktopClient,
 
@@ -151,6 +157,13 @@ param (
 )
 
 #region Parameter Validation and Configuration
+
+If ($AutoSubscribe) {
+    If ($null -eq $EnvironmentAVD -or $EnvironmentAVD -eq '') {
+        Throw 'You must specify the EnvironmentAVD parameter when AutoSubscribe is enabled.'
+    }
+}
+
 $ActionParameters = @($DeviceRemovalAction, $IdleTimeoutAction, $SystemDisconnectAction, $UserDisconnectSignOutAction)
 If ($Autologon) {
     ForEach ($Action in $ActionParameters) {
@@ -231,12 +244,16 @@ $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\Schedule
 $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 
 # Set AVD feed subscription Url.
-Switch ($EnvironmentAVD) {
-    'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn/api/arm/feeddiscovery' }
-    'AzureCloud' { $SubscribeUrl = 'https://rdweb.wvd.azure.com/api/arm/feeddiscovery' }
-    'AzureUSGovernment' { $SubscribeUrl = 'https://rdweb.wvd.azure.us/api/arm/feeddiscovery' }
-    'AzureGovernmentSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>/api/arm/feeddiscovery' }
-    'AzureGovernmentTopSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>/api/arm/feeddiscovery' }
+if ($AutoSubscribe) {
+    Switch ($Cloud) {
+        'AzureChina' { $SubscribeUrl = 'https://rdweb.wvd.azure.cn/api/arm/feeddiscovery' }
+        'AzureCloud' { $SubscribeUrl = 'https://rdweb.wvd.azure.com' }
+        'AzureUSGovernment' { $SubscribeUrl = 'https://rdweb.wvd.azure.us/api/arm/feeddiscovery' }
+        'AzureGovernmentSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>/api/arm/feeddiscovery' }
+        'AzureGovernmentTopSecret' { $SubscribeUrl = 'https://rdweb.wvd.<CLOUDSUFFIX>/api/arm/feeddiscovery' }
+    }
+} Else {
+    $SubscribeUrl = $null
 }
 
 If ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '') {
@@ -379,7 +396,7 @@ If ($CustomLaunchScript) {
     $Content = Get-Content -Path $FileToUpdate
     $Content = $Content.Replace('[string]$EventLog', "[string]`$EventLog = '$EventLog'") 
     $Content = $Content.Replace('[string]$EventSource', "[string]`$EventSource = '$LaunchScriptSource'")
-    If ($Autologon) {
+    If ($Autologon -and $SubscribeUrl) {
         $Content = $Content.Replace('[string]$SubscribeUrl', "[string]`$SubscribeUrl = '$SubscribeUrl'")
     }
     If ($SecurityKey) { $Content = $Content.Replace('[string]$DeviceVendorID', "[string]`$DeviceVendorID = '$DeviceVendorID'") }
@@ -511,11 +528,6 @@ Else {
 
 # Configure Feed URL for Autologon User
 If ($Autologon) {
-    $outfile = "$env:Temp\Users-AVDURL.txt"
-    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'users-DefaultConnectionUrl.txt'
-    (Get-Content -Path $sourceFile).Replace('<url>', $SubscribeUrl) | Out-File $outfile
-    $null = cmd /c lgpo.exe /t "$outfile" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 70 -Message "Configured Default Connection URL for autologon user via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     # Disable Password requirement for screen saver lock and wake from sleep.
     $null = cmd /c lgpo.exe /t "$DirGPO\disablePasswordForUnlock.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -574,8 +586,11 @@ $RegValues += [PSCustomObject]@{
 }
 
 
-If (-not $Autologon) {
+If (-not $Autologon -and $null -ne $SubscribeUrl) {
     #https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remotedesktop#autosubscription
+    If ($SubscribeUrl -notlike '*/feeddiscovery*') {
+        $SubscribeUrl = "$SubscribeUrl/api/arm/feeddiscovery"
+    }
     $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
         Name         = 'AutoSubscription'
