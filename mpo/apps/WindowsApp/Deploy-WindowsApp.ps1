@@ -151,15 +151,18 @@ If ($DeploymentType -ne "Uninstall") {
 
     # Provision the app with dependencies
     Add-AppxProvisionedPackage -Online -PackagePath $MSIXPath -DependencyPackagePath $DependenciesPath -SkipLicense
+    
+    # Skip First Run Experience
+    $RegKey = "HKLM:\SOFTWARE\Microsoft\WindowsApp"
+    If (-not (Test-Path -Path $RegKey)) {
+        New-Item -Path $RegKey -Force | Out-Null
+    }
+    Write-Output "Disabling the First Run Experience (FRE)"
+    New-ItemProperty -Path $RegKey -Name "SkipFRE" -Value 1 -PropertyType DWord -Force | Out-Null
+
     # Configure Auto Logoff Settings
     If ($AutologoffEnable.IsPresent -or $AutoLogoffOnSuccessfulConnect.IsPresent -or $AutoLogoffTimeInterval) {
-        Write-Output "Configuring Auto Logoff Settings"
-        $RegKey = "HKLM:\SOFTWARE\Microsoft\WindowsApp"
-        If (-not (Test-Path -Path $RegKey)) {
-            New-Item -Path $RegKey -Force | Out-Null
-        }
-        Write-Output "Disabling the First Run Experience (FRE)"
-        New-ItemProperty -Path $RegKey -Name "SkipFRE" -Value 1 -PropertyType DWord -Force | Out-Null
+        Write-Output "Configuring Auto Logoff Settings"        
         If ($AutologoffEnable.IsPresent) {
             Write-Output "Enabling Auto Logoff"
             New-ItemProperty -Path $RegKey -Name "AutoLogoffEnable" -Value 1 -PropertyType DWord -Force | Out-Null
