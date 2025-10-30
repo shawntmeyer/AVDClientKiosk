@@ -100,7 +100,7 @@ If (Test-Path -Path $DirKiosk) {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 10 -EntryType Information -Message "Restoring registry values to default."
         
         # Check if any registry keys require HKCU access before loading the hive
-        $RequiresHKCU = $RegValues | Where-Object { $_.Key -like 'HKCU:*' }
+        $RequiresHKCU = $RegValues | Where-Object { $_.Path -like 'HKCU:*' }
         $HiveLoaded = $false
         
         If ($RequiresHKCU) {

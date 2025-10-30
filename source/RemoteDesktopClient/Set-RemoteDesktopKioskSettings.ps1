@@ -568,7 +568,7 @@ $RegValues += [PSCustomObject]@{
     Name         = 'BlockAADWorkplaceJoin'
     PropertyType = 'DWord'
     Value        = 1
-    Description  = 'Disable "Stay Signed in to all your apps" pop-up'
+    Description  = "Disable 'Stay Signed in to all your apps' pop-up"
 }
 
 
@@ -610,7 +610,7 @@ New-Item -Path $FileRestore -ItemType File -Force | Out-Null
 Add-Content -Path $FileRestore -Value 'Path,Name,PropertyType,Value,Description'
 
 # Check if any registry keys require HKCU access before loading the hive     
-If ($RegValues | Where-Object { $_.Key -like 'HKCU:*' }) {
+If ($RegValues | Where-Object { $_.Path -like 'HKCU:*' }) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 11 -EntryType Information -Message "Loading Default User Hive for HKCU registry operations."
     Start-Process -FilePath "REG.exe" -ArgumentList "LOAD", "HKLM\Default", "$env:SystemDrive\Users\default\ntuser.dat" -Wait
 }
