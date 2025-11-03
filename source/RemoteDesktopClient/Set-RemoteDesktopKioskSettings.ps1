@@ -160,7 +160,7 @@ param (
 
 If ($AutoSubscribe.IsPresent) {
     If ($null -eq $Cloud -or $Cloud -eq '') {
-        Throw 'You must specify the 'Cloud' parameter when AutoSubscribe is enabled.'
+        Throw "You must specify the 'Cloud' parameter when AutoSubscribe is enabled."
     }
 }
 
