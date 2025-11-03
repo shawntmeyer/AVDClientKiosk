@@ -182,7 +182,7 @@ Else {
             }
         }
     }
-    If ($DeviceRemovalAction -and $SmartCard -eq $false -and ($null -eq $DeviceVendorID)) {
+    If ($DeviceRemovalAction -and -not ($SmartCard.IsPresent) -and ($null -eq $DeviceVendorID)) {
         Throw 'You must specify either a DeviceVendorID or SmartCard when DeviceRemoval is a trigger.'
     }
     ElseIf ($DeviceRemovalAction -and $SmartCard -and ($null -ne $DeviceVendorID -and $DeviceVendorID -ne '')) {
