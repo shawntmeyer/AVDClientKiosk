@@ -158,14 +158,14 @@ param (
 
 #region Parameter Validation and Configuration
 
-If ($AutoSubscribe) {
+If ($AutoSubscribe.IsPresent) {
     If ($null -eq $Cloud -or $Cloud -eq '') {
         Throw 'You must specify the EnvironmentAVD parameter when AutoSubscribe is enabled.'
     }
 }
 
 $ActionParameters = @($DeviceRemovalAction, $IdleTimeoutAction, $SystemDisconnectAction, $UserDisconnectSignOutAction)
-If ($Autologon) {
+If ($Autologon.IsPresent) {
     ForEach ($Action in $ActionParameters) {
         If ($null -ne $Action) {
             If ($Action -eq 'Lock' -or $Action -eq 'Logoff') {
