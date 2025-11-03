@@ -208,8 +208,8 @@ Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -
 
 If (Get-PendingReboot) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Warning -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
-    Start-Wait -Seconds 15
-    Restart-Computer -Force
+    Start-Process -FilePath 'shutdown.exe' -ArgumentList '/r /t 15' -NoNewWindow
+    Exit
 }
 
 # Copy lgpo to system32 for future use.
