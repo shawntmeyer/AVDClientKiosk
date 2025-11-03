@@ -191,21 +191,9 @@ ForEach ($Function in $Functions) {
 #region Initialization
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-Write-Output "Waiting for event log to be ready (timeout: 5 seconds)..."
-# Wait for event log to be ready with timeout
-$timeout = 5
-$elapsed = 0
-do {
-    Start-Sleep -Seconds 1
-    $elapsed ++
-    $eventLogReady = Get-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-} while (-not $eventLogReady -and $elapsed -lt $timeout)
+Write-Output "Pausing for 5 seconds to ensure event log is ready..."
+Start-Sleep -Seconds 5
 
-if ($eventLogReady) {
-    Write-Output "Event log is ready after $elapsed seconds."
-} else {
-    Write-Output "Event log not confirmed ready after $timeout seconds, continuing anyway."
-}
 
 $message = @"
 Starting Windows App Kiosk Configuration Script
