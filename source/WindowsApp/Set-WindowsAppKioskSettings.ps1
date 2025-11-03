@@ -196,9 +196,9 @@ Write-Output "Waiting for event log to be ready (timeout: 5 seconds)..."
 $timeout = 5
 $elapsed = 0
 do {
-    Start-Sleep -Milliseconds 500
-    $elapsed += 0.5
-    $eventLogReady = Get-EventLog -LogName $EventLog -Source $EventSource -Newest 1 -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    $elapsed ++
+    $eventLogReady = Get-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 } while (-not $eventLogReady -and $elapsed -lt $timeout)
 
 if ($eventLogReady) {
