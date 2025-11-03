@@ -314,7 +314,7 @@ $message = @"
 Starting Remote Desktop Client Kiosk Configuration Script
 Script Full Name: $($Script:FullName)
 Parameters:
-    $($PSBoundParameters | Out-String)
+$($PSBoundParameters | Out-String)
 Running on: $($OS.Caption) version $($OS.Version)
 "@
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message $message
