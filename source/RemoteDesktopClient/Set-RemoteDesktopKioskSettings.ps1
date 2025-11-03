@@ -396,7 +396,7 @@ If ($CustomLaunchScript) {
     $Content = Get-Content -Path $FileToUpdate
     $Content = $Content.Replace('[string]$EventLog', "[string]`$EventLog = '$EventLog'") 
     $Content = $Content.Replace('[string]$EventSource', "[string]`$EventSource = '$LaunchScriptSource'")
-    If ($Autologon -and $SubscribeUrl -and $Cloud -ne 'AzureCloud') {
+    If ($Autologon -and $SubscribeUrl) {
         $Content = $Content.Replace('[string]$SubscribeUrl', "[string]`$SubscribeUrl = '$SubscribeUrl'")
     }
     If ($SecurityKey) { $Content = $Content.Replace('[string]$DeviceVendorID', "[string]`$DeviceVendorID = '$DeviceVendorID'") }
