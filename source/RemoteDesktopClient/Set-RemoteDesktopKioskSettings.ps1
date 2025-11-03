@@ -283,22 +283,35 @@ If (Test-Path -Path $DirFunctions) {
         }
         Catch {
             Write-Error "Failed to load function from $($Function.FullName): $($_.Exception.Message)"
-            Exit 1
+            Exit 1618
         }
     }
 }
 Else {
     Write-Error "Functions directory not found at: $DirFunctions"
-    Exit 1
+    Exit 1618
 }
 
 #endregion Functions
 
 #region Initialization
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-Write-Output "Waiting 5 seconds for event log to be ready..."
-# Wait for event log to be ready
-Start-Sleep -Seconds 5
+
+Write-Output "Waiting for event log to be ready (timeout: 5 seconds)..."
+# Wait for event log to be ready with timeout
+$timeout = 5
+$elapsed = 0
+do {
+    Start-Sleep -Milliseconds 500
+    $elapsed += 0.5
+    $eventLogReady = Get-EventLog -LogName $EventLog -Source $EventSource -Newest 1 -ErrorAction SilentlyContinue
+} while (-not $eventLogReady -and $elapsed -lt $timeout)
+
+if ($eventLogReady) {
+    Write-Output "Event log is ready after $elapsed seconds."
+} else {
+    Write-Output "Event log not confirmed ready after $timeout seconds, continuing anyway."
+}
 
 $message = @"
 Starting Remote Desktop Client Kiosk Configuration Script
