@@ -54,7 +54,21 @@ ForEach ($Function in $Functions) {
 }
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 5
+Write-Output "Waiting for event log to be ready (timeout: 5 seconds)..."
+# Wait for event log to be ready with timeout
+$timeout = 5
+$elapsed = 0
+do {
+    Start-Sleep -Milliseconds 500
+    $elapsed += 0.5
+    $eventLogReady = Get-EventLog -LogName $EventLog -Source $EventSource -Newest 1 -ErrorAction SilentlyContinue
+} while (-not $eventLogReady -and $elapsed -lt $timeout)
+
+if ($eventLogReady) {
+    Write-Output "Event log is ready after $elapsed seconds."
+} else {
+    Write-Output "Event log not confirmed ready after $timeout seconds, continuing anyway."
+}
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
 
 #endregion Initialization and Logging
