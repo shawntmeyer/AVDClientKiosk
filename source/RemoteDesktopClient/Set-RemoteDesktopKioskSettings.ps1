@@ -852,12 +852,13 @@ If ($Autologon) {
 }
 
 #endregion Prevent Microsoft AAD Broker Timeout
+
 If ($ScriptExitCode -eq 1618) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 135 -Message "At least one critical failure occurred. Exiting Script and restarting computer."
     Restart-Computer -Force
 }
 Else {
-    $ScriptExitCode = 0
+    $ScriptExitCode = 3010
 }
     
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
