@@ -310,9 +310,9 @@ Running on: $($OS.Caption) version $($OS.Version)
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message $message
 
 If (Get-PendingReboot) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
-    Start-Process -FilePath 'shutdown.exe' -ArgumentList '/r /t 15'
-    Exit 2
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Warning -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
+    Start-Wait -Seconds 15
+    Restart-Computer -Force
 }
 
 # Copy lgpo to system32 for future use.
@@ -514,7 +514,6 @@ If ($ClientShell) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 61 -Message "Disabled New User Privacy Experience via Computer Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
-
     # Hide Windows Security notification area control
     $null = cmd /c lgpo.exe /t "$DirGPO\computer-HideWindowsSecurityControl.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 62 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"

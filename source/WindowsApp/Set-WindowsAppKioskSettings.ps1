@@ -207,9 +207,9 @@ Running on: $($OS.Caption) version $($OS.Version)
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 1 -Message $message
 
 If (Get-PendingReboot) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
-    Start-Process -FilePath 'shutdown.exe' -ArgumentList '/r /t 15'
-    Exit 3010
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Warning -EventId 0 -Message "There is a reboot pending. This application cannot be installed when a reboot is pending.`nRebooting the computer in 15 seconds."
+    Start-Wait -Seconds 15
+    Restart-Computer -Force
 }
 
 # Copy lgpo to system32 for future use.
@@ -473,7 +473,8 @@ ForEach ($Entry in $RegValues) {
 
     If ($Path -like 'HKCU:*') {
         $PathHKLM = $Path.Replace("HKCU:\", "HKLM:\Default\")
-    } Else {
+    }
+    Else {
         $PathHKLM = $Path
     }
     $CurrentRegValue = $null
