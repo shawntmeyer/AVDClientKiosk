@@ -42,19 +42,27 @@ Function Get-PendingReboot {
         ## query the CBS Reg Key
 	    
         $RegSubKeysCBS = $WMI_Reg.EnumKey($HKLM, "SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\")
-        $CBSRebootPend = $RegSubKeysCBS.sNames -contains "RebootPending"		
+        $CBSRebootPend = $RegSubKeysCBS.sNames -contains "RebootPending"
+        If ($CBSRebootPend) { Write-Verbose "Component Based Servicing Reboot Pending" }		
 	    							
         ## Query WUAU from the registry
         $RegWUAURebootReq = $WMI_Reg.EnumKey($HKLM, "SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\")
         $WUAURebootReq = $RegWUAURebootReq.sNames -contains "RebootRequired"
+        If ($WUAURebootReq) { Write-Verbose "Windows Update Auto Update Reboot Required" }
 						
         ## Query PendingFileRenameOperations from the registry
         $RegSubKeySM = $WMI_Reg.GetMultiStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\Session Manager\", "PendingFileRenameOperations")
         $RegValuePFRO = $RegSubKeySM.sValue
+        ## If PendingFileRenameOperations has a value set $RegValuePFRO variable to $true
+        If ($RegValuePFRO) {
+            $PendFileRename = $true
+            Write-Verbose "Pending File Rename Operations detected"
+        }
 
         ## Query JoinDomain key from the registry - These keys are present if pending a reboot from a domain join operation
         $Netlogon = $WMI_Reg.EnumKey($HKLM, "SYSTEM\CurrentControlSet\Services\Netlogon").sNames
         $PendDomJoin = ($Netlogon -contains 'JoinDomain') -or ($Netlogon -contains 'AvoidSpnSet')
+        If ($PendDomJoin) { Write-Verbose "Pending Domain Join reboot required" }
 
         ## Query ComputerName and ActiveComputerName from the registry
         $ActCompNm = $WMI_Reg.GetStringValue($HKLM, "SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName\", "ComputerName")            
@@ -62,13 +70,9 @@ Function Get-PendingReboot {
 
         If (($ActCompNm -ne $CompNm) -or $PendDomJoin) {
             $CompPendRen = $true
+            Write-Verbose "Pending Computer Rename reboot required"
         }
 						
-        ## If PendingFileRenameOperations has a value set $RegValuePFRO variable to $true
-        If ($RegValuePFRO) {
-            $PendFileRename = $true
-        }
-
         ## Determine SCCM 2012 Client Reboot Pending Status
         ## To avoid nested 'If' statements and unneeded WMI calls to determine If the CCM_ClientUtilities class exist, setting EA = 0
         
@@ -86,6 +90,7 @@ Function Get-PendingReboot {
             }
             If ($CCMClientSDK.IsHardRebootPending -or $CCMClientSDK.RebootPending) {
                 $SCCM = $true
+                Write-Verbose "SCCM Client SDK reports Reboot Pending"
             }
         }
         Else {
