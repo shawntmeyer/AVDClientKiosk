@@ -179,9 +179,6 @@ $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
     
-# Set default exit code to 0
-$ScriptExitCode = 0
-
 #region Load Functions
 
 $Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
@@ -565,23 +562,15 @@ If (Get-AssignedAccessConfiguration) {
 }
 Else {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
-    Exit 1        
+    Exit 1618        
 }
 
 #endregion Assigned Access Launcher
 
-#endregion Prevent Microsoft AAD Broker Timeout
-If ($ScriptExitCode -eq 1618) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 135 -Message "At least one critical failure occurred. Exiting Script and restarting computer."
-    Restart-Computer -Force
-}
-Else {
-    $ScriptExitCode = 1641
-}
     
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
 $GPUpdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
 $null = cmd /c reg add 'HKLM\Software\Kiosk' /v Version /d "$($version.ToString())" /t REG_SZ /f
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: $ScriptExitCode"
-Exit $ScriptExitCode
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: 3010"
+Exit 3010

@@ -270,9 +270,6 @@ If ($Autologon -or $IdleTimeoutAction -eq 'Logoff' -or $SystemDisconnectAction -
     $CustomLaunchScript = $true
 }
     
-# Set default exit code to 0
-$ScriptExitCode = 0
-
 #region Load Functions
 
 If (Test-Path -Path $DirFunctions) {
@@ -751,7 +748,7 @@ If ($ClientShell) {
     }
     Else {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
-        Exit 1
+        Exit 1618
     }
 }
 Else {
@@ -797,7 +794,7 @@ Else {
     }
     Else {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Multi-App Kiosk configuration failed. Computer should be restarted first."
-        Exit 1        
+        Exit 1618        
     }
 }
 
@@ -832,7 +829,7 @@ If ($ClientShell) {
     }
     Else {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 120 -Message "Scheduled Task not created."
-        $ScriptExitCode = 1618
+        Exit 1618
     }
 }
 
@@ -860,23 +857,15 @@ If ($Autologon) {
     }
     Else {
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 120 -Message "Scheduled Task not created."
-        $ScriptExitCode = 1618
+        Exit 1618
     }
 }
 
 #endregion Prevent Microsoft AAD Broker Timeout
-
-If ($ScriptExitCode -eq 1618) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 135 -Message "At least one critical failure occurred. Exiting Script and restarting computer."
-    Restart-Computer -Force
-}
-Else {
-    $ScriptExitCode = 3010
-}
-    
+  
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
 $GPUpdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
 Set-RegistryValue -Path 'HKLM:\Software\Kiosk' -Name 'Version' -PropertyType 'String' -Value $($version.ToString())
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: $ScriptExitCode"
-Exit $ScriptExitCode
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: 3010"
+Exit 3010
