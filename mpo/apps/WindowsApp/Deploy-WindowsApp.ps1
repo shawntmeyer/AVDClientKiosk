@@ -8,42 +8,46 @@ This script installs or uninstalls the Windows App application package using App
 .PARAMETER DeploymentType
 Specifies whether to install or uninstall the application. Default is "Install".
 
-.PARAMETER AutologoffEnable
-Specifies whether to sign all users out of Windows App and resets app data when the user closes Windows App.
-
-It doesn't impact active Azure Virtual Desktop or Windows 365 sessions.
-
-This behavior will automatically be enabled if either AutoLogoffOnSuccessfulConnect or AutoLogoffTimeInterval are set.
-
-.PARAMETER AutoLogoffOnSuccessfulConnect
-Specifies whether to sign all users out of Windows App and reset app data when a successful connection to an Azure Virtual Desktop session host or Windows 365 Cloud PC is made.
+.PARAMETER AutoLogoffConfig
+Specifies the auto logoff configuration for Windows App. Valid values are:
+- 'Disabled': No auto logoff behavior (default)
+- 'ResetOnAppCloseOnly': Sign all users out of Windows App and reset app data when the user closes the app
+- 'ResetOnIdleTimeOut': Sign all users out of Windows App and reset app data after the specified idle timeout
+- 'ResetAfterConnection': Sign all users out of Windows App and reset app data when a successful connection to an Azure Virtual Desktop session host or Windows 365 Cloud PC is made
 
 It doesn't impact active Azure Virtual Desktop or Windows 365 sessions.
 
 .PARAMETER AutoLogoffTimeInterval
-Determines the interval at which Windows App checks the Windows OS for inactivity. For example, if set to 5, the app will poll the OS for inactivity every 5 minutes and the logout process will initiate if the OS reports 5 or more minutes of inactivity.
+Determines the interval in minutes at which Windows App checks the Windows OS for inactivity. This parameter is only used when AutoLogoffConfig is set to 'ResetOnIdleTimeOut'. For example, if set to 15, the app will poll the OS for inactivity every 15 minutes and the logout process will initiate if the OS reports 15 or more minutes of inactivity.
 
-Additionally, if a user manually closes the app, auto logoff is triggered immediately upon shutdown, clearing relevant app data.
+Additionally, if a user manually closes the app, auto logoff is triggered immediately upon shutdown, clearing relevant app data. Default is 15 minutes.
+
+.PARAMETER SkipFRE
+Specifies whether to skip the First Run Experience (FRE) for Windows App. Default is $true.
     
 .EXAMPLE
 .\Deploy-WindowsApp.ps1 
 Runs an installation in Passive mode with logging enabled.
 
 .EXAMPLE
-.\Deploy-WindowsApp.ps1 -Uninstall
-Uninstall Windows App.
+.\Deploy-WindowsApp.ps1 -DeploymentType 'Uninstall'
+Uninstalls Windows App.
 
 .EXAMPLE
-.\Deploy-WindowsApp.ps1 -AutologoffEnable
-Installs Windows App with autologoff enabled.
+.\Deploy-WindowsApp.ps1 -AutoLogoffConfig 'ResetOnAppCloseOnly'
+Installs Windows App with autologoff configured to reset when the user closes the app.
 
 .EXAMPLE
-.\Deploy-WindowsApp.ps1 -AutoLogoffOnSuccessfulConnect
-Installs Windows App with autologoff enabled and configures it to sign out users upon successful connection to an AVD session host or Windows 365 Cloud PC.
+.\Deploy-WindowsApp.ps1 -AutoLogoffConfig 'ResetAfterConnection'
+Installs Windows App with autologoff configured to reset upon successful connection to an AVD session host or Windows 365 Cloud PC.
 
 .EXAMPLE
-.\Deploy-WindowsApp.ps1 -AutoLogoffTimeInterval 15
-Installs Windows App with autologoff enabled and configures it to sign out users after 15 minutes of inactivity.
+.\Deploy-WindowsApp.ps1 -AutoLogoffConfig 'ResetOnIdleTimeOut' -AutoLogoffTimeInterval 30
+Installs Windows App with autologoff configured to reset after 30 minutes of inactivity.
+
+.EXAMPLE
+.\Deploy-WindowsApp.ps1 -SkipFRE $false
+Installs Windows App but allows the First Run Experience to be shown to users.
 
 .INPUTS
 None. You cannot pipe objects to this script.
@@ -70,13 +74,14 @@ Param
     [string]$DeploymentType = "Install",
 
     [Parameter(Mandatory = $false)]
-    [switch]$AutologoffEnable,
+    [ValidateSet('Disabled', 'ResetOnAppCloseOnly', 'ResetOnIdleTimeOut', 'ResetAfterConnection')]
+    [switch]$AutoLogoffConfig = 'Disabled',
 
     [Parameter(Mandatory = $false)]
-    [switch]$AutoLogoffOnSuccessfulConnect,
+    [int]$AutoLogoffTimeInterval = 15,
 
     [Parameter(Mandatory = $false)]
-    [int]$AutoLogoffTimeInterval
+    [bool]$SkipFRE = $true
 )
 
 #region Initialization
@@ -112,6 +117,30 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
         Throw "Failed to start 64-bit PowerShell"
     }
     Exit
+}
+
+Function Set-RegistryValue {
+    [CmdletBinding()]
+    param (
+        [string]$Name,
+        [string]$Path,
+        [string]$PropertyType,
+        [string]$Value
+    )
+    Write-Verbose "[Set-RegistryValue]: Setting Registry Value: $Name"
+    If (!(Test-Path -Path $Path)) {
+        New-Item -Path $Path -Force | Out-Null
+    }
+    $RemoteValue = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
+    If ($RemoteValue) {
+        $CurrentValue = Get-ItemPropertyValue -Path $Path -Name $Name
+        If ($Value -ne $CurrentValue) {
+            Set-ItemProperty -Path $Path -Name $Name -Value $Value -Force | Out-Null
+        }
+    }
+    Else {
+        New-ItemProperty -Path $Path -Name $Name -PropertyType $PropertyType -Value $Value -Force | Out-Null
+    }
 }
 
 If (-not (Test-Path -Path $Script:LogDir)) {
@@ -153,29 +182,29 @@ If ($DeploymentType -ne "Uninstall") {
     Add-AppxProvisionedPackage -Online -PackagePath $MSIXPath -DependencyPackagePath $DependenciesPath -SkipLicense
     
     # Skip First Run Experience
-    $RegKey = "HKLM:\SOFTWARE\Microsoft\WindowsApp"
-    If (-not (Test-Path -Path $RegKey)) {
-        New-Item -Path $RegKey -Force | Out-Null
+    If ($SkipFRE) {
+        Write-Output "Disabling the First Run Experience (FRE)"
+        Set-RegistryValue -Path "HKLM:\SOFTWARE\Microsoft\Windows365" -Name "SkipFRE" -Value 1 -PropertyType DWord
     }
-    Write-Output "Disabling the First Run Experience (FRE)"
-    New-ItemProperty -Path $RegKey -Name "SkipFRE" -Value 1 -PropertyType DWord -Force | Out-Null
 
     # Configure Auto Logoff Settings
-    If ($AutologoffEnable.IsPresent -or $AutoLogoffOnSuccessfulConnect.IsPresent -or $AutoLogoffTimeInterval) {
-        Write-Output "Configuring Auto Logoff Settings"        
-        If ($AutologoffEnable.IsPresent) {
-            Write-Output "Enabling Auto Logoff"
-            New-ItemProperty -Path $RegKey -Name "AutoLogoffEnable" -Value 1 -PropertyType DWord -Force | Out-Null
+    If ($null -ne $AutoLogoffConfig -and $AutoLogoffConfig -ne 'Disabled') {
+        $RegKey = "HKLM:\SOFTWARE\Microsoft\WindowsApp"
+        #    [ValidateSet('Disabled', 'ResetOnAppCloseOnly', 'ResetOnIdleTimeOut', 'ResetAfterConnection')]
+        Switch ($AutologoffConfig) {
+            'ResetOnAppCloseOnly' {
+                Set-RegistryValue -Path $RegKey -Name "AutoLogoffEnable" -Value 1 -PropertyType DWord
+            }
+            'ResetOnIdleTimeOut' {
+                Set-RegistryValue -Path $RegKey -Name 'AutoLogoffTimeInterval' -Value $AutoLogoffTimeInterval -PropertyType DWord
+            }
+            'ResetAfterConnection' {
+                Set-RegistryValue -Path $RegKey -Name 'AutoLogoffOnSuccessfulConnect' -Value 1 -PropertyType DWord
+            }
         }
-        If ($AutoLogoffOnSuccessfulConnect.IsPresent) {
-            Write-Output "Configuring Auto Logoff on Successful Connect"
-            New-ItemProperty -Path $RegKey -Name "AutoLogoffOnSuccessfulConnect" -Value 1 -PropertyType DWord -Force | Out-Null
-        }
-        If ($AutoLogoffTimeInterval) {
-            Write-Output "Setting Auto Logoff Time Interval to $AutoLogoffTimeInterval minutes"
-            New-ItemProperty -Path $RegKey -Name "AutoLogoffTimeInterval" -Value $AutoLogoffTimeInterval -PropertyType DWord -Force | Out-Null
-        }
+
     }
+    
     if ($tempDir -and (Test-Path -Path $tempDir)) {
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
