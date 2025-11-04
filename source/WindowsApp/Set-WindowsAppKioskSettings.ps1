@@ -388,7 +388,7 @@ if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $Share
     # Streamline the user experience by disabling First Run Experience
     # https://learn.microsoft.com/en-us/windows-app/windowsautologoff#skipfre
     $RegValues += [PSCustomObject]@{
-        Path         = 'HKLM:\SOFTWARE\Microsoft\WindowsApp'
+        Path         = 'HKLM:\SOFTWARE\Microsoft\Windows365'
         Name         = 'SkipFRE'
         PropertyType = 'DWord'
         Value        = 1
