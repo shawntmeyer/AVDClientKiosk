@@ -78,7 +78,7 @@ Param
     [switch]$AutoLogoffConfig = 'Disabled',
 
     [Parameter(Mandatory = $false)]
-    [int]$AutoLogoffTimeInterval = 15,
+    [int]$AutoLogoffTimeInterval,
 
     [Parameter(Mandatory = $false)]
     [bool]$SkipFRE = $true

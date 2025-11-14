@@ -1,5 +1,5 @@
 $SoftwareName = 'Amazon Workspaces'
-[version]$TargetVersion = '5.29.2.0000'
+[version]$TargetVersion = '5.30.0.5657'
 $RegistrationCode = 'SLiad+EUXQ58'
 $LaunchArg = "--uri `"workspaces://@$RegistrationCode`""
 $URLProtocolValue = "`"$env:ProgramFiles\Amazon Web Services, Inc\Amazon Workspaces\workspaces.exe`" $LaunchArg"
