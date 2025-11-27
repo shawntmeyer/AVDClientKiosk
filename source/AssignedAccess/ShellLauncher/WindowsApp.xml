@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ShellLauncherConfiguration xmlns="http://schemas.microsoft.com/ShellLauncher/2018/Configuration" xmlns:v2="http://schemas.microsoft.com/ShellLauncher/2019/Configuration">
+<ShellLauncherConfiguration xmlns="http://schemas.microsoft.com/ShellLauncher/2018/Configuration" xmlns:V2="http://schemas.microsoft.com/ShellLauncher/2019/Configuration">
     <Profiles>
         <DefaultProfile>
             <Shell Shell="MicrosoftCorporationII.Windows365_8wekyb3d8bbwe!Windows365" V2:AppType="UWP">
