@@ -359,13 +359,6 @@ Else {
                 Set-Service -Name 'SCPolicySvc' -StartupType Automatic
                 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service startup type set to Automatic."
             }
-            If ($SCPolicyService.Status -ne 'Running') {
-                $SCPolicyService | Start-Service -ErrorAction SilentlyContinue
-                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service started successfully."
-            }
-            Else {
-                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service is already running."
-            }
         }
         Catch {
             Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Warning -EventId 83 -Message "Failed to configure Smart Card Removal Policy service: $($_.Exception.Message)"
