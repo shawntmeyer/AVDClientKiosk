@@ -58,7 +58,7 @@ If ($DeploymentType -ne "Uninstall") {
         Write-Output "Attempting to download from '$Url'"
         $tempDir = Join-Path -Path $Script:TempDir -ChildPath "$($Script:Name)"
         New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
-        $MSIXPath = Join-Path -Path $env:Temp -ChildPath 'WindowsApp.msix'
+        $MSIXPath = Join-Path -Path $TempDir -ChildPath 'WindowsApp.msix'
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri $Url -OutFile $MSIXPath -UseBasicParsing
         If (Test-Path -Path $MSIXPath) {

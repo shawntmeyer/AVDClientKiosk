@@ -319,7 +319,7 @@ ForEach ($Package in $ProvisioningPackages) {
 
 #region User Logos
 if ($AutoLogonKiosk) {
-    $null = cmd /c lgpo.exe /t "$DirGPO\computer-userlogos.txt" '2>&1'
+    $null = cmd /c lgpo.exe /t "$DirGPO\AutoLogon-UserLogos.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
     Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
@@ -330,22 +330,26 @@ if ($AutoLogonKiosk) {
 
 #region Local GPO Settings
 
-if (-not $WindowsAppShell) {
+if ($WindowsAppShell) {
+    $null = cmd /c lgpo.exe /t "$DirGPO\ShellLauncher-DisableTaskMgr.txt" '2>&1'
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Disabled Task Manager via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+}
+Else {
     # Hide Windows Security notification area control
-    $null = cmd /c lgpo.exe /t "$DirGPO\computer-HideWindowsSecurityControl.txt" '2>&1'
+    $null = cmd /c lgpo.exe /t "$DirGPO\MultiApp-HideWindowsSecurityControl.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 If ($ShowSettings) {
-    $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-ShowSettings.txt" '2>&1'
+    $null = cmd /c lgpo.exe /t "$DirGPO\MultiApp-ShowSettings.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 If ($AutoLogonKiosk) {
     # Disable Password requirement for screen saver lock and wake from sleep.
-    $null = cmd /c lgpo.exe /t "$DirGPO\disablePasswordForUnlock.txt" '2>&1'
+    $null = cmd /c lgpo.exe /t "$DirGPO\AutoLogon-DisablePasswordForUnlock.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    $null = cmd /c lgpo.exe /t "$DirGPO\nonadmins-autologon.txt" '2>&1'
+    $null = cmd /c lgpo.exe /t "$DirGPO\AutoLogon-HideLockLogoff.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
