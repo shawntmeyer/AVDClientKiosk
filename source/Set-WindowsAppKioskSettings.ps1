@@ -417,6 +417,16 @@ If ($OneDrivePresent) {
     }
 }
 
+If (-not $SingleAppKiosk) {
+    $RegValues += [PSCustomObject]@{
+        Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+        Name         = 'StartShownOnUpgrade'
+        PropertyType = 'DWord'
+        Value        = 1
+        Description  = 'Disable Start Menu from opening automatically'
+    }
+}
+
 if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $SharedPC) {
     # Streamline the user experience by disabling First Run Experience
     # https://learn.microsoft.com/en-us/windows-app/windowsautologoff#skipfre
