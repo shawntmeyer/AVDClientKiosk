@@ -8,7 +8,7 @@ The solution consists of two main parts: User interface customizations and Windo
 
 The user interface customizations are configured using:
 
-- An Assigned Access configuration for single-app or multi-app kiosk modes applied via the WMI Bridge CSP.
+- An Assigned Access configuration for multi-app kiosk mode or shell launcher applied via the WMI Bridge CSP.
 - A multi-user local group policy object for non-administrative users.
 - Provisioning packages that remove pinned items from the start menu, disable Windows Spotlight, and optionally enable Shared PC mode.
 
@@ -18,20 +18,30 @@ This custom kiosk could be used for numerous scenarios including secure remote a
 
 ## Prerequisites
 
-1. A currently [supported version of Windows 11](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) with the choice of the following editions [^1]:
-   - Education
-   - Enterprise
-   - Enterprise LTSC
-   - IoT Enterprise
-   - IoT Enterprise LTSC
-   - Pro
-   - Pro Education
+1. A currently [supported version of Windows 11](https://learn.microsoft.com/en-us/windows/release-health/supported-versions-windows-client) with the choice of the following editions based on the `WindowsAppShell` parameter.
+
+   1. When the `WindowsAppShell` parameter is specified, then the following editions are supported [^1]:
+      - Education
+      - Enterprise
+      - Enterprise LTSC
+      - IoT Enterprise
+      - IoT Enterprise LTSC
+
+   2. When the `WindowsAppShell` parameter is not specified, then the following editions are supported [^2]:
+      - Education
+      - Enterprise
+      - Enterprise LTSC
+      - IoT Enterprise
+      - IoT Enterprise LTSC
+      - Pro
+      - Pro Education
 
 2. The ability to run the installation script as SYSTEM. The instructions are provided in the [Manual Installation section](#manual-installation).
 
-3. For most scenarios, you'll need to [join the client device to Entra ID](https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join) or [Entra ID Hybrid Join the device](https://learn.microsoft.com/en-us/entra/identity/devices/concept-hybrid-join).
+3. For most scenarios, you should [join the client device to Entra ID](https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join) or [Entra ID Hybrid Join the device](https://learn.microsoft.com/en-us/entra/identity/devices/concept-hybrid-join).
 
-[^1]: For more information see [Assigned Access Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview?tabs=ps#windows-edition-requirements)
+[~1]: For more information see [Shell Launcher Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/shell-launcher/#windows-edition-requirements)
+[^2]: For more information see [Assigned Access Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview?tabs=ps#windows-edition-requirements)
 
 ## User Interface
 
@@ -41,10 +51,10 @@ The user interface experience is determined by several factors and parameters. T
 
 **Table 1:** Windows App User Interface Summary
 
-| SingleAppKiosk | AutoLogonKiosk | User Interface |
+| WindowsAppShell | AutoLogonKiosk | User Interface |
 |:--------------:|:--------------:|----------------|
-| True           | True           | The Windows App becomes the only available application via Assigned Access single-app kiosk mode. Windows 11 will automatically logon with the 'KioskUser0' account. The user will be presented with the Windows App interface to connect to their Azure Virtual Desktop resources. |
-| True           | False          | The Windows App becomes the only available application via Assigned Access single-app kiosk mode. The user will sign-in to the device using Entra ID credentials and will be automatically presented with the Windows App. |
+| True           | True           | The Windows App becomes the only available application via Shell Launcher kiosk mode. Windows 11 will automatically logon with the 'KioskUser0' account. The user will be presented with the Windows App interface to connect to their Azure Virtual Desktop resources. |
+| True           | False          | The Windows App becomes the only available application via Shell Launcher kiosk mode. The user will sign-in to the device using Entra ID credentials and will be automatically presented with the Windows App. |
 | False          | True           | A Multi-App Kiosk configuration is applied via Assigned Access which locks down the explorer interface to only show the Windows App and optionally Settings. Windows 11 will automatically logon with the 'KioskUser0' account. The user will be presented with a restricted Start menu containing only the Windows App. |
 | False          | False          | *This is the default configuration if no parameters are specified.* A Multi-App Kiosk configuration is applied via Assigned Access which locks down the explorer interface to only show the Windows App and optionally Settings. The user will sign-in to the device using Entra ID credentials and will be automatically presented with a restricted interface showing only approved applications. |
 
@@ -52,9 +62,9 @@ The user interface experience is determined by several factors and parameters. T
 
 #### Multi-App Kiosk
 
-When the `SingleAppKiosk` switch parameter is <u>not</u> specified, the device is configured using the [Multi-App Kiosk Assigned Access](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview).
+When the `WindowsAppShell` switch parameter is <u>not</u> specified, the device is configured using the [Multi-App Kiosk Assigned Access](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview).
 
-The user interface experience provides a restricted Start menu with only the Windows App and optionally the Settings app. Users can easily switch between multiple Azure Virtual Desktop connections while maintaining security restrictions.
+The user interface experience provides a restricted Start menu with only the Windows App and optionally the Settings app. Users can easily switch between multiple Azure Virtual Desktop or Windows 365 connections while maintaining security restrictions.
 
 **Figure 1:** Multi-App Kiosk showing Windows App interface
 
@@ -66,15 +76,15 @@ The figure below illustrates the Settings applet restricted to allow the user to
 
 ![Restricted Settings App](docs/media/Settings.png)
 
-#### Single-App Kiosk
+#### Windows App Shell Laucher Kiosk
 
-When the `SingleAppKiosk` parameter is selected, the Windows App becomes the only available application using [Single-App Assigned Access](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview).
+When the `WindowsAppShell` parameter is selected, the Windows App replaces the default Windows 'Explorer.exe' shell using [Shell Launcher](https://learn.microsoft.com/en-us/windows/configuration/shell-launcher/).
 
 The user interface experience provides only the Windows App with no access to other system functions, providing the highest level of security and focus.
 
-**Figure 3:** Single-App Kiosk showing Windows App only
+**Figure 3:** Windows App Shell Kiosk showing Windows App only
 
-![Windows App Single-App](docs/media/WindowsApp-SingleApp.png)
+![Windows App Shell Launcher](docs/media/WindowsApp-SingleApp.png)
 
 ## Windows App Auto Logoff Behaviors
 
@@ -102,12 +112,12 @@ The table below describes each parameter and any requirements or usage informati
 | Parameter Name   | Type   | Description | Notes/Requirements |
 |:-----------------|:------:|:------------|:-------------------|
 | `AutoLogonKiosk` | Switch | Determines if autologon is enabled through the Assigned Access configuration. | When configured, Windows will automatically create a new user, 'KioskUser0', which will not have a password and be configured to automatically logon when Windows starts. |
-| `SingleAppKiosk` | Switch | Determines whether to configure single-app kiosk mode with Windows App as the only available application. | When not specified, multi-app kiosk mode is used with a restricted Start menu. |
+| `WindowsAppShell` | Switch | Determines whether to configure shell launcher kiosk mode with Windows App as the only available application. | When not specified, multi-app kiosk mode is used with a restricted Start menu. |
 | `WindowsAppAutoLogoffConfig` | String | Determines the automatic logoff configuration for the Windows App when AutoLogonKiosk is used. | Possible values: 'Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle'. |
 | `WindowsAppAutoLogoffTimeInterval` | Int | Determines the interval in minutes at which Windows App checks for OS inactivity. | Used with 'ResetAppOnCloseOrIdle' configuration. Default is 15 minutes. |
 | `InstallWindowsApp` | Switch | Determines if the latest Windows App is automatically downloaded and provisioned on the system prior to configuration. | Requires internet access to (https://go.microsoft.com/fwlink/?linkid=2262633) and the url to which it redirects. Alternatively, download the MSIX file from this link and place it in the root of the [source/WindowsApp/Apps/WindowsApp](source/WindowsApp/Apps/WindowsApp) folder |
 | `SharedPC` | Switch | Determines if the computer is setup as a shared PC with automatic profile cleanup. | Only valid for direct logon mode (AutoLogonKiosk switch is not used). |
-| `ShowSettings` | Switch | Determines if the Settings App appears in the restricted interface, limited to display and audio settings. | Only valid when SingleAppKiosk is not specified. |
+| `ShowSettings` | Switch | Determines if the Settings App appears in the restricted interface, limited to display and audio settings. | Only valid when WindowsAppShell is not specified. |
 | `LockScreenAfterSeconds` | Int | Determines the number of seconds of idle time before the lock screen is displayed. | Only valid when AutoLogonKiosk is not used. |
 | `SmartCardRemovalAction` | String | Determines what occurs when the smart card used for authentication is removed. | Possible values: 'Lock', 'Logoff'. Cannot be used when AutoLogonKiosk is true. |
 | `Version` | Version | Writes this value to HKLM:\SOFTWARE\Kiosk\version registry key. | Allows tracking of the installed version using configuration management software. Default is '1.0.0'. |
@@ -147,10 +157,10 @@ The table below describes each parameter and any requirements or usage informati
       .\Set-WindowsAppKioskSettings.ps1 -ShowSettings
       ```
 
-    - **Single-App Kiosk with AutoLogon**
+    - **Windows App Shell Kiosk with AutoLogon**
 
       ``` powershell
-      .\Set-WindowsAppKioskSettings.ps1 -SingleAppKiosk -AutoLogonKiosk -WindowsAppAutoLogoffConfig 'ResetAppOnCloseOrIdle' -WindowsAppAutoLogoffTimeInterval 15
+      .\Set-WindowsAppKioskSettings.ps1 -WindowsAppShell -AutoLogonKiosk -WindowsAppAutoLogoffConfig 'ResetAppOnCloseOrIdle' -WindowsAppAutoLogoffTimeInterval 15
       ```
 
     - **Multi-App Kiosk with AutoLogon and App Reset on Close**
@@ -168,7 +178,7 @@ The table below describes each parameter and any requirements or usage informati
     - **Install Windows App and Configure Kiosk**
 
       ``` powershell
-      .\Set-WindowsAppKioskSettings.ps1 -InstallWindowsApp -SingleAppKiosk -AutoLogonKiosk -WindowsAppAutoLogoffConfig 'ResetAppAfterConnection' -WindowsAppAutoLogoffTimeInterval 5
+      .\Set-WindowsAppKioskSettings.ps1 -InstallWindowsApp -WindowsAppShell -AutoLogonKiosk -WindowsAppAutoLogoffConfig 'ResetAppAfterConnection' -WindowsAppAutoLogoffTimeInterval 5
       ```
 
     - **Lock Screen on Idle**
