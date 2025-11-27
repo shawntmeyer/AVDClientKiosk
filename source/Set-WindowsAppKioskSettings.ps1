@@ -532,20 +532,20 @@ Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -
 If ($WindowsAppShell) {
     If ($AutoLogonKiosk) {
         $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp_AutoLogon.xml"
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App with Autologon via WMI MDM bridge."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Windows App Shell Launcher with Autologon via WMI MDM bridge."
     }
     Else {
         $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp.xml"
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App via WMI MDM bridge."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Windows App Shell Launcher via WMI MDM bridge."
     }
     $DestFile = Join-Path -Path $DirKiosk -ChildPath "AssignedAccessShellLauncher.xml"
     Copy-Item -Path $ConfigFile -Destination $DestFile -Force
     Set-AssignedAccessShellLauncher -FilePath $DestFile
     If (Get-AssignedAccessShellLauncher) {
-        Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
     }
     Else {
-        Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
         Exit 1618
     }
 }
