@@ -1,4 +1,0 @@
-Computer
-SOFTWARE\Policies\Microsoft\Windows\OOBE
-DisablePrivacyExperience
-DWORD:1

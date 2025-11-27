@@ -181,9 +181,21 @@ $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
     
 #region Load Functions
 
-$Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
-ForEach ($Function in $Functions) {
-    . "$($Function.FullName)"
+If (Test-Path -Path $DirFunctions) {
+    $Functions = Get-ChildItem -Path $DirFunctions -Filter '*.ps1'
+    ForEach ($Function in $Functions) {
+        Try {
+            . "$($Function.FullName)"
+        }
+        Catch {
+            Write-Error "Failed to load function from $($Function.FullName): $($_.Exception.Message)"
+            Exit 1
+        }
+    }
+}
+Else {
+    Write-Error "Functions directory not found at: $DirFunctions"
+    Exit 1
 }
 
 #endregion Functions
@@ -193,7 +205,6 @@ ForEach ($Function in $Functions) {
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
 Write-Output "Pausing for 5 seconds to ensure event log is ready..."
 Start-Sleep -Seconds 5
-
 
 $message = @"
 Starting Windows App Kiosk Configuration Script
@@ -213,7 +224,7 @@ If (Get-PendingReboot) {
 # Copy lgpo to system32 for future use.
 Copy-Item -Path "$DirTools\lgpo.exe" -Destination "$env:SystemRoot\System32" -Force
 
-#endregion Inistiialization
+#endregion Initialization
 
 #region Remove Previous Versions
 
@@ -266,13 +277,14 @@ If (-not (Test-Path $DirKiosk)) {
 
 # Setting ACLs on the Kiosk Settings directory to prevent Non-Administrators from changing files. Defense in Depth.
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 41 -Message "Configuring Kiosk Directory ACLs"
-$Group = New-Object System.Security.Principal.NTAccount("Builtin", "Administrators")
+$AdminsSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")
+$Group = $AdminsSID.Translate([System.Security.Principal.NTAccount])
 $ACL = Get-ACL $DirKiosk
 $ACL.SetOwner($Group)
 Set-ACL -Path $DirKiosk -AclObject $ACL
-Update-ACL -Path $DirKiosk -Identity 'BuiltIn\Administrators' -FileSystemRights 'FullControl' -Type 'Allow'
-Update-ACL -Path $DirKiosk -Identity 'BuiltIn\Users' -FileSystemRights 'ReadAndExecute' -Type 'Allow'
-Update-ACL -Path $DirKiosk -Identity 'System' -FileSystemRights 'FullControl' -Type 'Allow'
+Update-ACL -Path $DirKiosk -Identity 'S-1-5-32-544' -FileSystemRights 'FullControl' -Type 'Allow'
+Update-ACL -Path $DirKiosk -Identity 'S-1-5-32-545' -FileSystemRights 'ReadAndExecute' -Type 'Allow'
+Update-ACL -Path $DirKiosk -Identity 'S-1-5-18' -FileSystemRights 'FullControl' -Type 'Allow'
 Update-ACLInheritance -Path $DirKiosk -DisableInheritance $true -PreserveInheritedACEs $false
 
 #endregion KioskSettings Directory
@@ -338,6 +350,27 @@ If ($AutoLogonKiosk) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
+    If ($SmartCardRemovalAction -ne $null) {
+        # Ensure Smart Card Removal Policy service is running and set to automatic
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Configuring Smart Card Removal Policy service."
+        Try {
+            $SCPolicyService = Get-Service -Name 'SCPolicySvc' -ErrorAction Stop
+            If ($SCPolicyService.StartType -ne 'Automatic') {
+                Set-Service -Name 'SCPolicySvc' -StartupType Automatic
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service startup type set to Automatic."
+            }
+            If ($SCPolicyService.Status -ne 'Running') {
+                Start-Service -Name 'SCPolicySvc'
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service started successfully."
+            }
+            Else {
+                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service is already running."
+            }
+        }
+        Catch {
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Warning -EventId 83 -Message "Failed to configure Smart Card Removal Policy service: $($_.Exception.Message)"
+        }
+    }
     If ($SmartCardRemovalAction -eq 'Lock') {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -393,16 +426,6 @@ if (($AutoLogonKiosk -and $WindowsAppAutoLogoffConfig -ne 'Disabled') -or $Share
         PropertyType = 'DWord'
         Value        = 1
         Description  = 'Disable First Run Experience in Windows App'
-    }
-}
-
-If (-not $SingleAppKiosk) {
-    $RegValues += [PSCustomObject]@{
-        Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
-        Name         = 'StartShownOnUpgrade'
-        PropertyType = 'DWord'
-        Value        = 1
-        Description  = 'Disable Start Menu from opening automatically'
     }
 }
 
@@ -554,11 +577,10 @@ Else {
 }
 
 #endregion Assigned Access Launcher
-
     
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
 $GPUpdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
-$null = cmd /c reg add 'HKLM\Software\Kiosk' /v Version /d "$($version.ToString())" /t REG_SZ /f
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($version.ToString())' with Exit Code: 3010"
+$null = cmd /c reg add 'HKLM\Software\Kiosk' /v Version /d "$($Version.ToString())" /t REG_SZ /f
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 199 -Message "Ending Kiosk Mode Configuration version '$($Version.ToString())' with Exit Code: 3010"
 Exit 3010
