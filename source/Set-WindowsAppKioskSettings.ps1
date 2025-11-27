@@ -58,9 +58,8 @@ This string parameter determines the automatic logoff configuration for the Wind
 This integer value determines the interval at which Windows App checks the Windows OS for inactivity.
 For example, if set to 5, the app will poll the OS for inactivity every 5 minutes and the logout process will initiate if the OS reports 5 or more minutes of inactivity. 
 
-.PARAMETER SingleAppKiosk
-This switch parameter determines whether the Windows Shell is replaced by the Remote Desktop client for Windows or remains the default 'explorer.exe'.
-When the default 'explorer' shell is used additional local group policy settings and provisioning packages are applied to lock down the shell.
+.PARAMETER WindowsAppShell
+This switch parameter determines whether the Windows Shell is replaced by the Windows App or remains the default 'explorer.exe'.
 
 .PARAMETER InstallWindowsApp
 This switch parameter determines If the latest Remote Desktop client for Windows is automatically downloaded from the Internet and installed
@@ -89,24 +88,24 @@ This version parameter allows tracking of the installed version using configurat
 param (
     [switch]$InstallWindowsApp,
 
-    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonShellLauncher')]
     [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [switch]$AutoLogonKiosk,
 
-    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory, ParameterSetName = 'AutologonShellLauncher')]
     [Parameter(Mandatory, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [ValidateSet('Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle')]
     [string]$WindowsAppAutoLogoffConfig,
 
-    [Parameter(Mandatory = $false, ParameterSetName = 'AutologonSingleAppKiosk')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'AutologonShellLauncher')]
     [Parameter(Mandatory = $false, ParameterSetName = 'AutoLogonMultiAppKiosk')]
     [int]$WindowsAppAutoLogoffTimeInterval,
 
-    [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonShellLauncher')]
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]    
     [int]$LockScreenAfterSeconds,
 
-    [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonShellLauncher')]
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
     [switch]$SharedPC,
 
@@ -114,11 +113,11 @@ param (
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
     [switch]$ShowSettings,
 
-    [Parameter(Mandatory, ParameterSetName = 'AutologonSingleAppKiosk')]
-    [Parameter(Mandatory, ParameterSetName = 'DirectLogonSingleAppKiosk')]
-    [switch]$SingleAppKiosk,
+    [Parameter(Mandatory, ParameterSetName = 'AutologonShellLauncher')]
+    [Parameter(Mandatory, ParameterSetName = 'DirectLogonShellLauncher')]
+    [switch]$WindowsAppShell,
 
-    [Parameter(ParameterSetName = 'DirectLogonSingleAppKiosk')]
+    [Parameter(ParameterSetName = 'DirectLogonShellLauncher')]
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
     [ValidateSet('Lock', 'Logoff')]
     [string]$SmartCardRemovalAction,
@@ -172,7 +171,7 @@ $DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
 $DirAssignedAccess = Join-Path -Path $Script:Dir -ChildPath 'AssignedAccess'
 $DirMultiAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'MultiApp'
 $DirProvisioningPackages = Join-Path -Path $Script:Dir -ChildPath 'ProvisioningPackages'
-$DirSingleAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'SingleApp'
+$DirShellLauncherSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'ShellLauncher'
 $DirGPO = Join-Path -Path $Script:Dir -ChildPath "GPOSettings"
 $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
@@ -230,7 +229,7 @@ Copy-Item -Path "$DirTools\lgpo.exe" -Destination "$env:SystemRoot\System32" -Fo
 
 # Run Removal Script first in the event that a previous version is installed or in the event of a failed installation.
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 3 -Message 'Running removal script in case of previous installs or failures.'
-& "$Script:Dir\Remove-KioskSettings.ps1"
+& "$Script:Dir\Remove-KioskSettings.ps1" -Reinstall
 
 #endregion Previous Version Removal
 
@@ -304,7 +303,7 @@ If ($SharedPC) {
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
 }
 
-If (!$SingleAppKiosk) {
+If (!$WindowsAppShell) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
@@ -331,7 +330,7 @@ if ($AutoLogonKiosk) {
 
 #region Local GPO Settings
 
-if (-not $SingleAppKiosk) {
+if (-not $WindowsAppShell) {
     # Hide Windows Security notification area control
     $null = cmd /c lgpo.exe /t "$DirGPO\computer-HideWindowsSecurityControl.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
@@ -350,19 +349,14 @@ If ($AutoLogonKiosk) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
-    If ($SmartCardRemovalAction -ne $null) {
+    If ($SmartCardRemovalAction) {
         # Ensure Smart Card Removal Policy service is running and set to automatic
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Configuring Smart Card Removal Policy service."
-        Try {
-            $SCPolicyService = Get-Service -Name 'SCPolicySvc' -ErrorAction Stop
-            If ($SCPolicyService.StartType -ne 'Automatic') {
-                Set-Service -Name 'SCPolicySvc' -StartupType Automatic
-                Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service startup type set to Automatic."
-            }
-        }
-        Catch {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Warning -EventId 83 -Message "Failed to configure Smart Card Removal Policy service: $($_.Exception.Message)"
-        }
+        $SCPolicyService = Get-Service -Name 'SCPolicySvc' -ErrorAction Stop
+        If ($SCPolicyService.StartType -ne 'Automatic') {
+            Set-Service -Name 'SCPolicySvc' -StartupType Automatic
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service startup type set to Automatic."
+        }           
     }
     If ($SmartCardRemovalAction -eq 'Lock') {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
@@ -410,7 +404,7 @@ If ($OneDrivePresent) {
     }
 }
 
-If (-not $SingleAppKiosk) {
+If (-not $WindowsAppShell) {
     $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
         Name         = 'StartShownOnUpgrade'
@@ -535,14 +529,24 @@ If (Test-Path -Path 'HKLM:\Default') {
 #region Assigned Access Configuration
 
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
-If ($SingleAppKiosk) {
+If ($WindowsAppShell) {
     If ($AutoLogonKiosk) {
-        $ConfigFile = Join-Path -Path $DirSingleAppSettings -ChildPath "WindowsApp_AutoLogon.xml"
+        $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp_AutoLogon.xml"
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App with Autologon via WMI MDM bridge."
     }
     Else {
-        $ConfigFile = Join-Path -Path $DirSingleAppSettings -ChildPath "WindowsApp.xml"
+        $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp.xml"
         Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Single App Kiosk Windows App via WMI MDM bridge."
+    }
+    $DestFile = Join-Path -Path $DirKiosk -ChildPath "AssignedAccessShellLauncher.xml"
+    Copy-Item -Path $ConfigFile -Destination $DestFile -Force
+    Set-AssignedAccessShellLauncher -FilePath $DestFile
+    If (Get-AssignedAccessShellLauncher) {
+        Write-Log -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+        Exit 1618
     }
 }
 Else {
@@ -565,18 +569,18 @@ Else {
             Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App."
             $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
         }
-    }    
-}
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
-$DestFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
-Copy-Item -Path $ConfigFile -Destination $DestFile -Force
-Set-AssignedAccessConfiguration -FilePath $DestFile
-If (Get-AssignedAccessConfiguration) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
-}
-Else {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
-    Exit 1618        
+    }  
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
+    $DestFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
+    Copy-Item -Path $ConfigFile -Destination $DestFile -Force
+    Set-AssignedAccessConfiguration -FilePath $DestFile
+    If (Get-AssignedAccessConfiguration) {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
+    }
+    Else {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
+        Exit 1618        
+    }  
 }
 
 #endregion Assigned Access Launcher
