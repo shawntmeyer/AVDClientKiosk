@@ -26,7 +26,24 @@ Function Update-ACL {
 
     If (Test-Path $Path) {
         $NewAcl = Get-ACL -Path $Path
-        $FileSystemAccessRuleArgumentList = $Identity, $FileSystemRights, $InheritanceFlags, $PropagationFlags, $type
+        
+        # Handle SID strings by converting to SecurityIdentifier object
+        If ($Identity -match '^S-1-\d') {
+            Try {
+                $SecurityIdentifier = New-Object System.Security.Principal.SecurityIdentifier($Identity)
+                $IdentityReference = $SecurityIdentifier
+            }
+            Catch {
+                Write-Error "Invalid SID format: $Identity"
+                return
+            }
+        }
+        Else {
+            # Handle account names
+            $IdentityReference = $Identity
+        }
+        
+        $FileSystemAccessRuleArgumentList = $IdentityReference, $FileSystemRights, $InheritanceFlags, $PropagationFlags, $type
         $FileSystemAccessRule = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $FileSystemAccessRuleArgumentList
         $NewAcl.SetAccessRule($FileSystemAccessRule)
         Set-Acl -Path "$Path" -AclObject $NewAcl
