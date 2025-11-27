@@ -1,4 +1,0 @@
-Computer
-Software\Policies\Microsoft\Windows Defender Security Center\Systray
-HideSystray
-DWORD:1

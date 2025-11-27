@@ -17,7 +17,7 @@ Function Update-ACL {
         [string]$InheritanceFlags = 'ContainerInherit,ObjectInherit',
 
         [Parameter()]
-        [string]$PropogationFlags = 'None',
+        [string]$PropagationFlags = 'None',
 
         [Parameter()]
         [ValidateSet('Allow', 'Deny')]
@@ -26,7 +26,7 @@ Function Update-ACL {
 
     If (Test-Path $Path) {
         $NewAcl = Get-ACL -Path $Path
-        $FileSystemAccessRuleArgumentList = $Identity, $FileSystemRights, $InheritanceFlags, $PropogationFlags, $type
+        $FileSystemAccessRuleArgumentList = $Identity, $FileSystemRights, $InheritanceFlags, $PropagationFlags, $type
         $FileSystemAccessRule = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $FileSystemAccessRuleArgumentList
         $NewAcl.SetAccessRule($FileSystemAccessRule)
         Set-Acl -Path "$Path" -AclObject $NewAcl
