@@ -167,6 +167,8 @@ $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11
 If ($OS.Name -match 'LTSC') { $LTSC = $true }
 # Source Directories and supporting files
+$DirAppLocker = Join-Path -Path $Script:Dir -ChildPath "AppLocker"
+$FileAppLockerClear = Join-Path -Path $DirAppLocker -ChildPath "ClearAppLockerPolicy.xml"
 $DirApps = Join-Path -Path $Script:Dir -ChildPath 'Apps'
 $DirAssignedAccess = Join-Path -Path $Script:Dir -ChildPath 'AssignedAccess'
 $DirMultiAppSettings = Join-Path -Path $DirAssignedAccess -ChildPath 'MultiApp'
@@ -177,6 +179,8 @@ $DirKiosk = Join-Path -Path $env:SystemDrive -ChildPath "KioskSettings"
 $DirTools = Join-Path -Path $Script:Dir -ChildPath "Tools"
 $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
+$DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
+$FileKeyboardFilterConfig = Join-Path -Path $DirSchedTasksScripts -ChildPath "Set-KeyboardFilterConfiguration.ps1"
     
 #region Load Functions
 
@@ -588,7 +592,63 @@ Else {
 }
 
 #endregion Assigned Access Launcher
-    
+
+#region AppLocker Configuration
+
+If ($WindowsAppShell) {
+    Write-Log -EntryType Information -EventId 120 -Message "Applying AppLocker Policy to disable Explorer, Edge, and Search for the Kiosk User."
+    # If there is an existing applocker policy, back it up and store its XML for restore.
+    # Else, copy a blank policy to the restore location.
+    # Then apply the new AppLocker Policy
+    $FileAppLockerKiosk = Join-Path -Path $DirAppLocker -ChildPath "ShellLauncher.xml"
+
+    [xml]$Policy = Get-ApplockerPolicy -Local -XML
+    If ($Policy.AppLockerPolicy.RuleCollection) {
+        Get-ApplockerPolicy -Local -XML | out-file "$DirKiosk\ApplockerPolicy.xml" -force
+    }
+    Else {
+        Copy-Item -Path $FileAppLockerClear -Destination "$DirKiosk\ApplockerPolicy.xml" -Force
+    }
+    Set-AppLockerPolicy -XmlPolicy $FileAppLockerKiosk
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 121 -Message "Enabling and Starting Application Identity Service"
+    Set-Service -Name AppIDSvc -StartupType Automatic -ErrorAction SilentlyContinue
+}
+
+#endregion AppLocker Configuration
+
+#region Keyboard Filter
+
+if ($WindowsAppShell) {
+    New-Item -Path (Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasksScripts') -ItemType Directory -Force | Out-Null
+    $SchedTasksScriptsDir = Join-Path -Path $DirKiosk -ChildPath 'ScheduledTasksScripts'
+    Copy-Item -Path $FileKeyboardFilterConfig -Destination $SchedTasksScriptsDir -Force
+    $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
+    $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
+    Write-Log -EntryType Information -EventID 125 -Message "Enabling Keyboard filter."
+    Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
+    # Configure Keyboard Filter after reboot
+    $TaskName = "(AVD Client) - Configure Keyboard Filter"
+    Write-Log -EntryType Information -EventId 126 -Message "Creating Scheduled Task: '$TaskName'."
+    $TaskScriptEventSource = 'Keyboard Filter Configuration'
+    $TaskDescription = "Configures the Keyboard Filter"
+    New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
+    $TaskTrigger = New-ScheduledTaskTrigger -AtStartup
+    $TaskScriptArgs = "-TaskName `"$TaskName`" -EventLog `"$EventLog`" -EventSource `"$TaskScriptEventSource`""
+    $TaskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-executionpolicy bypass -file $TaskScriptFullName $TaskScriptArgs"
+    $TaskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
+    Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
+    If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
+        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+    }
+    Else {
+        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
+        Exit 1618
+    }
+}
+
+#endregion Keyboard Filter
+
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 150 -Message "Updating Group Policy"
 $GPUpdate = Start-Process -FilePath 'GPUpdate' -ArgumentList '/force' -Wait -PassThru
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 151 -Message "GPUpdate Exit Code: [$($GPUpdate.ExitCode)]"
