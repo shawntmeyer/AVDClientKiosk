@@ -208,4 +208,4 @@ Write-EventLog -LogName $EventLog -Source $EventSource -EntryType Information -E
 Get-ScheduledTask | Where-Object {$_.TaskName -eq "$TaskName"} | Unregister-ScheduledTask -Confirm:$False
 Write-EventLog -LogName $EventLog -Source $EventSource -EntryType Information -EventId 910 -Message "Ending Script: '$Script:FullName'."
 Stop-Transcript
-Restart-Computer -Force
+Start-Process -FilePath 'shutdown.exe' -ArgumentList '/r /t 15 /c "System will restart in 15 seconds to apply Keyboard Filter configuration changes."' -NoNewWindow -WindowStyle Hidden

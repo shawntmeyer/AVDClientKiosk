@@ -343,38 +343,97 @@ Update-ACLInheritance -Path $DirKiosk -DisableInheritance $true -PreserveInherit
 
 #endregion KioskSettings Directory
 
+#region Assigned Access Configuration
+
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 50 -Message "Starting Assigned Access Configuration Section."
+If ($WindowsAppShell) {
+    If ($AutoLogonKiosk) {
+        $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp_AutoLogon.xml"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 51 -Message "Enabling Windows App Shell Launcher with Autologon via WMI MDM bridge."
+    }
+    Else {
+        $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp.xml"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 51 -Message "Enabling Windows App Shell Launcher via WMI MDM bridge."
+    }
+    $DestFile = Join-Path -Path $DirKiosk -ChildPath "AssignedAccessShellLauncher.xml"
+    Copy-Item -Path $ConfigFile -Destination $DestFile -Force
+    Set-AssignedAccessShellLauncher -FilePath $DestFile
+    If (Get-AssignedAccessShellLauncher) {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 52 -Message "Shell Launcher configuration successfully applied."
+    }
+    Else {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 53 -Message "Shell Launcher configuration failed. Computer should be restarted first."
+        Exit 1618
+    }
+}
+Else {
+    If ($AutoLogonKiosk) {
+        If ($ShowSettings) {
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 55 -Message "Configuring MultiApp Kiosk settings for Windows App with Settings and Autologon."
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings_AutoLogon.xml"
+        }
+        Else {
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 56 -Message "Configuring MultiApp Kiosk settings for Windows App and Autologon."
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_AutoLogon.xml"
+        }
+    }
+    Else {
+        If ($ShowSettings) {
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 56 -Message "Configuring MultiApp Kiosk settings for Windows App and Settings."
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings.xml"
+        }
+        Else {
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 56 -Message "Configuring MultiApp Kiosk settings for Windows App."
+            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
+        }
+    }  
+    $DestFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
+    Copy-Item -Path $ConfigFile -Destination $DestFile -Force
+    Set-AssignedAccessConfiguration -FilePath $DestFile
+    If (Get-AssignedAccessConfiguration) {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 57 -Message "Assigned Access configuration successfully applied."
+    }
+    Else {
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 58 -Message "Assigned Access configuration failed. Computer should be restarted first."
+        Exit 1618        
+    }  
+}
+
+#endregion Assigned Access Launcher
+
+
 #region Provisioning Packages
 
 $ProvisioningPackages = @()
 
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable Windows Spotlight"
+Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Adding Provisioning Package to disable Windows Spotlight"
 $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableWindowsSpotlight.ppkg'
 
 If (!$SharedPC -or $AutoLogonKiosk) {
     # This setting is already included in the SharedPC provisioning package, so only add it when not using SharedPC mode.
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable first sign-in animation"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 61 -Message "Adding Provisioning Package to disable first sign-in animation"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableFirstLogonAnimation.ppkg'
 }
 
 If ($SharedPC) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 62 -Message "Adding Provisioning Package to enable SharedPC mode"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC-DirectLogon.ppkg'
 }
 
 If ($AutoLogonKiosk) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode without account management"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Adding Provisioning Package to enable SharedPC mode without account management"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC-AutoLogon.ppkg'
 }
 
 If (!$WindowsAppShell) {
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to hide Start Menu Elements"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 64 -Message "Adding Provisioning Package to hide Start Menu Elements"
     $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'HideStartMenuElements.ppkg'
 }
 
 New-Item -Path "$DirKiosk\ProvisioningPackages" -ItemType Directory -Force | Out-Null
 ForEach ($Package in $ProvisioningPackages) {
     Copy-Item -Path $Package -Destination "$DirKiosk\ProvisioningPackages" -Force | Out-Null
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 46 -Message "Installing $($Package)."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 65 -Message "Installing $($Package)."
     Install-ProvisioningPackage -PackagePath $Package -ForceInstall -QuietInstall
 }
 
@@ -383,10 +442,10 @@ ForEach ($Package in $ProvisioningPackages) {
 #region User Logos
 if ($AutoLogonKiosk) {
     $null = cmd /c lgpo.exe /t "$DirGPO\AutoLogon-UserLogos.txt" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 55 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 56 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 70 -Message "Configured User Logos to use default via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 71 -Message "Backing up current User Logo files to '$DirKiosk\UserLogos'."
     Copy-Item -Path "$env:ProgramData\Microsoft\User Account Pictures" -Destination "$DirKiosk\UserLogos" -Force
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 57 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 72 -Message "Copying User Logo files to '$env:ProgramData\Microsoft\User Account Pictures'."
     Get-ChildItem -Path $DirUserLogos | Copy-Item -Destination "$env:ProgramData\Microsoft\User Account Pictures" -Force
 }
 #endregion User Logos
@@ -395,17 +454,17 @@ if ($AutoLogonKiosk) {
 
 if ($WindowsAppShell) {
     $null = cmd /c lgpo.exe /t "$DirGPO\ShellLauncher-DisableTaskMgr.txt" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Disabled Task Manager via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Disabled Task Manager via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
     # Hide Windows Security notification area control
     $null = cmd /c lgpo.exe /t "$DirGPO\MultiApp-HideWindowsSecurityControl.txt" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 60 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Hide Windows Security notification area control via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 If ($ShowSettings) {
     $null = cmd /c lgpo.exe /t "$DirGPO\MultiApp-ShowSettings.txt" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 63 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Restricted Settings App and Control Panel to allow only Display Settings for kiosk user via Non-Administrators Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
 }
 
 If ($AutoLogonKiosk) {
@@ -413,25 +472,25 @@ If ($AutoLogonKiosk) {
     $null = cmd /c lgpo.exe /t "$DirGPO\AutoLogon-DisablePasswordForUnlock.txt" '2>&1'
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Disabled password requirement for screen saver lock and wake from sleep via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     $null = cmd /c lgpo.exe /t "$DirGPO\AutoLogon-HideLockLogoff.txt" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 81 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Removed logoff, change password, lock workstation, and fast user switching entry points. `nlgpo.exe Exit Code: [$LastExitCode]"
 }
 Else {
     If ($SmartCardRemovalAction) {
         # Ensure Smart Card Removal Policy service is running and set to automatic
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Configuring Smart Card Removal Policy service."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Configuring Smart Card Removal Policy service."
         $SCPolicyService = Get-Service -Name 'SCPolicySvc' -ErrorAction Stop
         If ($SCPolicyService.StartType -ne 'Automatic') {
             Set-Service -Name 'SCPolicySvc' -StartupType Automatic
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 82 -Message "Smart Card Removal Policy service startup type set to Automatic."
+            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Smart Card Removal Policy service startup type set to Automatic."
         }           
     }
     If ($SmartCardRemovalAction -eq 'Lock') {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLockWorkstation.inf" '2>&1'
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Lock Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
     ElseIf ($SmartCardRemovalAction -eq 'Logoff') {
         $null = cmd /c lgpo /s "$DirGPO\SmartCardLogOffWorkstation.inf" '2>&1'
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 84 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Set 'Interactive logon: Smart Card Removal behavior' to 'Force Logoff Workstation' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     }
     If ($LockScreenAfterSeconds) {
         # Will lock the system via the inactivity timeout built-in policy which locks the screen after inactivity.
@@ -439,7 +498,7 @@ Else {
         $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'MachineInactivityTimeout.inf'
         (Get-Content -Path $SourceFile).Replace('<Seconds>', ($LockScreenAfterSeconds)) | Out-File $OutFile
         $null = cmd /c lgpo /s "$outFile" '2>&1'
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 85 -Message "Set 'Interactive logon: Machine inactivity limit' to '$LockScreenAfterSeconds seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Set 'Interactive logon: Machine inactivity limit' to '$LockScreenAfterSeconds seconds' via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
         Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
     }
 }
@@ -465,7 +524,7 @@ If($ConfigureAutomaticMaintenance) {
         $content | Out-File $OutFile
     }    
     $null = cmd /c lgpo /s "$outFile" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 86 -Message "Configured Automatic Maintenance settings via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Configured Automatic Maintenance settings via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
 }
 
@@ -475,7 +534,7 @@ If($SetPowerPolicies) {
     $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'PowerSettings.txt'
     (Get-Content -Path $SourceFile).Replace('<SleepTimeOut>', $SleepAfterSeconds) | Out-File $OutFile
     $null = cmd /c lgpo /s "$outFile" '2>&1'
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 87 -Message "Configured Power Settings via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 80 -Message "Configured Power Settings via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
     Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
 }
 
@@ -627,65 +686,6 @@ If (Test-Path -Path 'HKLM:\Default') {
 }
 
 #endregion Registry Edits
-
-#region Assigned Access Configuration
-
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Starting Assigned Access Configuration Section."
-If ($WindowsAppShell) {
-    If ($AutoLogonKiosk) {
-        $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp_AutoLogon.xml"
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Windows App Shell Launcher with Autologon via WMI MDM bridge."
-    }
-    Else {
-        $ConfigFile = Join-Path -Path $DirShellLauncherSettings -ChildPath "WindowsApp.xml"
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Enabling Windows App Shell Launcher via WMI MDM bridge."
-    }
-    $DestFile = Join-Path -Path $DirKiosk -ChildPath "AssignedAccessShellLauncher.xml"
-    Copy-Item -Path $ConfigFile -Destination $DestFile -Force
-    Set-AssignedAccessShellLauncher -FilePath $DestFile
-    If (Get-AssignedAccessShellLauncher) {
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Shell Launcher configuration successfully applied."
-    }
-    Else {
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Shell Launcher configuration failed. Computer should be restarted first."
-        Exit 1618
-    }
-}
-Else {
-    If ($AutoLogonKiosk) {
-        If ($ShowSettings) {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App with Settings and Autologon."
-            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings_AutoLogon.xml"
-        }
-        Else {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App and Autologon."
-            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_AutoLogon.xml"
-        }
-    }
-    Else {
-        If ($ShowSettings) {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App and Settings."
-            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp_Settings.xml"
-        }
-        Else {
-            Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 113 -Message "Configuring MultiApp Kiosk settings for Windows App."
-            $ConfigFile = Join-Path -Path $DirMultiAppSettings -ChildPath "WindowsApp.xml"
-        }
-    }  
-    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 114 -Message "Configuration File = $ConfigFile"
-    $DestFile = Join-Path $DirKiosk -ChildPath 'AssignedAccessConfiguration.xml'
-    Copy-Item -Path $ConfigFile -Destination $DestFile -Force
-    Set-AssignedAccessConfiguration -FilePath $DestFile
-    If (Get-AssignedAccessConfiguration) {
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 115 -Message "Assigned Access configuration successfully applied."
-    }
-    Else {
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 116 -Message "Assigned Access configuration failed. Computer should be restarted first."
-        Exit 1618        
-    }  
-}
-
-#endregion Assigned Access Launcher
 
 #region AppLocker Configuration
 
