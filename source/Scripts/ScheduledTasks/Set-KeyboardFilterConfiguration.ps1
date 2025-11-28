@@ -140,25 +140,33 @@ Write-EventLog -LogName $EventLog -Source $EventSource -EntryType Information -E
 Set-DisableKeyboardFilterForAdministrators $True
 $PredefinedKeys = @{
     "Ctrl+Win+F" = "Open Find Computers"
+    "Win+A" = "Open Action Center"#
     "Win+Break" = "Open System dialog box"
-    "Win+F" = "Open Search"
-    "Win+P" = "Cycle through Presentation Mode"
-    "Win+R" = "Open Run Dialog"
-    "Win+Tab" = "Cycle through Microsoft Store Apps. Also blocks the Windows+Ctrl+Tab and Windows+Shift+Tab combinations"
-    "Win+B" = "Sets focus in the notification area"    
-    "Win+K" = "Open Connect"
+    "Win+Alt+D" = "Display and hide the date and time on the desktop"#
+    "Win+Ctrl+F" = "Search for computers"#
+    "Win+D" = "Show Desktop"#
+    "Win+E" = "Open File Explorer"#
+    "Win+F" = "Open Feedback Hub"#
+    "Win+G" = "Open Xbox Game Bar"#
     "Win+H" = "Open Dictation"
-    "Win+Q" = "Open Search Charm"    
+    "Win+I" = "Open Settings"#
+    "Win+J" = "Set focus to a Windows tip when one is available"#
+    "Win+K" = "Open Connect"
+    "Win+O" = "Lock Device Orientation"#
+    "Win+P" = "Cycle through Presentation Mode"
+    "Win+Q" = "Open Search Charm"#
+    "Win+R" = "Open Run Dialog"#
+    "Win+S" = "Open Search"#
+    "Win+Shift+C" = "Open Cortana in Listening Mode"
+    "Win+X" = "Open Quick Link Menu"
     "Win+W" = "Open Windows Ink Workspaces"
     "Win+Z" = "Open App bar"
     "Win+/" = "Open input method editor (IME)"
-    "Shift+Ctrl+Esc" = "Open Task Manager"
-    "Win+L" = "Lock the device"
+    "Shift+Ctrl+Esc" = "Open Task Manager"#
     "LaunchMail" = "Start Mail Key"
     "LaunchMediaSelect" = "Select Media Key"
     "LaunchApp1" = "Start Application 1 key"
     "LaunchApp2" = "Start Application 2 key"
-    "Win+I" = "Open Settings"
 }
 
 $PredefinedKeys.keys | ForEach-Object {
@@ -181,10 +189,8 @@ If ($model -like '*Surface*') {
 }
 
 $CustomKeys = @{
-    "Win+S" = "Open Search"
     "Win+;" = "Open Emojis"
     "Win+," = "Open Emojis"
-    "Win+X" = "Open Quick Link Menu"
     "Win+Alt+Enter" = "Open Taskbar Settings"
     "Win+Ctrl+D" = "Add a Virtual Desktop"
     "Win+Ctrl+Left" = "Switch between virtual desktops you've created on the left"

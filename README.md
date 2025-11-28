@@ -10,11 +10,12 @@ The user interface customizations are configured using:
 
 - An Assigned Access configuration for multi-app kiosk mode or shell launcher applied via the WMI Bridge CSP.
 - A multi-user local group policy object for non-administrative users.
+- Applocker policy policy applied in the WindowsAppShell scenario.
 - Provisioning packages that remove pinned items from the start menu, disable Windows Spotlight, and optionally enable Shared PC mode.
 
-The Windows App configurations are designed to enforce security of the client and access to the Azure Virtual Desktop service. The options include automatic logoff behaviors, first-run experience configuration, and integration with Windows security features such as smart card removal actions.
+The Windows App configurations are designed to enforce security of the client and access to the Azure Virtual Desktop and  Windows 365 services. The options include automatic logoff behaviors, first-run experience configuration, and integration with Windows security features such as smart card removal actions.
 
-This custom kiosk could be used for numerous scenarios including secure remote access, shared workstations, and dedicated Azure Virtual Desktop endpoints.
+This custom kiosk could be used for numerous scenarios including secure remote access, shared workstations, and dedicated Azure Virtual Desktop and Windows 365 endpoints.
 
 ## Prerequisites
 

@@ -1,11 +1,11 @@
 Function Write-Log {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true)]
-        [string]$EventLog,
+        [Parameter()]
+        [string]$EventLog = $Script:EventLog,
 
-        [Parameter(Mandatory=$true)]
-        [string]$EventSource,
+        [Parameter()]
+        [string]$EventSource = $Script:EventSource,
 
         [Parameter()]
         [ValidateSet('Information', 'Warning', 'Error')]

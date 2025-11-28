@@ -261,14 +261,14 @@ ElseIf (Test-Path -Path "$env:ProgramFiles\Microsoft OneDrive") {
 
 #endregion Remove Apps
 
-#region Install AVD Client
+#region Install Windows App
 
 If ($InstallWindowsApp) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 31 -Message "Running Script to install or update the Windows App."
     & "$DirApps\WindowsApp\Deploy-WindowsApp.ps1"
 }
 
-#endregion Install AVD Client
+#endregion Install Windows App
 
 #region KioskSettings Directory
 
@@ -304,7 +304,12 @@ $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'Di
 
 If ($SharedPC) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
-    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC.ppkg'
+    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC-DirectLogon.ppkg'
+}
+
+If ($AutoLogonKiosk) {
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode without account management"
+    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'SharedPC-AutoLogon.ppkg'
 }
 
 If (!$WindowsAppShell) {
@@ -596,7 +601,7 @@ Else {
 #region AppLocker Configuration
 
 If ($WindowsAppShell) {
-    Write-Log -EntryType Information -EventId 120 -Message "Applying AppLocker Policy to disable Explorer, Edge, and Search for the Kiosk User."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 120 -Message "Applying AppLocker Policy to disable Explorer, Edge, and Search for the Kiosk User."
     # If there is an existing applocker policy, back it up and store its XML for restore.
     # Else, copy a blank policy to the restore location.
     # Then apply the new AppLocker Policy
@@ -624,11 +629,11 @@ if ($WindowsAppShell) {
     Copy-Item -Path $FileKeyboardFilterConfig -Destination $SchedTasksScriptsDir -Force
     $TaskScriptName = 'Set-KeyboardFilterConfiguration.ps1'
     $TaskScriptFullName = Join-Path -Path $SchedTasksScriptsDir -ChildPath $TaskScriptName
-    Write-Log -EntryType Information -EventID 125 -Message "Enabling Keyboard filter."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventID 125 -Message "Enabling Keyboard filter."
     Enable-WindowsOptionalFeature -Online -FeatureName Client-KeyboardFilter -All -NoRestart
     # Configure Keyboard Filter after reboot
     $TaskName = "(AVD Client) - Configure Keyboard Filter"
-    Write-Log -EntryType Information -EventId 126 -Message "Creating Scheduled Task: '$TaskName'."
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 126 -Message "Creating Scheduled Task: '$TaskName'."
     $TaskScriptEventSource = 'Keyboard Filter Configuration'
     $TaskDescription = "Configures the Keyboard Filter"
     New-EventLog -LogName $EventLog -Source $TaskScriptEventSource -ErrorAction SilentlyContinue     
@@ -639,10 +644,10 @@ if ($WindowsAppShell) {
     $TaskSettings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries
     Register-ScheduledTask -TaskName $TaskName -Description $TaskDescription -Action $TaskAction -Settings $TaskSettings -Principal $TaskPrincipal -Trigger $TaskTrigger
     If (Get-ScheduledTask | Where-Object { $_.TaskName -eq "$TaskName" }) {
-        Write-Log -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 119 -Message "Scheduled Task created successfully."
     }
     Else {
-        Write-Log -EntryType Error -EventId 120 -Message "Scheduled Task not created."
+        Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Error -EventId 120 -Message "Scheduled Task not created."
         Exit 1618
     }
 }
