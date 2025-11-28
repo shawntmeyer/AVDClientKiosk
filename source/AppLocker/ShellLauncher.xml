@@ -1,6 +1,6 @@
 <AppLockerPolicy Version="1">
   <RuleCollection Type="Appx" EnforcementMode="Enabled">
-    <FilePublisherRule Id="e8aaa8bb-8335-4fa3-ba4b-b38b0d091862" Name="All signed packaged apps" Description="Allows members of the Everyone group to run packaged apps that are signed." UserOrGroupSid="S-1-5-32-544" Action="Allow">
+    <FilePublisherRule Id="e8aaa8bb-8335-4fa3-ba4b-b38b0d091862" Name="All signed packaged apps" Description="Allows members of the Administrators group to run packaged apps that are signed." UserOrGroupSid="S-1-5-32-544" Action="Allow">
       <Conditions>
         <FilePublisherCondition PublisherName="*" ProductName="*" BinaryName="*">
           <BinaryVersionRange LowSection="0.0.0.0" HighSection="*" />
@@ -17,9 +17,6 @@
         <FilePublisherCondition PublisherName="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" ProductName="Microsoft.MicrosoftEdge.Stable" BinaryName="*">
           <BinaryVersionRange LowSection="*" HighSection="*" />
         </FilePublisherCondition>
-        <FilePublisherCondition PublisherName="CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" ProductName="Microsoft.Windows.Search" BinaryName="*">
-          <BinaryVersionRange LowSection="*" HighSection="*" />
-        </FilePublisherCondition>
       </Exceptions>
     </FilePublisherRule>
   </RuleCollection>
@@ -30,15 +27,14 @@
         <FilePathCondition Path="*" />
       </Conditions>
     </FilePathRule>
-    <FilePathRule Id="35f41f42-11c0-4455-8723-5a4116fc1002" Name="All files located in the Windows folder (except explorer)" Description="Allows members of the Everyone group to run applications that are located in the Windows folder with exceptions." UserOrGroupSid="S-1-1-0" Action="Allow">
+    <FilePathRule Id="35f41f42-11c0-4455-8723-5a4116fc1002" Name="All files located in the Windows folder (except notepad)" Description="Allows members of the Everyone group to run applications that are located in the Windows folder with exceptions." UserOrGroupSid="S-1-1-0" Action="Allow">
       <Conditions>
         <FilePathCondition Path="%WINDIR%\*" />
       </Conditions>
       <Exceptions>
-        <FilePublisherCondition PublisherName="O=MICROSOFT CORPORATION, L=REDMOND, S=WASHINGTON, C=US" ProductName="MICROSOFT® WINDOWS® OPERATING SYSTEM" BinaryName="EXPLORER.EXE">
+        <FilePublisherCondition PublisherName="O=MICROSOFT CORPORATION, L=REDMOND, S=WASHINGTON, C=US" ProductName="MICROSOFT® WINDOWS® OPERATING SYSTEM" BinaryName="NOTEPAD.EXE">
           <BinaryVersionRange LowSection="*" HighSection="*" />
         </FilePublisherCondition>
-      </Exceptions>
     </FilePathRule>
     <FilePathRule Id="b03ff384-aa20-4db0-bbee-82c7f7c47ab3" Name="All files located in the Program Files folder (except Edge)" Description="Allows members of the Everyone group to run applications that are located in the Program Files folder with exceptions." UserOrGroupSid="S-1-1-0" Action="Allow">
       <Conditions>
