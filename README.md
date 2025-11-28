@@ -41,9 +41,6 @@ This custom kiosk could be used for numerous scenarios including secure remote a
 
 3. For most scenarios, you should [join the client device to Entra ID](https://learn.microsoft.com/en-us/entra/identity/devices/concept-directory-join) or [Entra ID Hybrid Join the device](https://learn.microsoft.com/en-us/entra/identity/devices/concept-hybrid-join).
 
-[~1]: For more information see [Shell Launcher Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/shell-launcher/#windows-edition-requirements)
-[^2]: For more information see [Assigned Access Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview?tabs=ps#windows-edition-requirements)
-
 ## User Interface
 
 ### Summary
@@ -117,15 +114,15 @@ The table below describes each parameter and any requirements or usage informati
 | `WindowsAppAutoLogoffConfig` | String | Determines the automatic logoff configuration for the Windows App when AutoLogonKiosk is used. | Possible values: 'Disabled', 'ResetAppOnCloseOnly', 'ResetAppAfterConnection', 'ResetAppOnCloseOrIdle'. |
 | `WindowsAppAutoLogoffTimeInterval` | Int | Determines the interval in minutes at which Windows App checks for OS inactivity. | Used with 'ResetAppOnCloseOrIdle' configuration. Default is 15 minutes. |
 | `InstallWindowsApp` | Switch | Determines if the latest Windows App is automatically downloaded and provisioned on the system prior to configuration. | Requires internet access to (https://go.microsoft.com/fwlink/?linkid=2262633) and the url to which it redirects. Alternatively, download the MSIX file from this link and place it in the root of the [source/WindowsApp/Apps/WindowsApp](source/WindowsApp/Apps/WindowsApp) folder |
-| `SharedPC` | Switch | Determines if the computer is setup as a shared PC with automatic profile cleanup. | Only valid for direct logon mode (AutoLogonKiosk switch is not used). |
+| `SharedPC` | Switch | Determines if the computer is setup as a shared PC with automatic profile cleanup after logoff. | Only valid for direct logon mode (AutoLogonKiosk switch is not used). |
 | `ShowSettings` | Switch | Determines if the Settings App appears in the restricted interface, limited to display and audio settings. | Only valid when WindowsAppShell is not specified. |
 | `LockScreenAfterSeconds` | Int | Determines the number of seconds of idle time before the lock screen is displayed. | Only valid when AutoLogonKiosk is not used. |
 | `SmartCardRemovalAction` | String | Determines what occurs when the smart card used for authentication is removed. | Possible values: 'Lock', 'Logoff'. Cannot be used when AutoLogonKiosk is true. |
 | `ConfigureAutomaticMaintenance` | Switch | Determines if Windows automatic maintenance settings are configured via Local Group Policy. | When enabled, maintenance tasks will run at the specified activation time with optional random delay. Can be used with any parameter set. |
-| `MaintenanceActivationTime` | String | Specifies the time of day when automatic maintenance should begin in HH:mm:ss format. | Example: "02:00:00" for 2:00 AM. Converted to ISO 8601 format internally. Default is "00:00:00" (midnight). |
-| `MaintenanceRandomDelay` | Int | Specifies the maximum random delay in hours added to the maintenance activation time. | Valid values are 1-6 hours. Prevents multiple systems from running maintenance simultaneously. Default is 2 hours. |
-| `SetPowerPolicies` | Switch | Determines if power management policies are configured via Local Group Policy for shared PC scenarios. | Configures power buttons, sleep settings, energy saver, disables hibernation, and optimizes power behavior for shared environments. |
-| `SleepAfterSeconds` | Int | Specifies the number of seconds of inactivity before the system automatically goes to sleep. | Works with SetPowerPolicies to manage power consumption. Default is 3600 seconds (1 hour). |
+| `MaintenanceActivationTime` | String | Specifies the time of day when automatic maintenance should begin in HH:mm:ss format. | Example: "02:00:00" for 2:00 AM. Converted to ISO 8601 format internally. Default is "00:00:00" (midnight). See the [Maintenance Start Time section of the Shared PC technical reference](https://learn.microsoft.com/en-us/windows/configuration/shared-pc/shared-pc-technical#maintenancestarttime) for more information. |
+| `MaintenanceRandomDelay` | Int | Specifies the maximum random delay in hours added to the maintenance activation time. | Valid values are 1-6 hours. Prevents multiple systems from running maintenance simultaneously. Default is 2 hours. See the [Maintenance Start Time section of the Shared PC technical reference](https://learn.microsoft.com/en-us/windows/configuration/shared-pc/shared-pc-technical#maintenancestarttime) for more information. |
+| `SetPowerPolicies` | Switch | Determines if the Shared PC power management policies are configured via Local Group Policy for shared PC scenarios. | Configures power buttons, sleep settings, energy saver, disables hibernation, and optimizes power behavior for shared environments. See the [Set Power Policies section of the Shared PC technical reference](https://learn.microsoft.com/en-us/windows/configuration/shared-pc/shared-pc-technical#setpowerpolicies) for more information. |
+| `SleepAfterSeconds` | Int | Specifies the number of seconds of inactivity before the system automatically goes to sleep. | Works with SetPowerPolicies to manage power consumption. Default is 3600 seconds (1 hour). Set to 0 to Disable Sleep Timeout. See the [Policy Customization section of the SharedPC (Windows Configuration Designer reference)](https://learn.microsoft.com/en-us/windows/configuration/wcd/wcd-sharedpc#policycustomization) for more information. |
 | `Version` | Version | Writes this value to HKLM:\SOFTWARE\Kiosk\version registry key. | Allows tracking of the installed version using configuration management software. Default is '1.0.0'. |
 
 ### Manual Installation
@@ -250,3 +247,6 @@ Remove the configuration from the PowerShell prompt using:
 - [Shared PC Configuration](https://learn.microsoft.com/en-us/windows/configuration/shared-pc/)
 - [Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/)
 - [Windows 365](https://learn.microsoft.com/en-us/windows-365/)
+
+[~1]: For more information see [Shell Launcher Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/shell-launcher/#windows-edition-requirements)
+[~2]: For more information see [Assigned Access Windows Edition Requirements](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/overview?tabs=ps#windows-edition-requirements)
