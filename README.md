@@ -144,7 +144,7 @@ The table below describes each parameter and any requirements or usage informati
     Set-ExecutionPolicy Bypass -Scope Process
     ```
 
-4. Change directories to the local 'source\WindowsApp' directory.
+4. Change directories to the local 'source' directory.
 
 5. Then execute the script using the correct parameters as exemplified below:
 
@@ -197,16 +197,19 @@ This configuration supports deployment through Intune as a Win32 App. The instru
 Example command lines:
 
 - **Basic Configuration:**
+  
   ``` cmd
   powershell.exe -ExecutionPolicy Bypass -File Set-WindowsAppKioskSettings.ps1 -ShowSettings
   ```
 
 - **AutoLogon Kiosk:**
+  
   ``` cmd
   powershell.exe -ExecutionPolicy Bypass -File Set-WindowsAppKioskSettings.ps1 -AutoLogonKiosk -WindowsAppAutoLogoffConfig "ResetAppOnCloseOrIdle" -WindowsAppAutoLogoffTimeInterval 15
   ```
 
 - **Shared PC with Installation:**
+  
   ``` cmd
   powershell.exe -ExecutionPolicy Bypass -File Set-WindowsAppKioskSettings.ps1 -InstallWindowsApp -SharedPC -ShowSettings
   ```
