@@ -202,7 +202,7 @@ $Script:FullName = $MyInvocation.MyCommand.Path
 $Script:Dir = Split-Path $Script:FullName
 # Windows Event Log (.evtx)
 $EventLog = 'Windows-App-Kiosk'
-$EventSource = 'Configuration'
+$EventSource = 'ConfigScript'
 # Find LTSC OS (and Windows IoT Enterprise)
 $OS = Get-WmiObject -Class Win32_OperatingSystem
 # Detect Windows 11
