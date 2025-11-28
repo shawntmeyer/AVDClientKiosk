@@ -1,0 +1,14 @@
+Computer
+Software\Policies\Microsoft\Windows\Task Scheduler\Maintenance
+Activation Boundary
+SZ:<ActivationBoundary>
+
+Computer
+Software\Policies\Microsoft\Windows\Task Scheduler\Maintenance
+Random Delay
+SZ:<RandomDelay>
+
+Computer
+Software\Policies\Microsoft\Windows\Task Scheduler\Maintenance
+WakeUp
+DWORD:1

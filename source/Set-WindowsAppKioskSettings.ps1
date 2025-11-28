@@ -80,6 +80,21 @@ This integer value determines the number of seconds of idle time before the lock
 This string parameter determines what occurs when the smart card that was used to authenticate to the operating system is removed from the system. The possible values are 'Lock' or 'Logoff'.
 When AutoLogon is true, this parameter cannot be used.
 
+.PARAMETER ConfigureAutomaticMaintenance
+This switch parameter determines if Windows automatic maintenance settings are configured via Local Group Policy. When enabled, maintenance tasks will run at the specified activation time with optional random delay.
+
+.PARAMETER MaintenanceActivationTime
+This string parameter specifies the time of day when automatic maintenance should begin in HH:mm:ss format (e.g., "02:00:00" for 2:00 AM). The time is converted to ISO 8601 format internally with date 2000-01-01T for policy application. Default is "00:00:00" (midnight).
+
+.PARAMETER MaintenanceRandomDelay
+This integer parameter specifies the maximum random delay in hours that can be added to the maintenance activation time to prevent multiple systems from running maintenance simultaneously. Valid values are 1-6 hours. The value is converted to ISO 8601 duration format (PT#H) internally. Default is 2 hours.
+
+.PARAMETER SetPowerPolicies
+This switch parameter determines if power management policies are configured via Local Group Policy to optimize behavior for shared PC scenarios. When enabled, configures power button, sleep button, and lid switch actions to sleep, enables energy saver settings, disables hibernation, and enables standby states while turning off hybrid sleep for both battery and plugged-in scenarios.
+
+.PARAMETER SleepAfterSeconds
+This integer parameter specifies the number of seconds of inactivity before the system automatically goes to sleep. This setting works in conjunction with SetPowerPolicies to manage power consumption in shared PC environments. Default is 3600 seconds (1 hour).
+
 .PARAMETER Version
 This version parameter allows tracking of the installed version using configuration management software such as Microsoft Endpoint Manager or Microsoft Endpoint Configuration Manager by querying the value of the registry value: HKLM\Software\Kiosk\version.
 
@@ -121,6 +136,32 @@ param (
     [Parameter(ParameterSetName = 'DirectLogonMultiAppKiosk')]
     [ValidateSet('Lock', 'Logoff')]
     [string]$SmartCardRemovalAction,
+
+    [Parameter()]
+    [switch]$ConfigureAutomaticMaintenance,
+
+    [Parameter()]
+    [ValidateScript({
+        if ($_ -match '^\d{2}:\d{2}:\d{2}$') {
+            $timeSpan = [TimeSpan]::ParseExact($_, 'hh\:mm\:ss', $null)
+            if ($timeSpan -ge [TimeSpan]::Zero -and $timeSpan -lt [TimeSpan]::FromHours(24)) {
+                return $true
+            }
+            throw "Time must be between 00:00:00 and 23:59:59"
+        }
+        throw "Time must be in HH:mm:ss format (e.g., 02:00:00, 14:30:00, 23:59:59)"
+    })]
+    [string]$MaintenanceActivationTime = '00:00:00',
+
+    [Parameter()]
+    [ValidateRange(0, 6)]
+    [Int]$MaintenanceRandomDelay = 2,
+
+    [Parameter()]
+    [switch]$SetPowerPolicies,
+
+    [Parameter()]
+    [int]$SleepAfterSeconds = 3600,
 
     [version]$Version = '1.0.0'
 )
@@ -181,6 +222,16 @@ $DirUserLogos = Join-Path -Path $Script:Dir -ChildPath "UserLogos"
 $DirFunctions = Join-Path -Path $Script:Dir -ChildPath "Scripts\Functions"
 $DirSchedTasksScripts = Join-Path -Path $Script:Dir -ChildPath "Scripts\ScheduledTasks"
 $FileKeyboardFilterConfig = Join-Path -Path $DirSchedTasksScripts -ChildPath "Set-KeyboardFilterConfiguration.ps1"
+
+#region Parameter Conversions
+
+# Convert MaintenanceRandomDelay integer to PT4H format
+$MaintenanceRandomDelayPT = "PT$($MaintenanceRandomDelay)H"
+
+# Convert MaintenanceActivationTime to ISO 8601 format with date 2000-01-01T
+$MaintenanceActivationTimeISO = "2000-01-01T$MaintenanceActivationTime"
+
+#endregion Parameter Conversions
     
 #region Load Functions
 
@@ -299,8 +350,11 @@ $ProvisioningPackages = @()
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable Windows Spotlight"
 $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableWindowsSpotlight.ppkg'
 
-Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable first sign-in animation"
-$ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableFirstLogonAnimation.ppkg'
+If (!$SharedPC -or $AutoLogonKiosk) {
+    # This setting is already included in the SharedPC provisioning package, so only add it when not using SharedPC mode.
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to disable first sign-in animation"
+    $ProvisioningPackages += Join-Path -Path $DirProvisioningPackages -ChildPath 'DisableFirstLogonAnimation.ppkg'
+}
 
 If ($SharedPC) {
     Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 44 -Message "Adding Provisioning Package to enable SharedPC mode"
@@ -390,6 +444,41 @@ Else {
     }
 }
 
+If($ConfigureAutomaticMaintenance) {
+    # Configure Automatic Maintenance settings via Local Group Policy
+    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'AutomaticMaintenance.txt'
+    $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'AutomaticMaintenance.txt'
+    
+    If($MaintenanceRandomDelay -eq 0) {
+        # No random delay - just replace activation boundary
+        (Get-Content -Path $SourceFile).Replace('<ActivationBoundary>', $MaintenanceActivationTimeISO) | Out-File $OutFile
+    } Else {
+        # Include random delay - replace both values and add randomized setting
+        $content = (Get-Content -Path $SourceFile).Replace('<ActivationBoundary>', $MaintenanceActivationTimeISO).Replace('<RandomDelay>', $MaintenanceRandomDelayPT)
+        $content += @(
+            '',
+            'Computer',
+            'Software\Policies\Microsoft\Windows\Task Scheduler\Maintenance',
+            'Randomized',
+            'DWORD:1'
+        )
+        $content | Out-File $OutFile
+    }    
+    $null = cmd /c lgpo /s "$outFile" '2>&1'
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 86 -Message "Configured Automatic Maintenance settings via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
+}
+
+If($SetPowerPolicies) {
+    # Configure Power Settings via Local Group Policy
+    $sourceFile = Join-Path -Path $DirGPO -ChildPath 'PowerSettings.txt'
+    $outFile = Join-Path -Path "$env:SystemRoot\SystemTemp" -ChildPath 'PowerSettings.txt'
+    (Get-Content -Path $SourceFile).Replace('<SleepTimeOut>', $SleepAfterSeconds) | Out-File $OutFile
+    $null = cmd /c lgpo /s "$outFile" '2>&1'
+    Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 87 -Message "Configured Power Settings via Local Group Policy Object.`nlgpo.exe Exit Code: [$LastExitCode]"
+    Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
+}
+
 #endregion Local GPO Settings
 
 #region Registry Edits
@@ -417,7 +506,7 @@ If ($OneDrivePresent) {
     }
 }
 
-If (-not $WindowsAppShell) {
+If (!$WindowsAppShell) {
     $RegValues += [PSCustomObject]@{
         Path         = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
         Name         = 'StartShownOnUpgrade'

@@ -121,6 +121,11 @@ The table below describes each parameter and any requirements or usage informati
 | `ShowSettings` | Switch | Determines if the Settings App appears in the restricted interface, limited to display and audio settings. | Only valid when WindowsAppShell is not specified. |
 | `LockScreenAfterSeconds` | Int | Determines the number of seconds of idle time before the lock screen is displayed. | Only valid when AutoLogonKiosk is not used. |
 | `SmartCardRemovalAction` | String | Determines what occurs when the smart card used for authentication is removed. | Possible values: 'Lock', 'Logoff'. Cannot be used when AutoLogonKiosk is true. |
+| `ConfigureAutomaticMaintenance` | Switch | Determines if Windows automatic maintenance settings are configured via Local Group Policy. | When enabled, maintenance tasks will run at the specified activation time with optional random delay. Can be used with any parameter set. |
+| `MaintenanceActivationTime` | String | Specifies the time of day when automatic maintenance should begin in HH:mm:ss format. | Example: "02:00:00" for 2:00 AM. Converted to ISO 8601 format internally. Default is "00:00:00" (midnight). |
+| `MaintenanceRandomDelay` | Int | Specifies the maximum random delay in hours added to the maintenance activation time. | Valid values are 1-6 hours. Prevents multiple systems from running maintenance simultaneously. Default is 2 hours. |
+| `SetPowerPolicies` | Switch | Determines if power management policies are configured via Local Group Policy for shared PC scenarios. | Configures power buttons, sleep settings, energy saver, disables hibernation, and optimizes power behavior for shared environments. |
+| `SleepAfterSeconds` | Int | Specifies the number of seconds of inactivity before the system automatically goes to sleep. | Works with SetPowerPolicies to manage power consumption. Default is 3600 seconds (1 hour). |
 | `Version` | Version | Writes this value to HKLM:\SOFTWARE\Kiosk\version registry key. | Allows tracking of the installed version using configuration management software. Default is '1.0.0'. |
 
 ### Manual Installation
@@ -241,5 +246,7 @@ Remove the configuration from the PowerShell prompt using:
 
 - [Windows App Documentation](https://learn.microsoft.com/en-us/windows-app/)
 - [Assigned Access Configuration](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/)
+- [Shell Launcher](https://learn.microsoft.com/en-us/windows/configuration/assigned-access/shell-launcher/)
+- [Shared PC Configuration](https://learn.microsoft.com/en-us/windows/configuration/shared-pc/)
 - [Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/)
 - [Windows 365](https://learn.microsoft.com/en-us/windows-365/)
