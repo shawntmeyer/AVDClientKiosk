@@ -257,7 +257,7 @@ Else {
 #region Initialization
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-Write-Output "Pausing for 5 seconds to ensure event log is ready..."
+Write-Output "Pausing for 5 seconds to ensure $EventLog | $EventSource log is ready..."
 Start-Sleep -Seconds 5
 
 $message = @"

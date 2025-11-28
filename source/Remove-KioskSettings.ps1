@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param (
-    [string]$EventLog = 'Remote-Desktop-Client-Kiosk',
+    [string]$EventLog = 'Windows-App-Kiosk',
     [string]$EventSource = 'Removal',
     [switch]$Reinstall
 )
@@ -54,7 +54,7 @@ ForEach ($Function in $Functions) {
 }
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-Write-Output "Pausing for 5 seconds to ensure event log is ready..."
+Write-Output "Pausing for 5 seconds to ensure the $EventLog | $EventSource event log is ready..."
 Start-Sleep -Seconds 5
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
 
