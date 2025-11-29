@@ -91,6 +91,7 @@ The user interface experience provides only the Windows App with no access to ot
 The figure below illustrates the display of an Autologon Windows App Shell Launcher kiosk.
 
 **Figure 4:** Windows App Shell Kiosk before Sign-in
+
 ![Windows App Shell Launcher Sign In](docs/media/ShellLauncher-SignIn.png)
 
 The figure below illustrates the Windows App Shell kiosk after a user signs in to the Windows App.
