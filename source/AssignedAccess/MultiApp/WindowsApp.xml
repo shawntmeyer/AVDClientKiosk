@@ -5,7 +5,7 @@
       <AllAppsList>
         <AllowedApps>
           <App AppUserModelId="MicrosoftCorporationII.Windows365_8wekyb3d8bbwe!Windows365" rs5:AutoLaunch="true" />
-         </AllowedApps>
+        </AllowedApps>
       </AllAppsList>
       <v5:StartPins>
         <![CDATA[{

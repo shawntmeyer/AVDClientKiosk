@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param (
-    [string]$EventLog = 'Remote-Desktop-Client-Kiosk',
-    [string]$EventSource = 'Removal',
+    [string]$EventLog = 'Windows-App-Kiosk',
+    [string]$EventSource = 'RemovalScript',
     [switch]$Reinstall
 )
 #region Set Variables
@@ -54,8 +54,7 @@ ForEach ($Function in $Functions) {
 }
 
 New-EventLog -LogName $EventLog -Source $EventSource -ErrorAction SilentlyContinue
-Write-Output "Waiting for event log to be ready (timeout: 5 seconds)..."
-Write-Output "Pausing for 5 seconds to ensure event log is ready..."
+Write-Output "Pausing for 5 seconds to ensure the $EventLog | $EventSource event log is ready..."
 Start-Sleep -Seconds 5
 Write-Log -EventLog $EventLog -EventSource $EventSource -EntryType Information -EventId 5 -Message "Executing '$Script:FullName'."
 
@@ -189,19 +188,6 @@ If ($ScheduledTasks) {
     $Removed = $true
     Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 19 -EntryType Information -Message "Removing Scheduled Tasks."
     $ScheduledTasks | Unregister-ScheduledTask -Confirm:$false
-}
-
-# Remove Custom Start Menu Shortcut
-
-$DirsShortcuts = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup", "$env:SystemDrive\Users\Public\Desktop"
-$linkAVD = "Azure Virtual Desktop.lnk"
-ForEach ($DirShortcut in $DirsShortcuts) {
-    $pathLinkAVD = Join-Path $DirShortcut -ChildPath $linkAVD
-    If (Test-Path -Path $pathLinkAVD) {
-        $Removed = $true
-        Write-Log -EventLog $EventLog -EventSource $EventSource -EventId 20 -EntryType Information -Message "Removing Custom AVD Client Shortcut: '$pathLinkAVD'."
-        Remove-Item -Path $pathLinkAVD -Force
-    }
 }
 
 # Remove Version Registry Entry
