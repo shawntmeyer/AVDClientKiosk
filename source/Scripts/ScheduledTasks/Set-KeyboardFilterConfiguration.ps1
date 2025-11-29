@@ -207,6 +207,4 @@ $CustomKeys.keys | ForEach-Object {
 Write-EventLog -LogName $EventLog -Source $EventSource -EntryType Information -EventId 905 -Message "Deleting Scheduled Task: '$TaskName'."
 Get-ScheduledTask | Where-Object {$_.TaskName -eq "$TaskName"} | Unregister-ScheduledTask -Confirm:$False
 Write-EventLog -LogName $EventLog -Source $EventSource -EntryType Information -EventId 910 -Message "Ending Script: '$Script:FullName'."
-Start-Sleep -Seconds 15
-Write-EventLog -LogName $EventLog -Source $EventSource -EntryType Information -EventId 910 -Message "Restarting the Computer"
-Restart-Computer -Force
+Stop-Transcript
