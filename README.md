@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository contains a script and supporting artifacts to configure a Windows client operating system to act as a custom Windows App kiosk using the [Windows App](https://learn.microsoft.com/en-us/windows-app/overview).
+This repository contains a script and supporting artifacts to configure a Windows client operating system to act as a custom Windows 365 or Azure Virtual Desktop client kiosk using the [Windows App](https://learn.microsoft.com/en-us/windows-app/overview).
 
 The solution consists of two main parts: User interface customizations and Windows App configurations.
 
