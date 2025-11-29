@@ -88,7 +88,14 @@ When the `WindowsAppShell` parameter is selected, the Windows App replaces the d
 
 The user interface experience provides only the Windows App with no access to other system functions, providing the highest level of security and focus.
 
-**Figure 4:** Windows App Shell Kiosk showing Windows App only
+The figure below illustrates the display of an Autologon Windows App Shell Launcher kiosk.
+
+**Figure 4:** Windows App Shell Kiosk before Sign-in
+![Windows App Shell Launcher Sign In](docs/media/ShellLauncher-SignIn.png)
+
+The figure below illustrates the Windows App Shell kiosk after a user signs in to the Windows App.
+
+**Figure 5:** Windows App Shell Kiosk showing Windows App only
 
 ![Windows App Shell Launcher](docs/media/WindowsApp-SingleApp.png)
 
@@ -238,7 +245,7 @@ You can utilize a custom detection script in Intune or use a Registry detection 
 
 1. Create a custom configuration profile and specify the **OMA-URI** as './Vendor/MSFT/AssignedAccess/ShellLauncher' with the **Data type** as 'string (XML file)'. Then select the appropriate ShellLauncher XML file from the 'source\AssignedAccess\ShellLauncher' directory. Deploy to devices. [^6]
 
-**Figure 5:** Intune Shell Launcher configuration
+**Figure 6:** Intune Shell Launcher configuration
 
 ![Intune Shell Launcher Profile](docs/media/OMA-URI-ShellLauncher.png)
 
@@ -248,7 +255,7 @@ You can utilize a custom detection script in Intune or use a Registry detection 
 
 1. Create a custom configuration profile and specify the **OMA-URI** as './Vendor/MSFT/AssignedAccess/Configuration' with the **Data type** as 'string (XML file)'. Then select the appropriate MultiApp XML file from the 'source\AssignedAccess\MultiApp' directory. Deploy to devices. [^7]
 
-  **Figure 6:** Intune Multi-App Kiosk configuration
+  **Figure 7:** Intune Multi-App Kiosk configuration
 
   ![Intune Restricted User Experience Kiosk Profile](docs/media/OMA-URI-MultiApp.png)
 
@@ -256,7 +263,7 @@ You can utilize a custom detection script in Intune or use a Registry detection 
 3. Disable Search by creating a new Settings Catalog profile and setting **Search | Disable Search** to 'Enable'. Deploy to Devices.
 4. If you deployed a Multi-App Configuration with Settings and you wish to restrict the Settings and Control Panel to only certain pages, create a new Settings Catalog profile and select the settings as shown in the figure below.
 
-  **Figure 7:** Intune Restrict Settings and Control Panel
+  **Figure 8:** Intune Restrict Settings and Control Panel
 
   ![Intune Restrict Settings and Control Panel](docs/media/Intune-RestrictSettingsAndControlPanel.png)
 
@@ -264,7 +271,7 @@ You can utilize a custom detection script in Intune or use a Registry detection 
 
 1. If desired, create a Shared multi-user device configuration profile and select the appropriate settings based on your desired configuration. The figure below shows all items configured.
 
-  **Figure 7:** Intune Shared Multi-User Device Configuration
+  **Figure 9:** Intune Shared Multi-User Device Configuration
 
   ![Intune Shared PC Profile](docs/media/Intune-SharedPC.png)
 
